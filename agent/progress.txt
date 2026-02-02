@@ -271,3 +271,34 @@ This file tracks progress on the dash project features.
   - frontend/src/views/DashboardDetailView.vue - integrated pause/resume on modal open/close
 - Blockers/notes for next iteration:
   - None. Ready to proceed with Dashboard Grid Layout.
+
+## UI - Dashboard Grid Layout (12-Column Drag & Drop) - 2026-02-02
+- What was done:
+  - Added vue-grid-layout dependency to frontend
+  - Updated DashboardDetailView.vue to use GridLayout and GridItem components:
+    - 12-column responsive grid layout
+    - Drag-and-drop panel repositioning (drag from panel header)
+    - Resize handles on panel corners
+    - Collision detection with vertical compacting
+    - Responsive breakpoints: lg (12), md (10), sm (6), xs (4), xxs (2)
+  - Implemented debounced layout persistence:
+    - onLayoutUpdated handler detects position/size changes
+    - Debounced 500ms save to backend via updatePanel API
+    - Preserves local state while saving
+  - Added pause/resume auto-refresh integration (during panel editing)
+  - Added global CSS styles for vue-grid-layout:
+    - Placeholder styling (blue dashed border)
+    - Resize handle icon
+    - Drag/resize z-index management
+  - Added comprehensive tests:
+    - 8 new tests for DashboardDetailView component
+    - Tests cover: loading, panels rendering, navigation, modals, empty state
+    - All 153 frontend tests passing
+    - All backend tests passing
+- Files changed:
+  - frontend/package.json - added vue-grid-layout dependency
+  - frontend/src/views/DashboardDetailView.vue - replaced CSS grid with vue-grid-layout
+  - frontend/src/views/DashboardDetailView.spec.ts (new) - comprehensive tests
+  - frontend/src/style.css - added vue-grid-layout global styles
+- Blockers/notes for next iteration:
+  - All PRD features complete!

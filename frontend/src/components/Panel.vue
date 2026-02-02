@@ -116,6 +116,7 @@ const isLineChart = computed(() => props.panel.type === 'line_chart')
   padding: 0.75rem 1rem;
   border-bottom: 1px solid #333;
   background: #252526;
+  cursor: move;
 }
 
 .panel-title {

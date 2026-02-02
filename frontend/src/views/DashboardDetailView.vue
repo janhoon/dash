@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { GridLayout, GridItem } from 'vue-grid-layout'
 import type { Dashboard } from '../types/dashboard'
-import type { Panel as PanelType } from '../types/panel'
+import type { Panel as PanelType, GridPos } from '../types/panel'
 import { getDashboard } from '../api/dashboards'
-import { listPanels, deletePanel } from '../api/panels'
+import { listPanels, deletePanel, updatePanel } from '../api/panels'
 import Panel from '../components/Panel.vue'
 import PanelEditModal from '../components/PanelEditModal.vue'
 import TimeRangePicker from '../components/TimeRangePicker.vue'
@@ -25,11 +26,37 @@ const deletingPanel = ref<PanelType | null>(null)
 
 const dashboardId = route.params.id as string
 
+// Grid layout configuration
+const colNum = 12
+const rowHeight = 100
+
 // Time range composable for panel data refresh
 const { timeRange, onRefresh, cleanup: cleanupTimeRange, pauseAutoRefresh, resumeAutoRefresh } = useTimeRange()
 
 // Register refresh callback to refetch panel data when time range changes or auto-refresh triggers
 let unsubscribeRefresh: (() => void) | null = null
+
+// Convert panels to grid layout format
+interface LayoutItem {
+  i: string
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
+const layout = computed<LayoutItem[]>(() => {
+  return panels.value.map(panel => ({
+    i: panel.id,
+    x: panel.grid_pos.x,
+    y: panel.grid_pos.y,
+    w: panel.grid_pos.w,
+    h: panel.grid_pos.h,
+  }))
+})
+
+// Debounce timer for saving layout changes
+let saveLayoutTimeout: number | null = null
 
 async function fetchDashboard() {
   try {
@@ -107,6 +134,60 @@ function goBack() {
   router.push('/dashboards')
 }
 
+// Handle layout changes (drag/resize)
+function onLayoutUpdated(newLayout: LayoutItem[]) {
+  // Update local panels state with new positions
+  for (const item of newLayout) {
+    const panel = panels.value.find(p => p.id === item.i)
+    if (panel) {
+      const changed =
+        panel.grid_pos.x !== item.x ||
+        panel.grid_pos.y !== item.y ||
+        panel.grid_pos.w !== item.w ||
+        panel.grid_pos.h !== item.h
+
+      if (changed) {
+        panel.grid_pos.x = item.x
+        panel.grid_pos.y = item.y
+        panel.grid_pos.w = item.w
+        panel.grid_pos.h = item.h
+      }
+    }
+  }
+
+  // Debounce database save
+  if (saveLayoutTimeout) {
+    clearTimeout(saveLayoutTimeout)
+  }
+  saveLayoutTimeout = window.setTimeout(() => {
+    saveLayoutToDatabase(newLayout)
+  }, 500)
+}
+
+async function saveLayoutToDatabase(newLayout: LayoutItem[]) {
+  for (const item of newLayout) {
+    const panel = panels.value.find(p => p.id === item.i)
+    if (panel) {
+      try {
+        await updatePanel(panel.id, {
+          grid_pos: {
+            x: item.x,
+            y: item.y,
+            w: item.w,
+            h: item.h,
+          },
+        })
+      } catch (e) {
+        console.error('Failed to save panel position:', e)
+      }
+    }
+  }
+}
+
+function getPanelById(id: string): PanelType | undefined {
+  return panels.value.find(p => p.id === id)
+}
+
 onMounted(() => {
   loadData()
   // Subscribe to time range changes to refetch panels
@@ -120,6 +201,9 @@ onMounted(() => {
 onUnmounted(() => {
   if (unsubscribeRefresh) {
     unsubscribeRefresh()
+  }
+  if (saveLayoutTimeout) {
+    clearTimeout(saveLayoutTimeout)
   }
   cleanupTimeRange()
 })
@@ -158,23 +242,42 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <div v-else class="panel-grid">
-        <div
-          v-for="panel in panels"
-          :key="panel.id"
-          class="panel-wrapper"
-          :style="{
-            gridColumn: `span ${panel.grid_pos.w}`,
-            gridRow: `span ${panel.grid_pos.h}`
-          }"
+      <GridLayout
+        v-else
+        :layout="layout"
+        :col-num="colNum"
+        :row-height="rowHeight"
+        :margin="[10, 10]"
+        :is-draggable="true"
+        :is-resizable="true"
+        :vertical-compact="true"
+        :use-css-transforms="true"
+        :responsive="true"
+        :breakpoints="{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }"
+        :cols="{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }"
+        @layout-updated="onLayoutUpdated"
+        class="grid-layout"
+      >
+        <GridItem
+          v-for="item in layout"
+          :key="item.i"
+          :i="item.i"
+          :x="item.x"
+          :y="item.y"
+          :w="item.w"
+          :h="item.h"
+          :min-w="2"
+          :min-h="2"
+          drag-allow-from=".panel-header"
+          drag-ignore-from=".panel-actions"
         >
           <Panel
-            :panel="panel"
+            :panel="getPanelById(item.i)!"
             @edit="openEditPanel"
             @delete="confirmDeletePanel"
           />
-        </div>
-      </div>
+        </GridItem>
+      </GridLayout>
     </template>
 
     <PanelEditModal
@@ -287,15 +390,8 @@ onUnmounted(() => {
   color: #e74c3c;
 }
 
-.panel-grid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 1rem;
-  grid-auto-rows: minmax(100px, auto);
-}
-
-.panel-wrapper {
-  min-height: 200px;
+.grid-layout {
+  min-height: 300px;
 }
 
 .modal-overlay {
@@ -334,5 +430,47 @@ onUnmounted(() => {
   justify-content: flex-end;
   gap: 0.5rem;
   margin-top: 1.5rem;
+}
+</style>
+
+<style>
+/* vue-grid-layout global styles */
+.vue-grid-layout {
+  background: transparent;
+}
+
+.vue-grid-item {
+  touch-action: none;
+}
+
+.vue-grid-item.vue-grid-placeholder {
+  background: rgba(52, 152, 219, 0.2);
+  border: 2px dashed #3498db;
+  border-radius: 4px;
+}
+
+.vue-grid-item > .vue-resizable-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 6' fill='%23999'%3E%3Cpolygon points='6 0 0 6 6 6'/%3E%3C/svg%3E") no-repeat;
+  background-position: bottom right;
+  padding: 0 3px 3px 0;
+  background-repeat: no-repeat;
+  background-origin: content-box;
+  box-sizing: border-box;
+  z-index: 10;
+}
+
+.vue-grid-item.vue-draggable-dragging {
+  z-index: 100;
+  opacity: 0.9;
+}
+
+.vue-grid-item.vue-resizable-resizing {
+  z-index: 100;
 }
 </style>

@@ -246,6 +246,6 @@
       "TEST: Add new panel → appears in available space",
       "TEST: Reload dashboard → panels restore saved positions"
     ],
-    "passes": false
+    "passes": true
   }
 ]
