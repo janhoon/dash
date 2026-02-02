@@ -5,9 +5,11 @@ import type { Panel } from '../types/panel'
 import { useTimeRange } from '../composables/useTimeRange'
 import { useProm } from '../composables/useProm'
 import LineChart, { type ChartSeries } from './LineChart.vue'
+import BarChart from './BarChart.vue'
 import GaugeChart, { type Threshold } from './GaugeChart.vue'
 import PieChart, { type PieDataItem } from './PieChart.vue'
 import StatPanel, { type DataPoint } from './StatPanel.vue'
+import TablePanel from './TablePanel.vue'
 
 const props = defineProps<{
   panel: Panel
@@ -108,6 +110,22 @@ const statData = computed<DataPoint[]>(() => {
   }))
 })
 
+// Get the current (latest) value for stat panel
+const statValue = computed(() => {
+  if (chartData.value.series.length === 0) return 0
+  const firstSeries = chartData.value.series[0]
+  if (firstSeries.data.length === 0) return 0
+  return firstSeries.data[firstSeries.data.length - 1].value
+})
+
+// Get the previous value for trend calculation (second to last data point)
+const statPreviousValue = computed(() => {
+  if (chartData.value.series.length === 0) return undefined
+  const firstSeries = chartData.value.series[0]
+  if (firstSeries.data.length < 2) return undefined
+  return firstSeries.data[firstSeries.data.length - 2].value
+})
+
 // Extract stat panel config
 const statConfig = computed(() => {
   const query = props.panel.query || {}
@@ -122,9 +140,11 @@ const statConfig = computed(() => {
 
 const hasQuery = computed(() => !!promqlQuery.value)
 const isLineChart = computed(() => props.panel.type === 'line_chart')
+const isBarChart = computed(() => props.panel.type === 'bar_chart')
 const isGaugeChart = computed(() => props.panel.type === 'gauge')
 const isPieChart = computed(() => props.panel.type === 'pie')
 const isStatPanel = computed(() => props.panel.type === 'stat')
+const isTablePanel = computed(() => props.panel.type === 'table')
 </script>
 
 <template>
@@ -157,6 +177,9 @@ const isStatPanel = computed(() => props.panel.type === 'stat')
       <div v-else-if="isLineChart && chartSeries.length > 0" class="chart-container">
         <LineChart :series="chartSeries" />
       </div>
+      <div v-else-if="isBarChart && chartSeries.length > 0" class="chart-container">
+        <BarChart :series="chartSeries" />
+      </div>
       <div v-else-if="isGaugeChart && chartSeries.length > 0" class="chart-container">
         <GaugeChart
           :value="gaugeValue"
@@ -177,6 +200,8 @@ const isStatPanel = computed(() => props.panel.type === 'stat')
       </div>
       <div v-else-if="isStatPanel && statData.length > 0" class="chart-container">
         <StatPanel
+          :value="statValue"
+          :previous-value="statPreviousValue"
           :data="statData"
           :label="panel.title"
           :unit="statConfig.unit"
@@ -185,6 +210,9 @@ const isStatPanel = computed(() => props.panel.type === 'stat')
           :show-trend="statConfig.showTrend"
           :show-sparkline="statConfig.showSparkline"
         />
+      </div>
+      <div v-else-if="isTablePanel && chartSeries.length > 0" class="chart-container">
+        <TablePanel :series="chartSeries" />
       </div>
       <div v-else-if="chartSeries.length === 0" class="panel-state panel-no-data">
         <AlertCircle :size="48" class="icon-warning" />
