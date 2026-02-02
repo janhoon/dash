@@ -1,3 +1,33 @@
 # Progress Log
 
 This file tracks progress on the dash project features.
+
+## Setup - Project Architecture & Foundation - 2026-02-02
+- What was done:
+  - Created Vue.js 3 frontend with TypeScript and Vite (port 5173)
+  - Set up Vitest for frontend testing with happy-dom environment
+  - Created Go backend with pgx PostgreSQL driver
+  - Set up Go project structure: cmd/api, internal/handlers, internal/models, internal/db, pkg
+  - Created docker-compose.yml with PostgreSQL and Prometheus services
+  - Implemented database migrations for dashboards, panels, and data_sources tables
+  - Added CORS middleware to Go API
+  - Created GET /api/health endpoint returning 200 OK with JSON response
+  - Added comprehensive .gitignore
+  - Updated README.md with setup instructions
+- Files changed:
+  - frontend/ - entire Vue.js 3 project scaffolded
+  - frontend/src/App.vue - simplified dashboard landing page
+  - frontend/src/App.spec.ts - basic test for App component
+  - frontend/vite.config.ts - added vitest configuration
+  - frontend/package.json - added test and type-check scripts
+  - backend/cmd/api/main.go - API server with graceful shutdown
+  - backend/internal/handlers/health.go - health check handler
+  - backend/internal/handlers/health_test.go - health check tests
+  - backend/internal/db/db.go - database connection with pgx
+  - backend/internal/db/migrations.go - schema migrations
+  - docker-compose.yml - PostgreSQL and Prometheus services
+  - prometheus.yml - Prometheus configuration
+  - .gitignore - project-wide ignore rules
+  - README.md - setup instructions
+- Blockers/notes for next iteration:
+  - None. Ready to proceed with Dashboard CRUD Operations.

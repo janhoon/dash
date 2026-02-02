@@ -22,14 +22,68 @@ A Grafana-like monitoring dashboard built with Vue.js, Go, and Prometheus.
 
 ## Development
 
-Setup instructions coming soon as features are implemented.
+### Prerequisites
+
+- Node.js 18+
+- Go 1.21+
+- Docker and Docker Compose
+
+### Setup
+
+1. Start the infrastructure services:
+   ```bash
+   docker-compose up -d
+   ```
+
+2. Start the backend API:
+   ```bash
+   cd backend
+   go run ./cmd/api
+   ```
+   The API will be available at http://localhost:8080
+
+3. Start the frontend dev server:
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+   The frontend will be available at http://localhost:5173
+
+### Running Tests
+
+Frontend:
+```bash
+cd frontend
+npm run type-check
+npm run test
+```
+
+Backend:
+```bash
+cd backend
+go test ./...
+```
+
+### API Endpoints
+
+- `GET /api/health` - Health check endpoint
 
 ## Project Structure
 
 ```
 dash/
-├── frontend/      # Vue.js 3 application
-├── backend/       # Go API
-├── agent/         # Ralph agent for automated development
+├── frontend/           # Vue.js 3 application
+│   ├── src/
+│   └── package.json
+├── backend/            # Go API
+│   ├── cmd/api/        # Application entrypoint
+│   ├── internal/       # Private application code
+│   │   ├── handlers/   # HTTP handlers
+│   │   ├── models/     # Data models
+│   │   └── db/         # Database connection and migrations
+│   └── pkg/            # Public packages
+├── agent/              # Ralph agent for automated development
+├── docker-compose.yml  # PostgreSQL + Prometheus services
 └── README.md
 ```
