@@ -2,7 +2,7 @@ import type * as Monaco from 'monaco-editor'
 import { PROMQL_FUNCTIONS, PROMQL_KEYWORDS, PROMQL_LANGUAGE_ID } from './language'
 
 // Create hover provider for function documentation
-export function createHoverProvider(monaco: typeof Monaco): Monaco.languages.HoverProvider {
+export function createHoverProvider(_monaco: typeof Monaco): Monaco.languages.HoverProvider {
   return {
     provideHover(
       model: Monaco.editor.ITextModel,

@@ -106,7 +106,7 @@ function getCompletionContext(
 
     // Check if we just typed an operator (=, !=, =~, !~)
     const labelValueMatch = textAfterBrace.match(/(\w+)\s*(!?=~?)\s*["']?([^"',}]*)$/)
-    if (labelValueMatch) {
+    if (labelValueMatch && labelValueMatch[2]) {
       const operator = labelValueMatch[2]
       const afterOperator = textAfterBrace.slice(textAfterBrace.lastIndexOf(operator) + operator.length).trim()
       // If we have an operator and cursor is after it

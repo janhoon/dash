@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, shallowRef } from 'vue'
+import { ref, watch, onMounted, onUnmounted, shallowRef } from 'vue'
 import * as monaco from 'monaco-editor'
 import { registerPromQLLanguage, definePromQLTheme, PROMQL_LANGUAGE_ID } from '../promql/language'
 import { registerCompletionProvider } from '../promql/completionProvider'
@@ -38,12 +38,6 @@ const editorInstance = shallowRef<monaco.editor.IStandaloneCodeEditor | null>(nu
 // Track if component is mounted
 const isMounted = ref(false)
 
-// Internal value for two-way binding
-const internalValue = computed({
-  get: () => props.modelValue,
-  set: (value: string) => emit('update:modelValue', value)
-})
-
 // Create editor on mount
 onMounted(() => {
   isMounted.value = true
@@ -74,6 +68,8 @@ onMounted(() => {
     lineNumbersMinChars: 3,
     overviewRulerBorder: false,
     hideCursorInOverviewRuler: true,
+    // Fix autocomplete dropdown being clipped by container
+    fixedOverflowWidgets: true,
     scrollbar: {
       vertical: 'auto',
       horizontal: 'auto',
@@ -169,12 +165,18 @@ defineExpose({ focus })
   position: relative;
   border: 1px solid var(--border-primary);
   border-radius: 6px;
-  overflow: hidden;
-  background: #1e1e2e;
+  background: var(--bg-secondary);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.monaco-query-editor:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
 }
 
 .monaco-query-editor.disabled {
   opacity: 0.6;
+  pointer-events: none;
 }
 
 .editor-container {
@@ -192,20 +194,71 @@ defineExpose({ focus })
   pointer-events: none;
 }
 
-/* Fix Monaco editor styling */
+/* Monaco editor styling overrides */
 :deep(.monaco-editor) {
   border-radius: 6px;
 }
 
 :deep(.monaco-editor .margin) {
-  background: #1e1e2e !important;
+  background: var(--bg-secondary) !important;
 }
 
 :deep(.monaco-editor .monaco-scrollable-element > .scrollbar > .slider) {
-  background: rgba(255, 255, 255, 0.2) !important;
+  background: var(--border-secondary) !important;
+  border-radius: 4px;
 }
 
 :deep(.monaco-editor .monaco-scrollable-element > .scrollbar > .slider:hover) {
-  background: rgba(255, 255, 255, 0.3) !important;
+  background: #444444 !important;
+}
+
+/* Autocomplete widget styling */
+:deep(.monaco-editor .suggest-widget) {
+  border-radius: 6px !important;
+}
+
+:deep(.monaco-editor .suggest-widget .monaco-list-row.focused) {
+  background-color: var(--bg-hover) !important;
+}
+
+/* Hover widget styling */
+:deep(.monaco-editor .monaco-hover) {
+  border-radius: 6px !important;
+}
+</style>
+
+<!-- Global styles for Monaco overflow widgets (rendered at body level) -->
+<style>
+.monaco-editor .overflow-guard > .overflowingContentWidgets,
+body > .monaco-editor-overlaymessage,
+body > .monaco-aria-container {
+  z-index: 9999 !important;
+}
+
+/* Style the fixed overflow widgets */
+.overflowingContentWidgets .suggest-widget {
+  background: var(--bg-tertiary, #1a1a1a) !important;
+  border: 1px solid var(--border-primary, #2a2a2a) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+}
+
+.overflowingContentWidgets .suggest-widget .monaco-list-row.focused {
+  background-color: var(--bg-hover, #242424) !important;
+}
+
+.overflowingContentWidgets .suggest-widget .monaco-list-row:hover {
+  background-color: var(--bg-hover, #242424) !important;
+}
+
+.overflowingContentWidgets .monaco-hover {
+  background: var(--bg-tertiary, #1a1a1a) !important;
+  border: 1px solid var(--border-primary, #2a2a2a) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+}
+
+.overflowingContentWidgets .monaco-hover-content {
+  padding: 8px 12px !important;
 }
 </style>

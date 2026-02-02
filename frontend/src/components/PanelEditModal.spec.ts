@@ -11,6 +11,16 @@ vi.mock('../composables/useProm', () => ({
   fetchLabelValues: vi.fn().mockResolvedValue([])
 }))
 
+// Mock MonacoQueryEditor component (Monaco doesn't work in test environment)
+vi.mock('./MonacoQueryEditor.vue', () => ({
+  default: {
+    name: 'MonacoQueryEditor',
+    template: '<div class="mock-monaco-editor"><textarea :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)"></textarea></div>',
+    props: ['modelValue', 'disabled', 'height', 'placeholder'],
+    emits: ['update:modelValue', 'submit']
+  }
+}))
+
 describe('PanelEditModal', () => {
   const dashboardId = 'dashboard-123'
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { Search, Plus, X, Code, Layers, ChevronDown, ChevronUp } from 'lucide-vue-next'
+import MonacoQueryEditor from './MonacoQueryEditor.vue'
 import {
   useQueryBuilder,
   AGGREGATION_FUNCTIONS,
@@ -32,7 +33,6 @@ const {
   labelsCache,
   labelValuesCache,
   loadingMetrics,
-  loadingLabels,
   loadingLabelValues,
   loadMetrics,
   loadLabels,
@@ -41,8 +41,7 @@ const {
   removeLabelFilter,
   updateLabelFilter,
   toggleGroupByLabel,
-  setQuery,
-  reset
+  setQuery
 } = useQueryBuilder(props.modelValue)
 
 // Metric search
@@ -100,6 +99,13 @@ function selectMetric(m: string) {
   showMetricDropdown.value = false
 }
 
+// Delay hiding metric dropdown (to allow click events to fire)
+function hideMetricDropdownDelayed() {
+  setTimeout(() => {
+    showMetricDropdown.value = false
+  }, 200)
+}
+
 // Handle label filter label change - preload values
 async function handleLabelChange(filter: LabelFilter, newLabel: string) {
   updateLabelFilter(filter.id, { label: newLabel, value: '' })
@@ -155,7 +161,7 @@ function getLabelValues(labelName: string): string[] {
               placeholder="Search metrics..."
               :disabled="disabled || loadingMetrics"
               @focus="showMetricDropdown = true"
-              @blur="setTimeout(() => showMetricDropdown = false, 200)"
+              @blur="hideMetricDropdownDelayed"
             />
             <span v-if="metric" class="selected-metric">{{ metric }}</span>
           </div>
@@ -346,13 +352,12 @@ function getLabelValues(labelName: string): string[] {
     <!-- Code Mode -->
     <div v-else class="code-mode">
       <label class="section-label">PromQL Query</label>
-      <textarea
+      <MonacoQueryEditor
         v-model="codeQuery"
-        class="code-textarea"
-        placeholder="Enter PromQL query..."
-        rows="4"
         :disabled="disabled"
-      ></textarea>
+        :height="120"
+        placeholder="Enter PromQL query..."
+      />
     </div>
   </div>
 </template>

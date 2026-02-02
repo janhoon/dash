@@ -317,32 +317,70 @@ export function registerPromQLLanguage(monaco: typeof Monaco) {
   })
 }
 
-// Define dark theme colors for PromQL
+// Define dark theme colors for PromQL - matches app design system
 export function definePromQLTheme(monaco: typeof Monaco) {
   monaco.editor.defineTheme('promql-dark', {
     base: 'vs-dark',
     inherit: true,
     rules: [
-      { token: 'comment', foreground: '6A9955', fontStyle: 'italic' },
-      { token: 'string', foreground: 'CE9178' },
-      { token: 'string.escape', foreground: 'D7BA7D' },
-      { token: 'string.invalid', foreground: 'F44747' },
-      { token: 'number', foreground: 'B5CEA8' },
-      { token: 'number.duration', foreground: 'B5CEA8', fontStyle: 'bold' },
-      { token: 'operator', foreground: 'D4D4D4' },
-      { token: 'keyword', foreground: '569CD6', fontStyle: 'bold' },
-      { token: 'function', foreground: 'DCDCAA' },
-      { token: 'identifier', foreground: '9CDCFE' },
-      { token: 'label', foreground: '4EC9B0' }
+      // Comments - muted
+      { token: 'comment', foreground: '666666', fontStyle: 'italic' },
+      // Strings - warning yellow
+      { token: 'string', foreground: 'feca57' },
+      { token: 'string.escape', foreground: 'feca57' },
+      { token: 'string.invalid', foreground: 'ff6b6b' },
+      // Numbers - light purple
+      { token: 'number', foreground: 'a78bfa' },
+      { token: 'number.duration', foreground: 'a78bfa', fontStyle: 'bold' },
+      // Operators - text primary
+      { token: 'operator', foreground: 'f5f5f5' },
+      // Keywords (by, without, on, ignoring, etc.) - accent primary purple
+      { token: 'keyword', foreground: '667eea', fontStyle: 'bold' },
+      // Functions (rate, sum, avg, etc.) - success teal
+      { token: 'function', foreground: '00d4aa' },
+      // Metric names - light blue
+      { token: 'identifier', foreground: '60a5fa' },
+      // Label names - secondary purple
+      { token: 'label', foreground: '764ba2' }
     ],
     colors: {
-      'editor.background': '#1e1e2e',
-      'editor.foreground': '#cdd6f4',
-      'editor.lineHighlightBackground': '#313244',
-      'editorCursor.foreground': '#f5e0dc',
-      'editor.selectionBackground': '#45475a',
-      'editorLineNumber.foreground': '#6c7086',
-      'editorLineNumber.activeForeground': '#cdd6f4'
+      // Editor backgrounds - match app bg-secondary
+      'editor.background': '#141414',
+      'editor.foreground': '#f5f5f5',
+      'editor.lineHighlightBackground': '#1a1a1a',
+      'editor.lineHighlightBorder': '#2a2a2a',
+      // Cursor - accent primary
+      'editorCursor.foreground': '#667eea',
+      // Selection - hover background
+      'editor.selectionBackground': '#333333',
+      'editor.selectionHighlightBackground': '#2a2a2a',
+      // Line numbers
+      'editorLineNumber.foreground': '#666666',
+      'editorLineNumber.activeForeground': '#a0a0a0',
+      // Gutter
+      'editorGutter.background': '#141414',
+      // Widget (autocomplete dropdown)
+      'editorWidget.background': '#1a1a1a',
+      'editorWidget.border': '#2a2a2a',
+      'editorSuggestWidget.background': '#1a1a1a',
+      'editorSuggestWidget.border': '#2a2a2a',
+      'editorSuggestWidget.selectedBackground': '#242424',
+      'editorSuggestWidget.highlightForeground': '#667eea',
+      'editorSuggestWidget.focusHighlightForeground': '#667eea',
+      // Hover widget
+      'editorHoverWidget.background': '#1a1a1a',
+      'editorHoverWidget.border': '#2a2a2a',
+      // Scrollbar
+      'scrollbarSlider.background': '#333333',
+      'scrollbarSlider.hoverBackground': '#444444',
+      'scrollbarSlider.activeBackground': '#555555',
+      // Input (find widget)
+      'input.background': '#1a1a1a',
+      'input.border': '#2a2a2a',
+      'input.foreground': '#f5f5f5',
+      'inputOption.activeBorder': '#667eea',
+      // Focus border
+      'focusBorder': '#667eea'
     }
   })
 }
