@@ -5,6 +5,7 @@ import type { Panel } from '../types/panel'
 import { useTimeRange } from '../composables/useTimeRange'
 import { useProm } from '../composables/useProm'
 import LineChart, { type ChartSeries } from './LineChart.vue'
+import GaugeChart, { type Threshold } from './GaugeChart.vue'
 
 const props = defineProps<{
   panel: Panel
@@ -50,6 +51,28 @@ const chartSeries = computed<ChartSeries[]>(() => {
   }))
 })
 
+// Get the latest value for gauge chart (from first series)
+const gaugeValue = computed(() => {
+  if (chartData.value.series.length === 0) return 0
+  const firstSeries = chartData.value.series[0]
+  if (firstSeries.data.length === 0) return 0
+  return firstSeries.data[firstSeries.data.length - 1].value
+})
+
+// Extract gauge config from panel query
+const gaugeConfig = computed(() => {
+  const query = props.panel.query || {}
+  return {
+    min: typeof query.min === 'number' ? query.min : 0,
+    max: typeof query.max === 'number' ? query.max : 100,
+    unit: typeof query.unit === 'string' ? query.unit : '',
+    decimals: typeof query.decimals === 'number' ? query.decimals : 2,
+    thresholds: Array.isArray(query.thresholds)
+      ? (query.thresholds as Threshold[])
+      : [],
+  }
+})
+
 // Subscribe to time range refresh
 onRefresh(() => {
   if (promqlQuery.value) {
@@ -59,6 +82,7 @@ onRefresh(() => {
 
 const hasQuery = computed(() => !!promqlQuery.value)
 const isLineChart = computed(() => props.panel.type === 'line_chart')
+const isGaugeChart = computed(() => props.panel.type === 'gauge')
 </script>
 
 <template>
@@ -90,6 +114,16 @@ const isLineChart = computed(() => props.panel.type === 'line_chart')
       </div>
       <div v-else-if="isLineChart && chartSeries.length > 0" class="chart-container">
         <LineChart :series="chartSeries" />
+      </div>
+      <div v-else-if="isGaugeChart && chartSeries.length > 0" class="chart-container">
+        <GaugeChart
+          :value="gaugeValue"
+          :min="gaugeConfig.min"
+          :max="gaugeConfig.max"
+          :unit="gaugeConfig.unit"
+          :decimals="gaugeConfig.decimals"
+          :thresholds="gaugeConfig.thresholds"
+        />
       </div>
       <div v-else-if="chartSeries.length === 0" class="panel-state panel-no-data">
         <BarChart3 :size="24" />
