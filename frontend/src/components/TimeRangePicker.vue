@@ -8,6 +8,8 @@ const {
   isCustomRange,
   refreshInterval,
   refreshIntervalValue,
+  lastRefreshTime,
+  isRefreshing,
   presets,
   refreshIntervals,
   setPreset,
@@ -83,6 +85,16 @@ function handleRefresh() {
   refresh()
 }
 
+function formatLastRefresh(): string {
+  const now = Date.now()
+  const diff = now - lastRefreshTime.value
+
+  if (diff < 1000) return 'just now'
+  if (diff < 60000) return `${Math.floor(diff / 1000)}s ago`
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
+  return `${Math.floor(diff / 3600000)}h ago`
+}
+
 function formatDateTimeLocal(date: Date): string {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -127,11 +139,16 @@ onUnmounted(() => {
 
       <button
         class="refresh-btn"
+        :class="{ refreshing: isRefreshing }"
         @click="handleRefresh"
-        title="Refresh now"
+        :title="'Last refresh: ' + formatLastRefresh()"
       >
         &#8635;
       </button>
+
+      <span v-if="refreshIntervalValue !== 'off'" class="refresh-status">
+        {{ isRefreshing ? 'Refreshing...' : formatLastRefresh() }}
+      </span>
 
       <div class="refresh-interval-selector">
         <select
@@ -277,6 +294,21 @@ onUnmounted(() => {
 
 .refresh-btn:active {
   background: #e8e8e8;
+}
+
+.refresh-btn.refreshing {
+  animation: spin 0.5s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.refresh-status {
+  font-size: 12px;
+  color: #666;
+  padding: 0 8px;
 }
 
 .refresh-interval-selector select {

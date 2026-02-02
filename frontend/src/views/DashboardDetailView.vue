@@ -26,7 +26,7 @@ const deletingPanel = ref<PanelType | null>(null)
 const dashboardId = route.params.id as string
 
 // Time range composable for panel data refresh
-const { timeRange, onRefresh, cleanup: cleanupTimeRange } = useTimeRange()
+const { timeRange, onRefresh, cleanup: cleanupTimeRange, pauseAutoRefresh, resumeAutoRefresh } = useTimeRange()
 
 // Register refresh callback to refetch panel data when time range changes or auto-refresh triggers
 let unsubscribeRefresh: (() => void) | null = null
@@ -61,16 +61,19 @@ async function loadData() {
 function openAddPanel() {
   editingPanel.value = null
   showPanelModal.value = true
+  pauseAutoRefresh()
 }
 
 function openEditPanel(panel: PanelType) {
   editingPanel.value = panel
   showPanelModal.value = true
+  pauseAutoRefresh()
 }
 
 function closePanelModal() {
   showPanelModal.value = false
   editingPanel.value = null
+  resumeAutoRefresh()
 }
 
 function onPanelSaved() {

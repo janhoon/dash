@@ -9,11 +9,12 @@ describe('useTimeRange', () => {
 
   afterEach(() => {
     // Clean up between tests - must be done before restoring timers
-    const { cleanup, setPreset, setRefreshInterval } = useTimeRange()
+    const { cleanup, setPreset, setRefreshInterval, resumeAutoRefresh } = useTimeRange()
     cleanup()
     // Reset to default values
     setPreset('1h')
     setRefreshInterval('off')
+    resumeAutoRefresh() // Reset paused state
     vi.restoreAllMocks()
     vi.useRealTimers()
   })
@@ -40,9 +41,9 @@ describe('useTimeRange', () => {
 
   describe('REFRESH_INTERVALS', () => {
     it('should have all expected intervals', () => {
-      expect(REFRESH_INTERVALS).toHaveLength(5)
+      expect(REFRESH_INTERVALS).toHaveLength(6)
       expect(REFRESH_INTERVALS.map(r => r.value)).toEqual([
-        'off', '5s', '15s', '30s', '1m'
+        'off', '5s', '15s', '30s', '1m', '5m'
       ])
     })
 
@@ -299,6 +300,70 @@ describe('useTimeRange', () => {
       expect(callback).not.toHaveBeenCalled()
 
       // Auto-refresh should not trigger
+      vi.advanceTimersByTime(5000)
+      expect(callback).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('pauseAutoRefresh', () => {
+    it('should stop auto-refresh when paused', () => {
+      const { setRefreshInterval, onRefresh, pauseAutoRefresh, isPaused } = useTimeRange()
+      const callback = vi.fn()
+
+      onRefresh(callback)
+      setRefreshInterval('5s')
+
+      // First tick should work
+      vi.advanceTimersByTime(5000)
+      expect(callback).toHaveBeenCalledTimes(1)
+
+      // Pause and verify isPaused is true
+      pauseAutoRefresh()
+      expect(isPaused.value).toBe(true)
+
+      // Next tick should not trigger callback
+      vi.advanceTimersByTime(5000)
+      expect(callback).toHaveBeenCalledTimes(1) // Still 1
+    })
+  })
+
+  describe('resumeAutoRefresh', () => {
+    it('should resume auto-refresh after pause', () => {
+      const { setRefreshInterval, onRefresh, pauseAutoRefresh, resumeAutoRefresh, isPaused } = useTimeRange()
+      const callback = vi.fn()
+
+      onRefresh(callback)
+      setRefreshInterval('5s')
+
+      // First tick
+      vi.advanceTimersByTime(5000)
+      expect(callback).toHaveBeenCalledTimes(1)
+
+      // Pause
+      pauseAutoRefresh()
+      expect(isPaused.value).toBe(true)
+      vi.advanceTimersByTime(5000)
+      expect(callback).toHaveBeenCalledTimes(1) // Still 1
+
+      // Resume
+      resumeAutoRefresh()
+      expect(isPaused.value).toBe(false)
+
+      // Next tick should work
+      vi.advanceTimersByTime(5000)
+      expect(callback).toHaveBeenCalledTimes(2)
+    })
+
+    it('should not start auto-refresh if interval is off', () => {
+      const { setRefreshInterval, onRefresh, pauseAutoRefresh, resumeAutoRefresh } = useTimeRange()
+      const callback = vi.fn()
+
+      onRefresh(callback)
+      setRefreshInterval('off')
+
+      pauseAutoRefresh()
+      resumeAutoRefresh()
+
       vi.advanceTimersByTime(5000)
       expect(callback).not.toHaveBeenCalled()
     })

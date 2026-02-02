@@ -33,6 +33,7 @@ export const REFRESH_INTERVALS: RefreshInterval[] = [
   { label: '15s', value: '15s', interval: 15 * 1000 },
   { label: '30s', value: '30s', interval: 30 * 1000 },
   { label: '1m', value: '1m', interval: 60 * 1000 },
+  { label: '5m', value: '5m', interval: 5 * 60 * 1000 },
 ]
 
 // Shared state across all components using this composable
@@ -41,6 +42,8 @@ const customRange = ref<TimeRange | null>(null)
 const isCustomRange = ref(false)
 const refreshIntervalValue = ref<string>('off')
 const lastRefreshTime = ref<number>(Date.now())
+const isRefreshing = ref(false)
+const isPaused = ref(false)
 
 // Callbacks to be invoked on refresh
 const refreshCallbacks = new Set<() => void>()
@@ -65,12 +68,31 @@ function calculateTimeRange(): TimeRange {
 
 function startAutoRefresh(intervalMs: number) {
   stopAutoRefresh()
-  if (intervalMs > 0) {
+  if (intervalMs > 0 && !isPaused.value) {
     refreshIntervalId = window.setInterval(() => {
-      lastRefreshTime.value = Date.now()
-      refreshCallbacks.forEach(callback => callback())
+      triggerRefresh()
     }, intervalMs)
   }
+}
+
+async function triggerRefresh() {
+  if (isPaused.value) return
+
+  isRefreshing.value = true
+  lastRefreshTime.value = Date.now()
+
+  // Execute all refresh callbacks
+  const promises = Array.from(refreshCallbacks).map(callback => {
+    try {
+      const result = callback()
+      return result instanceof Promise ? result : Promise.resolve()
+    } catch {
+      return Promise.resolve()
+    }
+  })
+
+  await Promise.all(promises)
+  isRefreshing.value = false
 }
 
 function stopAutoRefresh() {
@@ -125,8 +147,20 @@ export function useTimeRange() {
   }
 
   function refresh() {
-    lastRefreshTime.value = Date.now()
-    refreshCallbacks.forEach(callback => callback())
+    triggerRefresh()
+  }
+
+  function pauseAutoRefresh() {
+    isPaused.value = true
+    stopAutoRefresh()
+  }
+
+  function resumeAutoRefresh() {
+    isPaused.value = false
+    const interval = REFRESH_INTERVALS.find(r => r.value === refreshIntervalValue.value)
+    if (interval && interval.interval > 0) {
+      startAutoRefresh(interval.interval)
+    }
   }
 
   function onRefresh(callback: () => void) {
@@ -152,6 +186,8 @@ export function useTimeRange() {
     refreshInterval,
     refreshIntervalValue: readonly(refreshIntervalValue),
     lastRefreshTime: readonly(lastRefreshTime),
+    isRefreshing: readonly(isRefreshing),
+    isPaused: readonly(isPaused),
 
     // Constants
     presets: TIME_RANGE_PRESETS,
@@ -164,6 +200,8 @@ export function useTimeRange() {
     refresh,
     onRefresh,
     cleanup,
+    pauseAutoRefresh,
+    resumeAutoRefresh,
   }
 }
 

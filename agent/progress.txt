@@ -238,39 +238,36 @@ This file tracks progress on the dash project features.
 - Blockers/notes for next iteration:
   - None. Ready to proceed with Line Chart Component.
 
-## Visualization - Line Chart Component - 2026-02-02
+## Feature - Auto-Refresh for Panels - 2026-02-02
 - What was done:
-  - Added ECharts dependencies (echarts, vue-echarts)
-  - Created LineChart.vue component with:
-    - ECharts integration using vue-echarts
-    - X-axis configured for timestamps (formatted as HH:mm:ss)
-    - Y-axis with auto-scaling for metric values
-    - Support for multiple series with legend
-    - Tooltip showing timestamp + value on hover
-    - Dark theme styling to match Grafana aesthetic
-    - Grid lines for readability
-    - Responsive sizing with ResizeObserver
-    - Smooth line rendering
-  - Integrated LineChart into Panel.vue:
-    - Panel now fetches data using useProm composable
-    - Displays LineChart when panel type is 'line_chart' and has data
-    - Shows loading state during data fetch
-    - Shows error state on fetch failure
-    - Shows "No query configured" when no PromQL query set
-    - Shows "No data returned" when query returns empty results
-    - Applied dark theme styling to panels
-    - Chart automatically refetches on time range changes
+  - Enhanced useTimeRange.ts composable with:
+    - isRefreshing state to track refresh operations
+    - isPaused state to support pause/resume during panel editing
+    - pauseAutoRefresh() function to stop auto-refresh
+    - resumeAutoRefresh() function to resume auto-refresh
+    - triggerRefresh() async function for consistent refresh behavior
+  - Enhanced TimeRangePicker.vue with:
+    - Refresh status indicator showing "Refreshing..." or last refresh time
+    - Last refresh timestamp in refresh button tooltip
+    - Animated refresh button with spinning icon during refresh
+    - Conditional display of refresh status based on interval setting
+  - Integrated pause/resume into DashboardDetailView.vue:
+    - Auto-refresh pauses when opening panel edit modal
+    - Auto-refresh resumes when closing panel edit modal
+    - Works for both add new panel and edit existing panel flows
+  - Added 5m refresh interval option to REFRESH_INTERVALS
   - Added comprehensive tests:
-    - 13 tests for LineChart component
-    - 8 updated tests for Panel with chart integration
-    - All 138 frontend tests passing
+    - pauseAutoRefresh test (stops auto-refresh and sets isPaused)
+    - resumeAutoRefresh test (resumes auto-refresh and clears isPaused)
+    - resumeAutoRefresh with interval off test
+    - TimeRangePicker tests for refresh status, animation, and tooltip
+    - All 125 frontend tests passing
     - All backend tests passing
 - Files changed:
-  - frontend/package.json - added echarts, vue-echarts dependencies
-  - frontend/src/components/LineChart.vue (new)
-  - frontend/src/components/LineChart.spec.ts (new)
-  - frontend/src/components/Panel.vue - integrated LineChart and useProm
-  - frontend/src/components/Panel.spec.ts - updated tests
-- PR: (pending)
+  - frontend/src/composables/useTimeRange.ts - added pause/resume, isRefreshing, isPaused
+  - frontend/src/composables/useTimeRange.spec.ts - added pause/resume tests
+  - frontend/src/components/TimeRangePicker.vue - added refresh indicator UI
+  - frontend/src/components/TimeRangePicker.spec.ts - added refresh UI tests
+  - frontend/src/views/DashboardDetailView.vue - integrated pause/resume on modal open/close
 - Blockers/notes for next iteration:
-  - None. Ready to proceed with Auto-Refresh for Panels.
+  - None. Ready to proceed with Dashboard Grid Layout.

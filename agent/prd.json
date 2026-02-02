@@ -223,7 +223,7 @@
       "TEST: Set to Off → refresh stops",
       "TEST: Edit panel → auto-refresh pauses"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "UI - Dashboard Grid Layout (12-Column Drag & Drop)",
