@@ -91,6 +91,19 @@ func main() {
 	mux.HandleFunc("POST /api/orgs/{id}/sso/microsoft", auth.RequireAuth(jwtManager, microsoftSSOHandler.ConfigureSSO))
 	mux.HandleFunc("GET /api/orgs/{id}/sso/microsoft", auth.RequireAuth(jwtManager, microsoftSSOHandler.GetSSOConfig))
 
+	// Organization routes
+	orgHandler := handlers.NewOrganizationHandler(pool, rdb)
+	mux.HandleFunc("POST /api/orgs", auth.RequireAuth(jwtManager, orgHandler.Create))
+	mux.HandleFunc("GET /api/orgs", auth.RequireAuth(jwtManager, orgHandler.List))
+	mux.HandleFunc("GET /api/orgs/{id}", auth.RequireAuth(jwtManager, orgHandler.Get))
+	mux.HandleFunc("PUT /api/orgs/{id}", auth.RequireAuth(jwtManager, orgHandler.Update))
+	mux.HandleFunc("DELETE /api/orgs/{id}", auth.RequireAuth(jwtManager, orgHandler.Delete))
+	mux.HandleFunc("POST /api/orgs/{id}/invitations", auth.RequireAuth(jwtManager, orgHandler.CreateInvitation))
+	mux.HandleFunc("POST /api/invitations/{token}/accept", auth.RequireAuth(jwtManager, orgHandler.AcceptInvitation))
+	mux.HandleFunc("GET /api/orgs/{id}/members", auth.RequireAuth(jwtManager, orgHandler.ListMembers))
+	mux.HandleFunc("PUT /api/orgs/{id}/members/{userId}/role", auth.RequireAuth(jwtManager, orgHandler.UpdateMemberRole))
+	mux.HandleFunc("DELETE /api/orgs/{id}/members/{userId}", auth.RequireAuth(jwtManager, orgHandler.RemoveMember))
+
 	// Dashboard routes
 	dashboardHandler := handlers.NewDashboardHandler(pool)
 	mux.HandleFunc("POST /api/dashboards", dashboardHandler.Create)

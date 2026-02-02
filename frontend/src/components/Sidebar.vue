@@ -2,11 +2,16 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { LayoutDashboard, Settings, Activity, ChevronLeft, ChevronRight, Compass } from 'lucide-vue-next'
+import OrganizationDropdown from './OrganizationDropdown.vue'
+import CreateOrganizationModal from './CreateOrganizationModal.vue'
+import { useOrganization } from '../composables/useOrganization'
 
 const route = useRoute()
 const router = useRouter()
+const { fetchOrganizations } = useOrganization()
 
 const isExpanded = ref(true)
+const showCreateOrgModal = ref(false)
 
 interface NavItem {
   icon: typeof LayoutDashboard
@@ -35,6 +40,11 @@ function toggleSidebar() {
   isExpanded.value = !isExpanded.value
 }
 
+function handleOrgCreated() {
+  showCreateOrgModal.value = false
+  fetchOrganizations()
+}
+
 defineExpose({ isExpanded })
 </script>
 
@@ -49,6 +59,8 @@ defineExpose({ isExpanded })
         <component :is="isExpanded ? ChevronLeft : ChevronRight" :size="16" />
       </button>
     </div>
+
+    <OrganizationDropdown :expanded="isExpanded" @createOrg="showCreateOrgModal = true" />
 
     <nav class="sidebar-nav">
       <div class="nav-main">
@@ -81,6 +93,12 @@ defineExpose({ isExpanded })
         </button>
       </div>
     </nav>
+
+    <CreateOrganizationModal
+      v-if="showCreateOrgModal"
+      @close="showCreateOrgModal = false"
+      @created="handleOrgCreated"
+    />
   </aside>
 </template>
 
