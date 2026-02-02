@@ -340,3 +340,61 @@ This file tracks progress on the dash project features.
   - frontend/src/components/Sidebar.vue - added Explore nav item
   - agent/prd.json - added Feature 10 specification
 - PR: (pending)
+
+## Feature 2: Monaco Editor with PromQL IntelliSense - 2026-02-02
+- What was done:
+  - Installed monaco-editor npm package
+  - Created MonacoQueryEditor.vue component:
+    - Monaco editor wrapper with PromQL language support
+    - Dark theme matching application design
+    - Disabled minimap, enabled line numbers
+    - Word wrap and automatic layout
+    - v-model binding for query text
+    - Ctrl+Enter keyboard shortcut to submit
+    - Placeholder text when empty
+    - Disabled state support
+  - Created PromQL language definition (promql/language.ts):
+    - Syntax highlighting for functions, operators, keywords
+    - Custom dark theme colors
+    - Token patterns for numbers, strings, labels, durations
+    - Complete list of PromQL functions and aggregations
+  - Created completion provider (promql/completionProvider.ts):
+    - Context-aware autocomplete (metrics, labels, label values)
+    - Fetches metrics from /api/datasources/prometheus/metrics
+    - Fetches labels from /api/datasources/prometheus/labels
+    - Fetches label values from /api/datasources/prometheus/label/:name/values
+    - Caching (5-minute TTL) for API responses
+    - Debouncing (250ms) for label value fetches
+    - Function completions with snippets and documentation
+  - Created hover provider (promql/hoverProvider.ts):
+    - Hover tooltips for PromQL functions
+    - Documentation showing function signature and description
+    - Keyword descriptions
+  - Added backend metadata endpoints:
+    - GET /api/datasources/prometheus/metrics (metric names)
+    - GET /api/datasources/prometheus/labels (label names)
+    - GET /api/datasources/prometheus/label/{label}/values (label values)
+    - Server-side caching with 5-minute TTL
+  - Added Prometheus client methods (LabelNames, LabelValues)
+  - Integrated MonacoQueryEditor into Explore.vue and PanelEditModal.vue
+  - Configured Vite for Monaco:
+    - optimizeDeps.include for monaco-editor
+    - Manual chunks for code splitting (lazy loading)
+  - Updated tests with Monaco component mock
+- Files changed:
+  - frontend/package.json - added monaco-editor
+  - frontend/src/components/MonacoQueryEditor.vue (new)
+  - frontend/src/promql/language.ts (new)
+  - frontend/src/promql/completionProvider.ts (new)
+  - frontend/src/promql/hoverProvider.ts (new)
+  - frontend/src/views/Explore.vue - replaced QueryEditor with MonacoQueryEditor
+  - frontend/src/components/PanelEditModal.vue - replaced QueryEditor with MonacoQueryEditor
+  - frontend/src/composables/useProm.ts - added fetchMetrics, fetchLabels, fetchLabelValues
+  - frontend/vite.config.ts - added Monaco optimization
+  - frontend/src/views/Explore.spec.ts - added Monaco mock
+  - frontend/src/views/DashboardDetailView.spec.ts - added Monaco mock
+  - frontend/src/components/PanelEditModal.spec.ts - added Monaco mock
+  - backend/pkg/prometheus/client.go - added LabelNames, LabelValues, MetadataResult
+  - backend/internal/handlers/prometheus.go - added Metrics, Labels, LabelValues handlers with caching
+  - backend/cmd/api/main.go - added metadata routes
+- PR: #12 (pending)

@@ -37,6 +37,24 @@ vi.mock('../components/LineChart.vue', () => ({
   }
 }))
 
+// Mock MonacoQueryEditor component (Monaco doesn't work in test environment)
+vi.mock('../components/MonacoQueryEditor.vue', () => ({
+  default: {
+    name: 'MonacoQueryEditor',
+    props: ['modelValue', 'disabled', 'height', 'placeholder'],
+    emits: ['update:modelValue', 'submit'],
+    template: `
+      <textarea
+        id="promql-query-input"
+        :value="modelValue"
+        :disabled="disabled"
+        :placeholder="placeholder"
+        @input="$emit('update:modelValue', $event.target.value)"
+      ></textarea>
+    `
+  }
+}))
+
 // Mock TimeRangePicker component
 vi.mock('../components/TimeRangePicker.vue', () => ({
   default: {

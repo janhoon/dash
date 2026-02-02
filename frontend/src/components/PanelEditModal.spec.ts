@@ -8,6 +8,24 @@ vi.mock('../composables/useProm', () => ({
   queryPrometheus: vi.fn()
 }))
 
+// Mock MonacoQueryEditor component (Monaco doesn't work in test environment)
+vi.mock('./MonacoQueryEditor.vue', () => ({
+  default: {
+    name: 'MonacoQueryEditor',
+    props: ['modelValue', 'disabled', 'height', 'placeholder'],
+    emits: ['update:modelValue', 'submit'],
+    template: `
+      <textarea
+        id="promql-query-input"
+        :value="modelValue"
+        :disabled="disabled"
+        :placeholder="placeholder"
+        @input="$emit('update:modelValue', $event.target.value)"
+      ></textarea>
+    `
+  }
+}))
+
 describe('PanelEditModal', () => {
   const dashboardId = 'dashboard-123'
 
@@ -21,8 +39,8 @@ describe('PanelEditModal', () => {
     })
     expect(wrapper.find('input#title').exists()).toBe(true)
     expect(wrapper.find('select#type').exists()).toBe(true)
-    // QueryEditor component is now used instead of textarea
-    expect(wrapper.findComponent({ name: 'QueryEditor' }).exists()).toBe(true)
+    // MonacoQueryEditor component (mocked as textarea)
+    expect(wrapper.find('#promql-query-input').exists()).toBe(true)
   })
 
   it('shows "Add Panel" title when creating new panel', () => {
@@ -66,7 +84,7 @@ describe('PanelEditModal', () => {
     expect(wrapper.text()).toContain('Title is required')
   })
 
-  it('saves panel with PromQL query from QueryEditor', async () => {
+  it('saves panel with PromQL query from MonacoQueryEditor', async () => {
     vi.mocked(api.createPanel).mockResolvedValue({
       id: '123',
       dashboard_id: dashboardId,
@@ -83,9 +101,9 @@ describe('PanelEditModal', () => {
     })
     await wrapper.find('input#title').setValue('Panel with Query')
 
-    // Simulate QueryEditor emitting an update
-    const queryEditor = wrapper.findComponent({ name: 'QueryEditor' })
-    await queryEditor.vm.$emit('update:modelValue', 'up')
+    // Simulate MonacoQueryEditor input
+    const queryInput = wrapper.find('#promql-query-input')
+    await queryInput.setValue('up')
 
     await wrapper.find('form').trigger('submit')
     await flushPromises()

@@ -10,5 +10,17 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     globals: true
+  },
+  optimizeDeps: {
+    include: ['monaco-editor']
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'monaco-editor': ['monaco-editor']
+        }
+      }
+    }
   }
 })

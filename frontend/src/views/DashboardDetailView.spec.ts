@@ -110,6 +110,24 @@ vi.mock('../composables/useProm', () => ({
   })
 }))
 
+// Mock MonacoQueryEditor component (Monaco doesn't work in test environment)
+vi.mock('../components/MonacoQueryEditor.vue', () => ({
+  default: {
+    name: 'MonacoQueryEditor',
+    props: ['modelValue', 'disabled', 'height', 'placeholder'],
+    emits: ['update:modelValue', 'submit'],
+    template: `
+      <textarea
+        id="promql-query-input"
+        :value="modelValue"
+        :disabled="disabled"
+        :placeholder="placeholder"
+        @input="$emit('update:modelValue', $event.target.value)"
+      ></textarea>
+    `
+  }
+}))
+
 describe('DashboardDetailView', () => {
   beforeEach(() => {
     vi.useFakeTimers()
