@@ -301,4 +301,42 @@ This file tracks progress on the dash project features.
   - frontend/src/views/DashboardDetailView.spec.ts (new) - comprehensive tests
   - frontend/src/style.css - added vue-grid-layout global styles
 - Blockers/notes for next iteration:
-  - All PRD features complete!
+  - None. Ready to proceed with PromQL Query Explorer.
+
+## Feature 10: PromQL Query Explorer - 2026-02-02
+- What was done:
+  - Created standalone query exploration screen at /explore route:
+    - Full-page layout with header, query section, and results visualization
+    - Integrated TimeRangePicker for time range selection
+    - Query textarea with monospace font and placeholder examples
+    - "Run Query" button with loading state
+    - Ctrl+Enter keyboard shortcut to execute queries
+  - Implemented query execution:
+    - Uses existing /api/datasources/prometheus/query endpoint
+    - Calculates optimal step based on time range (~200 data points)
+    - Shows loading spinner during query execution
+    - Handles errors with inline error display
+  - Added visualization:
+    - LineChart component displays query results
+    - Shows series count in results header
+    - Empty state messages for no data or initial state
+  - Implemented session-based query history:
+    - Stores last 10 queries in sessionStorage
+    - History dropdown with recent queries
+    - Clear history functionality
+    - Click to select from history
+  - Added navigation:
+    - "Explore" item in sidebar (with Compass icon)
+    - Route added to Vue Router
+  - Added comprehensive tests:
+    - 15 tests for Explore component
+    - Tests cover: rendering, query execution, error handling, loading states, history
+    - All 168 frontend tests passing
+    - All backend tests passing
+- Files changed:
+  - frontend/src/views/Explore.vue (new)
+  - frontend/src/views/Explore.spec.ts (new)
+  - frontend/src/router/index.ts - added /explore route
+  - frontend/src/components/Sidebar.vue - added Explore nav item
+  - agent/prd.json - added Feature 10 specification
+- PR: (pending)

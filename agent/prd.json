@@ -247,5 +247,39 @@
       "TEST: Reload dashboard → panels restore saved positions"
     ],
     "passes": true
+  },
+  {
+    "category": "Feature - PromQL Query Explorer",
+    "description": "Standalone PromQL query exploration screen (like Grafana Explore) - write and visualize queries without creating a dashboard first.",
+    "requirements": {
+      "route": "/explore route",
+      "query_editor": "Reuse existing QueryEditor component",
+      "time_picker": "Reuse existing TimeRangePicker component",
+      "visualization": "Line chart for results",
+      "no_persistence": "Session-only queries (no database storage)",
+      "workflow": "Quick exploration: write → run → visualize → iterate"
+    },
+    "steps": [
+      "Add /explore route to Vue Router (frontend/src/router/index.ts)",
+      "Create Explore.vue page component (frontend/src/views/Explore.vue)",
+      "Design layout: vertical split or 2-column (top/left: editor+controls, bottom/right: visualization)",
+      "Import and integrate TimeRangePicker.vue component for time range selection",
+      "Add 'Run Query' button (primary action button)",
+      "Implement query execution using existing GET /api/datasources/prometheus/query endpoint",
+      "Add loading state indicator while query runs",
+      "Import and integrate LineChart.vue component to display results",
+      "Display errors inline (invalid PromQL, API errors, timeouts)",
+      "Add 'Explore' link to main navigation/sidebar",
+      "Optional: Add Cmd/Ctrl+Enter keyboard shortcut to run query",
+      "Optional: Store last 5-10 queries in session storage as query history",
+      "TEST: Navigate to /explore from main navigation",
+      "TEST: Type PromQL query (e.g., 'up'), run query, verify line chart displays",
+      "TEST: Invalid PromQL query shows error message inline",
+      "TEST: Change time range, rerun query, verify chart updates with new data",
+      "TEST: Loading indicator shows while query executes",
+      "TEST: Keyboard shortcut (Ctrl+Enter) runs query if implemented",
+      "TEST: Multiple queries in session work correctly"
+    ],
+    "passes": true
   }
 ]

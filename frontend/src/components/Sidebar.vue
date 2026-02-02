@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { LayoutDashboard, Settings, Activity, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { LayoutDashboard, Settings, Activity, ChevronLeft, ChevronRight, Compass } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
@@ -16,6 +16,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: 'Dashboards', path: '/dashboards' },
+  { icon: Compass, label: 'Explore', path: '/explore' },
 ]
 
 const bottomNavItems: NavItem[] = [
