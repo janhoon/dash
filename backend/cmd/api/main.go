@@ -57,6 +57,13 @@ func main() {
 	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
 	mux.HandleFunc("GET /api/auth/me", auth.RequireAuth(jwtManager, authHandler.Me))
 
+	// Microsoft SSO routes
+	microsoftSSOHandler := handlers.NewMicrosoftSSOHandler(pool, jwtManager)
+	mux.HandleFunc("GET /api/auth/microsoft/login", microsoftSSOHandler.Login)
+	mux.HandleFunc("GET /api/auth/microsoft/callback", microsoftSSOHandler.Callback)
+	mux.HandleFunc("POST /api/orgs/{id}/sso/microsoft", auth.RequireAuth(jwtManager, microsoftSSOHandler.ConfigureSSO))
+	mux.HandleFunc("GET /api/orgs/{id}/sso/microsoft", auth.RequireAuth(jwtManager, microsoftSSOHandler.GetSSOConfig))
+
 	// Dashboard routes
 	dashboardHandler := handlers.NewDashboardHandler(pool)
 	mux.HandleFunc("POST /api/dashboards", dashboardHandler.Create)

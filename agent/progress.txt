@@ -24,3 +24,22 @@ Starting work on authentication, SSO, and visualization features.
   - backend/internal/auth/password_test.go - password tests
   - backend/internal/handlers/auth_test.go - handler tests
 - PR: #14
+
+## Feature 5: Auth - Microsoft SSO - 2026-02-02
+- What was done:
+  - Created backend/internal/handlers/sso_microsoft.go with Microsoft Entra ID OAuth2 flow
+  - GET /api/auth/microsoft/login?org={slug} - Initiates OAuth flow, redirects to Microsoft
+  - GET /api/auth/microsoft/callback - Exchanges code, gets user from Microsoft Graph API
+  - Auto-creates user if new, links to existing user if email matches
+  - Adds user_auth_methods record (provider=microsoft, provider_user_id)
+  - Auto-adds new users to organization as viewer
+  - POST /api/orgs/{id}/sso/microsoft - Configure SSO (admin only)
+  - GET /api/orgs/{id}/sso/microsoft - Get SSO config (admin only)
+  - Supports per-tenant configuration (tenant_id required)
+  - State parameter stored in secure HTTP-only cookie
+  - User info fetched from Microsoft Graph v1.0/me endpoint
+- Files changed:
+  - backend/internal/handlers/sso_microsoft.go (new)
+  - backend/internal/handlers/sso_microsoft_test.go (new)
+  - backend/cmd/api/main.go (added Microsoft SSO routes)
+- PR: https://github.com/janhoon/dash/pull/17

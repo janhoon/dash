@@ -99,7 +99,7 @@
       "TEST: Microsoft OAuth flow works",
       "TEST: User provisioning works"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "Auth - Multi-Auth Linking",
