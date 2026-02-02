@@ -52,7 +52,7 @@
       "TEST: Logout → token deleted",
       "TEST: Logout-all → all user tokens deleted"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "Auth - Google SSO",
