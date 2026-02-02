@@ -20,6 +20,12 @@ func main() {
 		dbURL = "postgres://dash:dash@localhost:5432/dash?sslmode=disable"
 	}
 
+	// Get Prometheus URL from environment
+	prometheusURL := os.Getenv("PROMETHEUS_URL")
+	if prometheusURL == "" {
+		prometheusURL = "http://localhost:9090"
+	}
+
 	// Connect to database
 	pool, err := db.Connect(context.Background(), dbURL)
 	if err != nil {
@@ -52,6 +58,10 @@ func main() {
 	mux.HandleFunc("GET /api/dashboards/{id}/panels", panelHandler.ListByDashboard)
 	mux.HandleFunc("PUT /api/panels/{id}", panelHandler.Update)
 	mux.HandleFunc("DELETE /api/panels/{id}", panelHandler.Delete)
+
+	// Prometheus data source routes
+	prometheusHandler := handlers.NewPrometheusHandler(prometheusURL)
+	mux.HandleFunc("GET /api/datasources/prometheus/query", prometheusHandler.Query)
 
 	// Apply CORS middleware
 	handler := corsMiddleware(mux)
