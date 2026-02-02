@@ -24,3 +24,33 @@ Starting work on authentication, SSO, and visualization features.
   - backend/internal/auth/password_test.go - password tests
   - backend/internal/handlers/auth_test.go - handler tests
 - PR: #14
+
+## Feature 3: Auth - Refresh Token System - 2026-02-02
+- What was done:
+  - Added go-redis/v9 dependency for Valkey connectivity
+  - Created backend/internal/valkey/client.go for Valkey client wrapper
+  - Added Valkey service to docker-compose.yml (valkey/valkey:7, port 6379)
+  - Created backend/internal/auth/refresh_token.go with full token management:
+    - GenerateRefreshToken (cryptographically secure 32-byte tokens)
+    - StoreRefreshToken (30-day TTL in Valkey)
+    - GetRefreshToken (validation and retrieval)
+    - RevokeRefreshToken (single logout)
+    - RevokeAllUserTokens (logout-all devices)
+    - RotateRefreshToken (atomic rotation for security)
+  - Updated POST /api/auth/login and /api/auth/register to return both access_token and refresh_token
+  - Added POST /api/auth/refresh endpoint for token rotation
+  - Added POST /api/auth/logout endpoint to revoke single token
+  - Added POST /api/auth/logout-all endpoint (requires auth) to revoke all user tokens
+  - Token storage: key=refresh_token:{token}, value={user_id, email, name, created_at}
+  - User token tracking: key=user_tokens:{user_id} (set of tokens for logout-all)
+  - Comprehensive tests for all refresh token functionality
+- Files changed:
+  - docker-compose.yml (added Valkey service)
+  - backend/go.mod (added go-redis/v9, miniredis)
+  - backend/internal/valkey/client.go (new)
+  - backend/internal/auth/refresh_token.go (new)
+  - backend/internal/auth/refresh_token_test.go (new)
+  - backend/internal/handlers/auth.go (updated with refresh/logout endpoints)
+  - backend/internal/handlers/auth_test.go (updated with refresh token tests)
+  - backend/cmd/api/main.go (wired Valkey and new routes)
+- PR: https://github.com/janhoon/dash/pull/15

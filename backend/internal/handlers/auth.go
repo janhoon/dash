@@ -12,17 +12,24 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/janhoon/dash/backend/internal/auth"
+	"github.com/redis/go-redis/v9"
 )
 
 type AuthHandler struct {
-	pool       *pgxpool.Pool
-	jwtManager *auth.JWTManager
+	pool                *pgxpool.Pool
+	jwtManager          *auth.JWTManager
+	refreshTokenManager *auth.RefreshTokenManager
 }
 
-func NewAuthHandler(pool *pgxpool.Pool, jwtManager *auth.JWTManager) *AuthHandler {
+func NewAuthHandler(pool *pgxpool.Pool, jwtManager *auth.JWTManager, rdb *redis.Client) *AuthHandler {
+	var rtm *auth.RefreshTokenManager
+	if rdb != nil {
+		rtm = auth.NewRefreshTokenManager(rdb)
+	}
 	return &AuthHandler{
-		pool:       pool,
-		jwtManager: jwtManager,
+		pool:                pool,
+		jwtManager:          jwtManager,
+		refreshTokenManager: rtm,
 	}
 }
 
@@ -41,9 +48,15 @@ type LoginRequest struct {
 
 // AuthResponse represents the authentication response
 type AuthResponse struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	ExpiresIn   int    `json:"expires_in"`
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token,omitempty"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int    `json:"expires_in"`
+}
+
+// RefreshRequest represents the token refresh request body
+type RefreshRequest struct {
+	RefreshToken string `json:"refresh_token"`
 }
 
 // UserResponse represents the user profile response
@@ -126,19 +139,37 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if userName != nil {
 		name = *userName
 	}
-	token, err := h.jwtManager.GenerateAccessToken(userID, userEmail, name)
+	accessToken, err := h.jwtManager.GenerateAccessToken(userID, userEmail, name)
 	if err != nil {
 		http.Error(w, `{"error":"failed to generate token"}`, http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(AuthResponse{
-		AccessToken: token,
+	response := AuthResponse{
+		AccessToken: accessToken,
 		TokenType:   "Bearer",
 		ExpiresIn:   900, // 15 minutes in seconds
-	})
+	}
+
+	// Generate refresh token if manager is available
+	if h.refreshTokenManager != nil {
+		refreshToken, err := auth.GenerateRefreshToken()
+		if err != nil {
+			http.Error(w, `{"error":"failed to generate refresh token"}`, http.StatusInternalServerError)
+			return
+		}
+
+		if err := h.refreshTokenManager.StoreRefreshToken(ctx, refreshToken, userID, userEmail, name); err != nil {
+			http.Error(w, `{"error":"failed to store refresh token"}`, http.StatusInternalServerError)
+			return
+		}
+
+		response.RefreshToken = refreshToken
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(response)
 }
 
 // Login handles user login
@@ -195,18 +226,36 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if userName != nil {
 		name = *userName
 	}
-	token, err := h.jwtManager.GenerateAccessToken(userID, userEmail, name)
+	accessToken, err := h.jwtManager.GenerateAccessToken(userID, userEmail, name)
 	if err != nil {
 		http.Error(w, `{"error":"failed to generate token"}`, http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(AuthResponse{
-		AccessToken: token,
+	response := AuthResponse{
+		AccessToken: accessToken,
 		TokenType:   "Bearer",
 		ExpiresIn:   900, // 15 minutes in seconds
-	})
+	}
+
+	// Generate refresh token if manager is available
+	if h.refreshTokenManager != nil {
+		refreshToken, err := auth.GenerateRefreshToken()
+		if err != nil {
+			http.Error(w, `{"error":"failed to generate refresh token"}`, http.StatusInternalServerError)
+			return
+		}
+
+		if err := h.refreshTokenManager.StoreRefreshToken(ctx, refreshToken, userID, userEmail, name); err != nil {
+			http.Error(w, `{"error":"failed to store refresh token"}`, http.StatusInternalServerError)
+			return
+		}
+
+		response.RefreshToken = refreshToken
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 // Me returns the current user's profile
@@ -269,6 +318,111 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 // GetJWTManager returns the JWT manager for use by other handlers
 func (h *AuthHandler) GetJWTManager() *auth.JWTManager {
 	return h.jwtManager
+}
+
+// Refresh handles token refresh using a refresh token
+func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
+	if h.refreshTokenManager == nil {
+		http.Error(w, `{"error":"refresh tokens not enabled"}`, http.StatusNotImplemented)
+		return
+	}
+
+	var req RefreshRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+		return
+	}
+
+	if req.RefreshToken == "" {
+		http.Error(w, `{"error":"refresh_token is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	// Rotate the refresh token (invalidates old, creates new)
+	newRefreshToken, data, err := h.refreshTokenManager.RotateRefreshToken(ctx, req.RefreshToken)
+	if err != nil {
+		if err == auth.ErrInvalidRefreshToken {
+			http.Error(w, `{"error":"invalid refresh token"}`, http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, `{"error":"failed to refresh token"}`, http.StatusInternalServerError)
+		return
+	}
+
+	// Generate new access token
+	accessToken, err := h.jwtManager.GenerateAccessToken(data.UserID, data.Email, data.Name)
+	if err != nil {
+		http.Error(w, `{"error":"failed to generate access token"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: newRefreshToken,
+		TokenType:    "Bearer",
+		ExpiresIn:    900, // 15 minutes
+	})
+}
+
+// Logout revokes the current refresh token
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	if h.refreshTokenManager == nil {
+		http.Error(w, `{"error":"refresh tokens not enabled"}`, http.StatusNotImplemented)
+		return
+	}
+
+	var req RefreshRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+		return
+	}
+
+	if req.RefreshToken == "" {
+		http.Error(w, `{"error":"refresh_token is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	if err := h.refreshTokenManager.RevokeRefreshToken(ctx, req.RefreshToken); err != nil {
+		http.Error(w, `{"error":"failed to logout"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "logged out successfully"})
+}
+
+// LogoutAll revokes all refresh tokens for the current user
+func (h *AuthHandler) LogoutAll(w http.ResponseWriter, r *http.Request) {
+	if h.refreshTokenManager == nil {
+		http.Error(w, `{"error":"refresh tokens not enabled"}`, http.StatusNotImplemented)
+		return
+	}
+
+	userID, ok := auth.GetUserID(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	if err := h.refreshTokenManager.RevokeAllUserTokens(ctx, userID); err != nil {
+		http.Error(w, `{"error":"failed to logout from all devices"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "logged out from all devices"})
 }
 
 // validatePassword checks password requirements
