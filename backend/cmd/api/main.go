@@ -38,6 +38,14 @@ func main() {
 	// Health check endpoint
 	mux.HandleFunc("GET /api/health", handlers.HealthCheck)
 
+	// Dashboard routes
+	dashboardHandler := handlers.NewDashboardHandler(pool)
+	mux.HandleFunc("POST /api/dashboards", dashboardHandler.Create)
+	mux.HandleFunc("GET /api/dashboards", dashboardHandler.List)
+	mux.HandleFunc("GET /api/dashboards/{id}", dashboardHandler.Get)
+	mux.HandleFunc("PUT /api/dashboards/{id}", dashboardHandler.Update)
+	mux.HandleFunc("DELETE /api/dashboards/{id}", dashboardHandler.Delete)
+
 	// Apply CORS middleware
 	handler := corsMiddleware(mux)
 

@@ -61,7 +61,7 @@
       "TEST: DELETE /api/dashboards/:id removes dashboard and returns 204",
       "TEST: Frontend displays dashboard list and allows create/edit/delete"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "Core - Panel System (Simple Container)",

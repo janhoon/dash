@@ -31,3 +31,49 @@ This file tracks progress on the dash project features.
   - README.md - setup instructions
 - Blockers/notes for next iteration:
   - None. Ready to proceed with Dashboard CRUD Operations.
+
+## Core - Dashboard CRUD Operations - 2026-02-02
+- What was done:
+  - Created Dashboard model in Go (internal/models/dashboard.go)
+  - Implemented full CRUD handlers for dashboards:
+    - POST /api/dashboards (create with title, description, user_id)
+    - GET /api/dashboards (list all dashboards)
+    - GET /api/dashboards/{id} (get single dashboard)
+    - PUT /api/dashboards/{id} (update title/description)
+    - DELETE /api/dashboards/{id} (delete with 204 response)
+  - Added google/uuid dependency for UUID parsing
+  - Created frontend types (types/dashboard.ts)
+  - Created API client (api/dashboards.ts) with fetch-based CRUD functions
+  - Set up Vue Router with /dashboards route
+  - Created DashboardList.vue component with:
+    - Dashboard grid display
+    - Loading/error/empty states
+    - Create, edit, delete functionality
+  - Created CreateDashboardModal.vue with form validation
+  - Created EditDashboardModal.vue for updating dashboards
+  - Added delete confirmation dialog
+  - Updated App.vue to use RouterView
+  - Added comprehensive tests (27 frontend tests, all passing)
+- Files changed:
+  - backend/internal/models/dashboard.go (new)
+  - backend/internal/handlers/dashboards.go (new)
+  - backend/internal/handlers/dashboards_test.go (new)
+  - backend/cmd/api/main.go - added dashboard routes
+  - backend/go.mod, go.sum - added google/uuid
+  - frontend/src/types/dashboard.ts (new)
+  - frontend/src/api/dashboards.ts (new)
+  - frontend/src/api/dashboards.spec.ts (new)
+  - frontend/src/components/DashboardList.vue (new)
+  - frontend/src/components/DashboardList.spec.ts (new)
+  - frontend/src/components/CreateDashboardModal.vue (new)
+  - frontend/src/components/CreateDashboardModal.spec.ts (new)
+  - frontend/src/components/EditDashboardModal.vue (new)
+  - frontend/src/components/EditDashboardModal.spec.ts (new)
+  - frontend/src/views/DashboardsView.vue (new)
+  - frontend/src/router/index.ts (new)
+  - frontend/src/main.ts - added router
+  - frontend/src/App.vue - updated to use RouterView
+  - frontend/src/App.spec.ts - updated for RouterView
+  - frontend/package.json - added vue-router
+- Blockers/notes for next iteration:
+  - None. Ready to proceed with Panel System feature.
