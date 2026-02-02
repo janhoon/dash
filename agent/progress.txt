@@ -1,0 +1,3 @@
+# Progress Log
+
+This file tracks progress on the dash project features.
