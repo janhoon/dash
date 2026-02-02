@@ -1,4 +1,4 @@
-import { ref, computed, readonly, watch } from 'vue'
+import { ref, computed, readonly } from 'vue'
 
 export interface TimeRange {
   start: number // Unix timestamp in milliseconds
@@ -46,7 +46,7 @@ const isRefreshing = ref(false)
 const isPaused = ref(false)
 
 // Callbacks to be invoked on refresh
-const refreshCallbacks = new Set<() => void>()
+const refreshCallbacks = new Set<() => void | Promise<void>>()
 
 let refreshIntervalId: number | null = null
 

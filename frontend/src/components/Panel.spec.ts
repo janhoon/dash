@@ -64,7 +64,7 @@ describe('Panel', () => {
     const wrapper = mount(Panel, {
       props: { panel: mockPanel },
     })
-    expect(wrapper.find('.panel-placeholder').exists()).toBe(true)
+    expect(wrapper.find('.panel-state').exists()).toBe(true)
     expect(wrapper.text()).toContain('No query configured')
   })
 
@@ -72,7 +72,10 @@ describe('Panel', () => {
     const wrapper = mount(Panel, {
       props: { panel: mockPanel },
     })
-    await wrapper.findAll('button').find((b) => b.text() === 'Edit')?.trigger('click')
+    // Find button by title attribute since we use icons now
+    const editBtn = wrapper.findAll('button').find((b) => b.attributes('title') === 'Edit')
+    expect(editBtn).toBeDefined()
+    await editBtn!.trigger('click')
     expect(wrapper.emitted('edit')).toBeTruthy()
     expect(wrapper.emitted('edit')![0]).toEqual([mockPanel])
   })
@@ -81,7 +84,10 @@ describe('Panel', () => {
     const wrapper = mount(Panel, {
       props: { panel: mockPanel },
     })
-    await wrapper.findAll('button').find((b) => b.text() === 'X')?.trigger('click')
+    // Find button by title attribute since we use icons now
+    const deleteBtn = wrapper.findAll('button').find((b) => b.attributes('title') === 'Delete')
+    expect(deleteBtn).toBeDefined()
+    await deleteBtn!.trigger('click')
     expect(wrapper.emitted('delete')).toBeTruthy()
     expect(wrapper.emitted('delete')![0]).toEqual([mockPanel])
   })
@@ -98,7 +104,7 @@ describe('Panel', () => {
       props: { panel: panelWithQuery },
     })
 
-    expect(wrapper.find('.panel-loading').exists()).toBe(true)
+    expect(wrapper.find('.panel-state').exists()).toBe(true)
     expect(wrapper.text()).toContain('Loading')
   })
 
@@ -153,6 +159,6 @@ describe('Panel', () => {
     })
 
     expect(wrapper.find('.panel-no-data').exists()).toBe(true)
-    expect(wrapper.text()).toContain('No data returned')
+    expect(wrapper.text()).toContain('No data')
   })
 })

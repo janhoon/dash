@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
+import { Clock, ChevronDown, ChevronUp, RefreshCw } from 'lucide-vue-next'
 import { useTimeRange } from '../composables/useTimeRange'
 
 const {
   displayText,
   selectedPreset,
   isCustomRange,
-  refreshInterval,
   refreshIntervalValue,
   lastRefreshTime,
   isRefreshing,
@@ -132,9 +132,9 @@ onUnmounted(() => {
         @click.stop="toggleDropdown"
         :class="{ active: isOpen }"
       >
-        <span class="clock-icon">&#128337;</span>
+        <Clock :size="16" class="clock-icon" />
         <span class="display-text">{{ currentDisplayText }}</span>
-        <span class="dropdown-arrow">{{ isOpen ? '&#9650;' : '&#9660;' }}</span>
+        <component :is="isOpen ? ChevronUp : ChevronDown" :size="14" class="dropdown-arrow" />
       </button>
 
       <button
@@ -143,7 +143,7 @@ onUnmounted(() => {
         @click="handleRefresh"
         :title="'Last refresh: ' + formatLastRefresh()"
       >
-        &#8635;
+        <RefreshCw :size="16" />
       </button>
 
       <span v-if="refreshIntervalValue !== 'off'" class="refresh-status">
@@ -215,8 +215,8 @@ onUnmounted(() => {
         </div>
 
         <div class="form-actions">
-          <button class="btn-cancel" @click="cancelCustomRange">Cancel</button>
-          <button class="btn-apply" @click="applyCustomRange">Apply</button>
+          <button class="btn btn-secondary" @click="cancelCustomRange">Cancel</button>
+          <button class="btn btn-primary" @click="applyCustomRange">Apply</button>
         </div>
       </div>
     </div>
@@ -227,77 +227,76 @@ onUnmounted(() => {
 .time-range-picker {
   position: relative;
   display: inline-block;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .picker-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
 .time-display {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: #fff;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
-  color: #333;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  transition: all 0.2s;
 }
 
 .time-display:hover {
-  border-color: #3498db;
+  border-color: var(--border-secondary);
+  background: var(--bg-tertiary);
 }
 
 .time-display.active {
-  border-color: #3498db;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
 }
 
 .clock-icon {
-  font-size: 16px;
+  color: var(--text-secondary);
 }
 
 .display-text {
-  min-width: 120px;
+  min-width: 100px;
 }
 
 .dropdown-arrow {
-  font-size: 10px;
-  color: #666;
+  color: var(--text-tertiary);
 }
 
 .refresh-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: #fff;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
+  width: 34px;
+  height: 34px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 18px;
-  color: #333;
-  transition: border-color 0.2s, background-color 0.2s;
+  color: var(--text-secondary);
+  transition: all 0.2s;
 }
 
 .refresh-btn:hover {
-  border-color: #3498db;
-  background: #f5f5f5;
-}
-
-.refresh-btn:active {
-  background: #e8e8e8;
+  border-color: var(--border-secondary);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
 }
 
 .refresh-btn.refreshing {
-  animation: spin 0.5s linear infinite;
+  color: var(--accent-primary);
+}
+
+.refresh-btn.refreshing svg {
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
@@ -306,30 +305,34 @@ onUnmounted(() => {
 }
 
 .refresh-status {
-  font-size: 12px;
-  color: #666;
-  padding: 0 8px;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  padding: 0 0.5rem;
 }
 
 .refresh-interval-selector select {
-  padding: 8px 12px;
-  background: #fff;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  font-size: 14px;
-  color: #333;
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  color: var(--text-primary);
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a0a0a0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
 }
 
 .refresh-interval-selector select:hover {
-  border-color: #3498db;
+  border-color: var(--border-secondary);
 }
 
 .refresh-interval-selector select:focus {
   outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
 }
 
 .dropdown {
@@ -337,133 +340,142 @@ onUnmounted(() => {
   top: calc(100% + 4px);
   left: 0;
   min-width: 220px;
-  background: #fff;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   z-index: 1000;
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .dropdown-section {
-  padding: 8px 0;
+  padding: 0.5rem 0;
 }
 
 .section-title {
-  padding: 8px 16px;
-  font-size: 12px;
+  padding: 0.5rem 1rem;
+  font-size: 0.6875rem;
   font-weight: 600;
-  color: #666;
+  color: var(--text-tertiary);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
 }
 
 .preset-item {
   display: block;
   width: 100%;
-  padding: 10px 16px;
+  padding: 0.625rem 1rem;
   background: none;
   border: none;
   text-align: left;
-  font-size: 14px;
-  color: #333;
+  font-size: 0.8125rem;
+  color: var(--text-primary);
   cursor: pointer;
   transition: background-color 0.15s;
 }
 
 .preset-item:hover {
-  background: #f5f5f5;
+  background: var(--bg-hover);
 }
 
 .preset-item.selected {
-  background: #e6f4ff;
-  color: #3498db;
+  background: rgba(102, 126, 234, 0.15);
+  color: var(--accent-primary);
   font-weight: 500;
 }
 
 .dropdown-divider {
   height: 1px;
-  background: #e8e8e8;
-  margin: 4px 0;
+  background: var(--border-primary);
+  margin: 0.25rem 0;
 }
 
 .custom-range-btn {
-  color: #3498db;
+  color: var(--accent-primary);
 }
 
 .custom-range-form {
-  padding: 16px;
+  padding: 1rem;
 }
 
 .form-group {
-  margin-bottom: 12px;
+  margin-bottom: 0.75rem;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 4px;
-  font-size: 12px;
+  margin-bottom: 0.375rem;
+  font-size: 0.75rem;
   font-weight: 500;
-  color: #666;
+  color: var(--text-secondary);
 }
 
 .form-group input {
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  font-size: 14px;
-  box-sizing: border-box;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  color-scheme: dark;
 }
 
 .form-group input:focus {
   outline: none;
-  border-color: #3498db;
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
 }
 
 .error-message {
-  padding: 8px 12px;
-  margin-bottom: 12px;
-  background: #fff2f0;
-  border: 1px solid #ffccc7;
-  border-radius: 4px;
-  color: #e74c3c;
-  font-size: 13px;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: 6px;
+  color: var(--accent-danger);
+  font-size: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
-.btn-cancel,
-.btn-apply {
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-size: 14px;
+.btn {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s;
+  transition: all 0.2s;
 }
 
-.btn-cancel {
-  background: #fff;
-  border: 1px solid #d9d9d9;
-  color: #333;
+.btn-secondary {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
 }
 
-.btn-cancel:hover {
-  border-color: #999;
+.btn-secondary:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-secondary);
 }
 
-.btn-apply {
-  background: #3498db;
-  border: 1px solid #3498db;
-  color: #fff;
+.btn-primary {
+  background: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+  color: white;
 }
 
-.btn-apply:hover {
-  background: #2980b9;
-  border-color: #2980b9;
+.btn-primary:hover {
+  background: var(--accent-primary-hover);
+  border-color: var(--accent-primary-hover);
 }
 </style>

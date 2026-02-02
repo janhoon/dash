@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -46,13 +46,24 @@ const props = withDefaults(
 
 const chartRef = ref<typeof VChart | null>(null)
 
-// Format timestamp for display
+// Purple gradient colors for the chart lines
+const lineColors = [
+  '#667eea', // Primary purple-blue
+  '#764ba2', // Secondary purple
+  '#00d4aa', // Success green
+  '#feca57', // Warning yellow
+  '#ff6b6b', // Danger red
+  '#a78bfa', // Light purple
+  '#60a5fa', // Light blue
+  '#34d399', // Emerald
+]
+
+// Format timestamp for display (compact format for axis labels)
 function formatTime(timestamp: number): string {
   const date = new Date(timestamp * 1000)
   const hours = String(date.getHours()).padStart(2, '0')
   const minutes = String(date.getMinutes()).padStart(2, '0')
-  const seconds = String(date.getSeconds()).padStart(2, '0')
-  return `${hours}:${minutes}:${seconds}`
+  return `${hours}:${minutes}`
 }
 
 function formatFullDateTime(timestamp: number): string {
@@ -67,13 +78,30 @@ function formatFullDateTime(timestamp: number): string {
 }
 
 const chartOption = computed<EChartsOption>(() => {
-  const seriesData = props.series.map((s) => ({
+  const seriesData = props.series.map((s, index) => ({
     name: s.name,
     type: 'line' as const,
     smooth: true,
     showSymbol: false,
     lineStyle: {
       width: 2,
+      color: lineColors[index % lineColors.length],
+    },
+    itemStyle: {
+      color: lineColors[index % lineColors.length],
+    },
+    areaStyle: {
+      color: {
+        type: 'linear' as const,
+        x: 0,
+        y: 0,
+        x2: 0,
+        y2: 1,
+        colorStops: [
+          { offset: 0, color: `${lineColors[index % lineColors.length]}33` },
+          { offset: 1, color: `${lineColors[index % lineColors.length]}05` },
+        ],
+      },
     },
     data: s.data.map((d) => [d.timestamp * 1000, d.value]),
   }))
@@ -85,31 +113,34 @@ const chartOption = computed<EChartsOption>(() => {
           text: props.title,
           left: 'center',
           textStyle: {
-            color: '#ccc',
-            fontSize: 14,
+            color: '#f5f5f5',
+            fontSize: 13,
+            fontWeight: 500,
           },
         }
       : undefined,
     tooltip: {
       trigger: 'axis',
-      backgroundColor: 'rgba(50, 50, 50, 0.9)',
-      borderColor: '#555',
+      backgroundColor: '#1a1a1a',
+      borderColor: '#2a2a2a',
+      borderWidth: 1,
       textStyle: {
-        color: '#ccc',
+        color: '#f5f5f5',
+        fontSize: 12,
       },
       formatter: (params: any) => {
         if (!Array.isArray(params) || params.length === 0) return ''
         const timestamp = params[0].data[0]
         const timeStr = formatFullDateTime(timestamp / 1000)
-        let result = `<div style="font-weight: bold; margin-bottom: 4px;">${timeStr}</div>`
+        let result = `<div style="font-weight: 500; margin-bottom: 6px; color: #a0a0a0; font-size: 11px;">${timeStr}</div>`
         for (const param of params) {
           const value = typeof param.data[1] === 'number'
             ? param.data[1].toFixed(4)
             : param.data[1]
-          result += `<div style="display: flex; align-items: center; gap: 4px;">
-            <span style="display: inline-block; width: 10px; height: 10px; background: ${param.color}; border-radius: 50%;"></span>
-            <span>${param.seriesName}:</span>
-            <span style="font-weight: bold;">${value}</span>
+          result += `<div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+            <span style="display: inline-block; width: 8px; height: 8px; background: ${param.color}; border-radius: 50%;"></span>
+            <span style="color: #a0a0a0; font-size: 12px;">${param.seriesName}:</span>
+            <span style="font-weight: 600; color: #f5f5f5;">${value}</span>
           </div>`
         }
         return result
@@ -119,51 +150,58 @@ const chartOption = computed<EChartsOption>(() => {
       show: props.series.length > 1,
       bottom: 0,
       textStyle: {
-        color: '#ccc',
+        color: '#a0a0a0',
+        fontSize: 11,
       },
+      itemWidth: 16,
+      itemHeight: 8,
     },
     grid: {
       left: '3%',
       right: '4%',
-      top: props.title ? '15%' : '10%',
-      bottom: props.series.length > 1 ? '15%' : '10%',
+      top: props.title ? '15%' : '8%',
+      bottom: props.series.length > 1 ? '15%' : '8%',
       containLabel: true,
     },
     xAxis: {
       type: 'time',
-      boundaryGap: false,
       axisLine: {
-        lineStyle: {
-          color: '#555',
-        },
+        show: false,
+      },
+      axisTick: {
+        show: false,
       },
       axisLabel: {
-        color: '#999',
+        color: '#666666',
+        fontSize: 10,
+        hideOverlap: true,
         formatter: (value: number) => formatTime(value / 1000),
       },
       splitLine: {
         show: true,
         lineStyle: {
-          color: '#333',
-          type: 'dashed',
+          color: '#1a1a1a',
+          type: 'solid',
         },
       },
     },
     yAxis: {
       type: 'value',
       axisLine: {
-        lineStyle: {
-          color: '#555',
-        },
+        show: false,
+      },
+      axisTick: {
+        show: false,
       },
       axisLabel: {
-        color: '#999',
+        color: '#666666',
+        fontSize: 10,
       },
       splitLine: {
         show: true,
         lineStyle: {
-          color: '#333',
-          type: 'dashed',
+          color: '#1a1a1a',
+          type: 'solid',
         },
       },
     },

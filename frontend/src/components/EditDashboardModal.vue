@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { X } from 'lucide-vue-next'
 import type { Dashboard } from '../types/dashboard'
 import { updateDashboard } from '../api/dashboards'
 
@@ -45,18 +46,21 @@ async function handleSubmit() {
     <div class="modal">
       <header class="modal-header">
         <h2>Edit Dashboard</h2>
-        <button class="btn-close" @click="emit('close')">&times;</button>
+        <button class="btn-close" @click="emit('close')">
+          <X :size="20" />
+        </button>
       </header>
 
       <form @submit.prevent="handleSubmit">
         <div class="form-group">
-          <label for="title">Title *</label>
+          <label for="title">Title <span class="required">*</span></label>
           <input
             id="title"
             v-model="title"
             type="text"
             placeholder="My Dashboard"
             :disabled="loading"
+            autocomplete="off"
           />
         </div>
 
@@ -71,10 +75,10 @@ async function handleSubmit() {
           ></textarea>
         </div>
 
-        <div v-if="error" class="error">{{ error }}</div>
+        <div v-if="error" class="error-message">{{ error }}</div>
 
         <div class="modal-actions">
-          <button type="button" class="btn" @click="emit('close')" :disabled="loading">
+          <button type="button" class="btn btn-secondary" @click="emit('close')" :disabled="loading">
             Cancel
           </button>
           <button type="submit" class="btn btn-primary" :disabled="loading">
@@ -93,46 +97,72 @@ async function handleSubmit() {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .modal {
-  background: white;
-  border-radius: 8px;
-  padding: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
   width: 100%;
   max-width: 480px;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .modal-header h2 {
   margin: 0;
-  color: #2c3e50;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .btn-close {
-  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
   border: none;
-  font-size: 1.5rem;
-  color: #999;
+  border-radius: 6px;
+  color: var(--text-secondary);
   cursor: pointer;
-  padding: 0;
-  line-height: 1;
+  transition: all 0.2s;
 }
 
 .btn-close:hover {
-  color: #666;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 form {
@@ -140,70 +170,109 @@ form {
 }
 
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 .form-group label {
   display: block;
   margin-bottom: 0.5rem;
+  font-size: 0.875rem;
   font-weight: 500;
-  color: #2c3e50;
+  color: var(--text-primary);
+}
+
+.required {
+  color: var(--accent-danger);
 }
 
 .form-group input,
 .form-group textarea {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
-  box-sizing: border-box;
+  padding: 0.75rem 1rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: var(--text-tertiary);
 }
 
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #3498db;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
 }
 
-.error {
-  color: #e74c3c;
+.form-group input:disabled,
+.form-group textarea:disabled {
+  background: var(--bg-primary);
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.error-message {
+  padding: 0.75rem 1rem;
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: 6px;
+  color: var(--accent-danger);
   font-size: 0.875rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
 }
 
 .btn {
-  padding: 0.75rem 1.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 1.25rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
   font-size: 0.875rem;
-}
-
-.btn:hover:not(:disabled) {
-  background: #f5f5f5;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
+.btn-secondary {
+  background: var(--bg-tertiary);
+  border-color: var(--border-primary);
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-secondary);
+}
+
 .btn-primary {
-  background: #3498db;
-  border-color: #3498db;
+  background: var(--accent-primary);
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #2980b9;
+  background: var(--accent-primary-hover);
 }
 </style>

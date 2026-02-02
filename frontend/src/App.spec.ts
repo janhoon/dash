@@ -6,7 +6,14 @@ vi.mock('vue-router', () => ({
   RouterView: {
     name: 'RouterView',
     template: '<div data-testid="router-view">Router View</div>'
-  }
+  },
+  useRoute: () => ({
+    path: '/dashboards',
+    params: {}
+  }),
+  useRouter: () => ({
+    push: vi.fn()
+  })
 }))
 
 describe('App', () => {
@@ -14,7 +21,8 @@ describe('App', () => {
     const wrapper = mount(App, {
       global: {
         stubs: {
-          RouterView: true
+          RouterView: true,
+          Sidebar: true
         }
       }
     })

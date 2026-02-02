@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { Play, Tag } from 'lucide-vue-next'
 import { queryPrometheus, type PrometheusQueryResult } from '../composables/useProm'
 
 const props = defineProps<{
@@ -76,13 +77,15 @@ const metricLabels = computed(() => {
 const previewData = computed(() => {
   if (!result.value?.data?.result) return []
 
-  return result.value.data.result.map((metric) => ({
-    metric: metric.metric,
-    latestValue: metric.values.length > 0
-      ? metric.values[metric.values.length - 1][1]
-      : 'N/A',
-    valueCount: metric.values.length
-  }))
+  return result.value.data.result.map((metric) => {
+    const values = metric.values ?? []
+    const lastValue = values.length > 0 ? values[values.length - 1] : null
+    return {
+      metric: metric.metric,
+      latestValue: lastValue ? lastValue[1] : 'N/A',
+      valueCount: values.length
+    }
+  })
 })
 </script>
 
@@ -106,7 +109,8 @@ const previewData = computed(() => {
           :disabled="disabled || loading || !query.trim()"
           @click="runQuery"
         >
-          {{ loading ? 'Running...' : 'Run Query' }}
+          <Play :size="14" />
+          <span>{{ loading ? 'Running...' : 'Run Query' }}</span>
         </button>
         <span class="hint">Ctrl+Enter to run</span>
       </div>
@@ -123,7 +127,8 @@ const previewData = computed(() => {
       </div>
 
       <div v-if="metricLabels.length > 0" class="labels-section">
-        <strong>Labels:</strong>
+        <Tag :size="14" class="labels-icon" />
+        <span class="labels-title">Labels:</span>
         <span v-for="label in metricLabels" :key="label" class="label-tag">
           {{ label }}
         </span>
@@ -171,28 +176,38 @@ const previewData = computed(() => {
 }
 
 .query-input-group label {
+  font-size: 0.875rem;
   font-weight: 500;
-  color: #2c3e50;
+  color: var(--text-primary);
 }
 
 .query-textarea {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
+  color: var(--text-primary);
   resize: vertical;
-  box-sizing: border-box;
+  min-height: 80px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.query-textarea::placeholder {
+  color: var(--text-tertiary);
 }
 
 .query-textarea:focus {
   outline: none;
-  border-color: #3498db;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
 }
 
 .query-textarea:disabled {
-  background: #f5f5f5;
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
   cursor: not-allowed;
 }
 
@@ -203,112 +218,141 @@ const previewData = computed(() => {
 }
 
 .btn-run {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
   padding: 0.5rem 1rem;
-  border: 1px solid #27ae60;
-  border-radius: 4px;
-  background: #27ae60;
+  background: var(--accent-success);
+  border: 1px solid var(--accent-success);
+  border-radius: 6px;
   color: white;
-  cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .btn-run:hover:not(:disabled) {
-  background: #219a52;
+  background: #00c49a;
+  border-color: #00c49a;
 }
 
 .btn-run:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .hint {
   font-size: 0.75rem;
-  color: #999;
+  color: var(--text-tertiary);
 }
 
 .query-error {
-  padding: 0.75rem;
-  background: #fdecea;
-  border: 1px solid #f5c6cb;
-  border-radius: 4px;
-  color: #721c24;
-  font-size: 0.875rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: 6px;
+  color: var(--accent-danger);
+  font-size: 0.8125rem;
 }
 
 .query-preview {
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
   overflow: hidden;
+  background: var(--bg-tertiary);
 }
 
 .preview-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .preview-header h4 {
   margin: 0;
-  font-size: 0.875rem;
-  color: #2c3e50;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .result-count {
   font-size: 0.75rem;
-  color: #666;
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
 }
 
 .labels-section {
-  padding: 0.75rem;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e0e0e0;
-  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-primary);
+  font-size: 0.8125rem;
+}
+
+.labels-icon {
+  color: var(--text-tertiary);
+}
+
+.labels-title {
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .label-tag {
   display: inline-block;
-  margin-left: 0.5rem;
   padding: 0.125rem 0.5rem;
-  background: #e0e0e0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
   border-radius: 4px;
   font-family: monospace;
   font-size: 0.75rem;
+  color: var(--accent-primary);
 }
 
 .preview-table-wrapper {
   max-height: 200px;
   overflow-y: auto;
-  background: white;
 }
 
 .preview-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
 }
 
 .preview-table th,
 .preview-table td {
-  padding: 0.5rem 0.75rem;
+  padding: 0.625rem 1rem;
   text-align: left;
-  border-bottom: 1px solid #e0e0e0;
-  color: #2c3e50;
+  border-bottom: 1px solid var(--border-primary);
+  color: var(--text-primary);
 }
 
 .preview-table th {
-  background: #f8f9fa;
+  background: var(--bg-secondary);
   font-weight: 500;
   position: sticky;
   top: 0;
-  color: #2c3e50;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .preview-table tr:last-child td {
   border-bottom: none;
+}
+
+.preview-table tr:hover td {
+  background: var(--bg-hover);
 }
 
 .metric-cell {
@@ -320,13 +364,13 @@ const previewData = computed(() => {
 
 .metric-cell code {
   font-size: 0.75rem;
-  color: #2c3e50;
+  color: var(--text-secondary);
 }
 
 .no-data {
-  padding: 1rem;
+  padding: 1.5rem;
   text-align: center;
-  color: #666;
-  font-size: 0.875rem;
+  color: var(--text-tertiary);
+  font-size: 0.8125rem;
 }
 </style>

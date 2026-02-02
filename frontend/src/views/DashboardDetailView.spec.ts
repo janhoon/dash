@@ -140,8 +140,8 @@ describe('DashboardDetailView', () => {
   it('should display loading state initially', () => {
     const wrapper = mount(DashboardDetailView)
 
-    expect(wrapper.find('.loading').exists()).toBe(true)
-    expect(wrapper.text()).toContain('Loading dashboard...')
+    expect(wrapper.find('.state-container').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Loading dashboard')
   })
 
   it('should show back button that navigates to dashboards', async () => {
@@ -188,7 +188,7 @@ describe('DashboardDetailView', () => {
     const wrapper = mount(DashboardDetailView)
     await flushPromises()
 
-    expect(wrapper.find('.empty').exists()).toBe(true)
+    expect(wrapper.find('.state-container').exists()).toBe(true)
     expect(wrapper.text()).toContain('No panels yet')
   })
 })

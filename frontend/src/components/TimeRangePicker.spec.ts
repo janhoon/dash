@@ -121,7 +121,7 @@ describe('TimeRangePicker', () => {
     await toInput.setValue('2026-02-02T14:00')
 
     // Click apply
-    await wrapper.find('.btn-apply').trigger('click')
+    await wrapper.find('.btn.btn-primary').trigger('click')
 
     // Dropdown should close
     expect(wrapper.find('.dropdown').exists()).toBe(false)
@@ -142,7 +142,7 @@ describe('TimeRangePicker', () => {
     await wrapper.find('#custom-to').setValue('2026-02-01T10:00')
 
     // Click apply
-    await wrapper.find('.btn-apply').trigger('click')
+    await wrapper.find('.btn.btn-primary').trigger('click')
 
     // Should show error
     expect(wrapper.find('.error-message').exists()).toBe(true)
@@ -160,7 +160,7 @@ describe('TimeRangePicker', () => {
 
     expect(wrapper.find('.custom-range-form').exists()).toBe(true)
 
-    await wrapper.find('.btn-cancel').trigger('click')
+    await wrapper.find('.btn.btn-secondary').trigger('click')
 
     // Should go back to presets
     expect(wrapper.find('.custom-range-form').exists()).toBe(false)

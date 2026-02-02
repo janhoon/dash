@@ -2,8 +2,9 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { GridLayout, GridItem } from 'vue3-grid-layout-next'
+import { ArrowLeft, Plus, Trash2, LayoutGrid, AlertCircle } from 'lucide-vue-next'
 import type { Dashboard } from '../types/dashboard'
-import type { Panel as PanelType, GridPos } from '../types/panel'
+import type { Panel as PanelType } from '../types/panel'
 import { getDashboard } from '../api/dashboards'
 import { listPanels, deletePanel, updatePanel } from '../api/panels'
 import Panel from '../components/Panel.vue'
@@ -211,34 +212,48 @@ onUnmounted(() => {
 
 <template>
   <div class="dashboard-detail">
-    <header class="header">
+    <header class="page-header">
       <div class="header-left">
-        <button class="btn btn-back" @click="goBack">
-          &larr; Back
+        <button class="btn-back" @click="goBack" title="Back to Dashboards">
+          <ArrowLeft :size="20" />
         </button>
-        <h1 v-if="dashboard">{{ dashboard.title }}</h1>
+        <div class="header-title" v-if="dashboard">
+          <h1>{{ dashboard.title }}</h1>
+          <p v-if="dashboard.description" class="header-description">
+            {{ dashboard.description }}
+          </p>
+        </div>
       </div>
       <div class="header-right">
         <TimeRangePicker />
         <button class="btn btn-primary" @click="openAddPanel" :disabled="loading">
-          + Add Panel
+          <Plus :size="18" />
+          <span>Add Panel</span>
         </button>
       </div>
     </header>
 
-    <div v-if="loading" class="loading">Loading dashboard...</div>
+    <div v-if="loading" class="state-container">
+      <div class="loading-spinner"></div>
+      <p>Loading dashboard...</p>
+    </div>
 
-    <div v-else-if="error" class="error">{{ error }}</div>
+    <div v-else-if="error" class="state-container error">
+      <AlertCircle :size="48" />
+      <p>{{ error }}</p>
+      <button class="btn btn-secondary" @click="goBack">Back to Dashboards</button>
+    </div>
 
     <template v-else>
-      <p v-if="dashboard?.description" class="dashboard-description">
-        {{ dashboard.description }}
-      </p>
-
-      <div v-if="panels.length === 0" class="empty">
-        <p>No panels yet</p>
+      <div v-if="panels.length === 0" class="state-container empty">
+        <div class="empty-icon">
+          <LayoutGrid :size="64" />
+        </div>
+        <h2>No panels yet</h2>
+        <p>Add your first panel to start visualizing data</p>
         <button class="btn btn-primary" @click="openAddPanel">
-          Add your first panel
+          <Plus :size="18" />
+          <span>Add Panel</span>
         </button>
       </div>
 
@@ -247,7 +262,7 @@ onUnmounted(() => {
         :layout="layout"
         :col-num="colNum"
         :row-height="rowHeight"
-        :margin="[10, 10]"
+        :margin="[12, 12]"
         :is-draggable="true"
         :is-resizable="true"
         :vertical-compact="true"
@@ -290,11 +305,14 @@ onUnmounted(() => {
 
     <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="cancelDelete">
       <div class="modal delete-modal">
+        <div class="modal-icon">
+          <Trash2 :size="24" />
+        </div>
         <h2>Delete Panel</h2>
         <p>Are you sure you want to delete "{{ deletingPanel?.title }}"?</p>
         <p class="warning">This action cannot be undone.</p>
         <div class="modal-actions">
-          <button class="btn" @click="cancelDelete">Cancel</button>
+          <button class="btn btn-secondary" @click="cancelDelete">Cancel</button>
           <button class="btn btn-danger" @click="handleDeletePanel">Delete</button>
         </div>
       </div>
@@ -304,16 +322,18 @@ onUnmounted(() => {
 
 <style scoped>
 .dashboard-detail {
-  padding: 2rem;
-  max-width: 1400px;
+  padding: 1.5rem 2rem;
+  max-width: 1600px;
   margin: 0 auto;
 }
 
-.header {
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .header-left {
@@ -322,113 +342,222 @@ onUnmounted(() => {
   gap: 1rem;
 }
 
+.btn-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-back:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-secondary);
+  color: var(--text-primary);
+}
+
+.header-title h1 {
+  margin-bottom: 0.25rem;
+}
+
+.header-description {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
 .header-right {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-.header h1 {
-  margin: 0;
-  color: #2c3e50;
-}
-
+/* Buttons */
 .btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
   font-size: 0.875rem;
-}
-
-.btn:hover:not(:disabled) {
-  background: #f5f5f5;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-.btn-back {
-  padding: 0.5rem 0.75rem;
-}
-
 .btn-primary {
-  background: #3498db;
-  border-color: #3498db;
+  background: var(--accent-primary);
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #2980b9;
+  background: var(--accent-primary-hover);
+}
+
+.btn-secondary {
+  background: var(--bg-tertiary);
+  border-color: var(--border-primary);
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-secondary);
 }
 
 .btn-danger {
-  background: #e74c3c;
-  border-color: #e74c3c;
+  background: var(--accent-danger);
   color: white;
 }
 
-.btn-danger:hover {
-  background: #c0392b;
+.btn-danger:hover:not(:disabled) {
+  background: var(--accent-danger-hover);
 }
 
-.dashboard-description {
-  color: #666;
-  margin: 0 0 1.5rem 0;
-}
-
-.loading, .error, .empty {
+/* State Containers */
+.state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
   text-align: center;
-  padding: 3rem;
-  color: #666;
+  color: var(--text-secondary);
 }
 
-.error {
-  color: #e74c3c;
+.state-container.error {
+  color: var(--accent-danger);
 }
 
+.state-container h2 {
+  margin: 1rem 0 0.5rem;
+  color: var(--text-primary);
+}
+
+.state-container p {
+  margin-bottom: 1.5rem;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-primary);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 120px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 16px;
+  color: var(--text-tertiary);
+  margin-bottom: 1rem;
+}
+
+/* Grid Layout */
 .grid-layout {
-  min-height: 300px;
+  min-height: 400px;
 }
 
+/* Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .modal {
-  background: white;
-  border-radius: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
   padding: 2rem;
   width: 100%;
   max-width: 400px;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.delete-modal {
+  text-align: center;
+}
+
+.modal-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 107, 107, 0.15);
+  border-radius: 50%;
+  color: var(--accent-danger);
+  margin-bottom: 1rem;
 }
 
 .delete-modal h2 {
-  margin: 0 0 1rem 0;
-  color: #e74c3c;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.delete-modal p {
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
 }
 
 .warning {
-  color: #e74c3c;
+  color: var(--accent-danger);
   font-size: 0.875rem;
 }
 
 .modal-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
+  justify-content: center;
+  gap: 0.75rem;
   margin-top: 1.5rem;
 }
 </style>
@@ -444,9 +573,9 @@ onUnmounted(() => {
 }
 
 .vue-grid-item.vue-grid-placeholder {
-  background: rgba(52, 152, 219, 0.2);
-  border: 2px dashed #3498db;
-  border-radius: 4px;
+  background: rgba(102, 126, 234, 0.15);
+  border: 2px dashed var(--accent-primary);
+  border-radius: 8px;
 }
 
 .vue-grid-item > .vue-resizable-handle {
@@ -456,7 +585,7 @@ onUnmounted(() => {
   bottom: 0;
   right: 0;
   cursor: se-resize;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 6' fill='%23999'%3E%3Cpolygon points='6 0 0 6 6 6'/%3E%3C/svg%3E") no-repeat;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 6' fill='%23666'%3E%3Cpolygon points='6 0 0 6 6 6'/%3E%3C/svg%3E") no-repeat;
   background-position: bottom right;
   padding: 0 3px 3px 0;
   background-repeat: no-repeat;
