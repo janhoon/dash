@@ -25,7 +25,7 @@
       "TEST: PostgreSQL container starts and migrations apply",
       "TEST: GET /api/health returns 200 OK"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "Core - Dashboard CRUD Operations",
