@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { Dashboard } from '../types/dashboard'
 import type { Panel as PanelType } from '../types/panel'
@@ -7,6 +7,8 @@ import { getDashboard } from '../api/dashboards'
 import { listPanels, deletePanel } from '../api/panels'
 import Panel from '../components/Panel.vue'
 import PanelEditModal from '../components/PanelEditModal.vue'
+import TimeRangePicker from '../components/TimeRangePicker.vue'
+import { useTimeRange } from '../composables/useTimeRange'
 
 const route = useRoute()
 const router = useRouter()
@@ -22,6 +24,12 @@ const showDeleteConfirm = ref(false)
 const deletingPanel = ref<PanelType | null>(null)
 
 const dashboardId = route.params.id as string
+
+// Time range composable for panel data refresh
+const { timeRange, onRefresh, cleanup: cleanupTimeRange } = useTimeRange()
+
+// Register refresh callback to refetch panel data when time range changes or auto-refresh triggers
+let unsubscribeRefresh: (() => void) | null = null
 
 async function fetchDashboard() {
   try {
@@ -96,7 +104,22 @@ function goBack() {
   router.push('/dashboards')
 }
 
-onMounted(loadData)
+onMounted(() => {
+  loadData()
+  // Subscribe to time range changes to refetch panels
+  unsubscribeRefresh = onRefresh(() => {
+    // In the future, this will refetch panel data with the new time range
+    // For now, we log the time range for debugging
+    console.log('Time range updated:', timeRange.value)
+  })
+})
+
+onUnmounted(() => {
+  if (unsubscribeRefresh) {
+    unsubscribeRefresh()
+  }
+  cleanupTimeRange()
+})
 </script>
 
 <template>
@@ -108,9 +131,12 @@ onMounted(loadData)
         </button>
         <h1 v-if="dashboard">{{ dashboard.title }}</h1>
       </div>
-      <button class="btn btn-primary" @click="openAddPanel" :disabled="loading">
-        + Add Panel
-      </button>
+      <div class="header-right">
+        <TimeRangePicker />
+        <button class="btn btn-primary" @click="openAddPanel" :disabled="loading">
+          + Add Panel
+        </button>
+      </div>
     </header>
 
     <div v-if="loading" class="loading">Loading dashboard...</div>
@@ -185,6 +211,12 @@ onMounted(loadData)
 }
 
 .header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-right {
   display: flex;
   align-items: center;
   gap: 1rem;

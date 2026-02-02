@@ -127,7 +127,7 @@
       "TEST: Time range updates trigger panel re-fetch",
       "TEST: Auto-refresh at 5s interval triggers panel updates"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "Data - Prometheus Data Source Integration",

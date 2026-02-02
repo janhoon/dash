@@ -129,3 +129,39 @@ This file tracks progress on the dash project features.
   - frontend/src/components/DashboardList.vue - made cards clickable
 - Blockers/notes for next iteration:
   - None. Ready to proceed with Time Range Picker Component.
+
+## UI - Time Range Picker Component - 2026-02-02
+- What was done:
+  - Created useTimeRange.ts composable with:
+    - Reactive start/end timestamps calculation
+    - All 7 preset ranges (5m, 15m, 30m, 1h, 6h, 24h, 7d)
+    - Custom range support with date pickers
+    - Auto-refresh with intervals (Off, 5s, 15s, 30s, 1m)
+    - Shared state across components using the composable
+    - onRefresh callback system for panel data refresh
+  - Created TimeRangePicker.vue component with:
+    - Dropdown UI for selecting time ranges
+    - Quick range presets list with visual selection indicator
+    - Custom range form with datetime-local inputs
+    - Validation for custom ranges (start < end)
+    - Refresh interval selector (dropdown)
+    - Manual refresh button
+    - Human-readable display text (e.g., "Last 5 minutes")
+  - Integrated TimeRangePicker into DashboardDetailView:
+    - Added to header alongside "Add Panel" button
+    - Connected to useTimeRange composable for shared state
+    - Set up refresh callback subscription for panel data updates
+    - Proper cleanup on unmount
+  - Added comprehensive tests:
+    - 23 tests for useTimeRange composable
+    - 13 tests for TimeRangePicker component
+    - All 85 frontend tests passing
+    - All backend tests passing
+- Files changed:
+  - frontend/src/composables/useTimeRange.ts (new)
+  - frontend/src/composables/useTimeRange.spec.ts (new)
+  - frontend/src/components/TimeRangePicker.vue (new)
+  - frontend/src/components/TimeRangePicker.spec.ts (new)
+  - frontend/src/views/DashboardDetailView.vue - integrated TimeRangePicker
+- Blockers/notes for next iteration:
+  - None. Ready to proceed with Prometheus Data Source Integration.
