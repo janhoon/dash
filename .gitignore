@@ -46,3 +46,7 @@ temp/
 # Docker volumes (local data)
 postgres_data/
 prometheus_data/
+
+# Ralph agent working files (local only, not part of the project)
+agent/prd.json
+agent/progress.txt
