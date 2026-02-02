@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Play, AlertCircle, History, X } from 'lucide-vue-next'
-import QueryEditor from '../components/QueryEditor.vue'
+import QueryBuilder from '../components/QueryBuilder.vue'
 import TimeRangePicker from '../components/TimeRangePicker.vue'
 import LineChart from '../components/LineChart.vue'
 import { useTimeRange } from '../composables/useTimeRange'
@@ -145,32 +145,23 @@ const seriesCount = computed(() => chartSeries.value.length)
 
     <div class="explore-content">
       <div class="query-section">
-        <div class="query-row">
-          <div class="query-input-wrapper">
-            <label for="promql-query-input" class="query-label">PromQL Query</label>
-            <div class="query-input-container">
-              <textarea
-                id="promql-query-input"
-                v-model="query"
-                placeholder="Enter a PromQL query, e.g., up, rate(http_requests_total[5m])"
-                rows="3"
-                :disabled="loading"
-                class="query-textarea"
-              ></textarea>
+        <div class="query-builder-wrapper">
+          <QueryBuilder v-model="query" :disabled="loading" />
 
-              <button
-                v-if="queryHistory.length > 0"
-                class="history-btn"
-                :class="{ active: showHistory }"
-                @click="showHistory = !showHistory"
-                title="Query history"
-              >
-                <History :size="16" />
-              </button>
-            </div>
+          <!-- History button -->
+          <div v-if="queryHistory.length > 0" class="history-container">
+            <button
+              class="history-btn"
+              :class="{ active: showHistory }"
+              @click="showHistory = !showHistory"
+              title="Query history"
+            >
+              <History :size="16" />
+              <span>History</span>
+            </button>
 
             <!-- Query history dropdown -->
-            <div v-if="showHistory && queryHistory.length > 0" class="history-dropdown">
+            <div v-if="showHistory" class="history-dropdown">
               <div class="history-header">
                 <span>Recent Queries</span>
                 <button class="clear-history-btn" @click="clearHistory" title="Clear history">
@@ -187,18 +178,18 @@ const seriesCount = computed(() => chartSeries.value.length)
               </button>
             </div>
           </div>
+        </div>
 
-          <div class="query-actions">
-            <button
-              class="btn btn-run"
-              :disabled="loading || !query.trim()"
-              @click="runQuery"
-            >
-              <Play :size="16" />
-              <span>{{ loading ? 'Running...' : 'Run Query' }}</span>
-            </button>
-            <span class="hint">Ctrl+Enter to run</span>
-          </div>
+        <div class="query-actions">
+          <button
+            class="btn btn-run"
+            :disabled="loading || !query.trim()"
+            @click="runQuery"
+          >
+            <Play :size="16" />
+            <span>{{ loading ? 'Running...' : 'Run Query' }}</span>
+          </button>
+          <span class="hint">Ctrl+Enter to run</span>
         </div>
 
         <!-- Error display -->
@@ -276,74 +267,32 @@ const seriesCount = computed(() => chartSeries.value.length)
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-
-.query-row {
-  display: flex;
-  gap: 1rem;
-  align-items: flex-start;
-}
-
-.query-input-wrapper {
-  flex: 1;
-  position: relative;
-}
-
-.query-label {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-primary);
-  margin-bottom: 0.5rem;
-}
-
-.query-input-container {
-  position: relative;
-}
-
-.query-textarea {
-  width: 100%;
-  padding: 0.75rem 3rem 0.75rem 1rem;
+  padding: 1.5rem;
   background: var(--bg-secondary);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 0.875rem;
-  color: var(--text-primary);
-  resize: vertical;
-  min-height: 80px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  border-radius: 12px;
 }
 
-.query-textarea::placeholder {
-  color: var(--text-tertiary);
+.query-builder-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.query-textarea:focus {
-  outline: none;
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
-}
-
-.query-textarea:disabled {
-  background: var(--bg-tertiary);
-  color: var(--text-tertiary);
-  cursor: not-allowed;
+.history-container {
+  position: relative;
 }
 
 .history-btn {
-  position: absolute;
-  top: 0.625rem;
-  right: 0.625rem;
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-primary);
   border-radius: 6px;
   color: var(--text-secondary);
+  font-size: 0.8125rem;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -358,8 +307,8 @@ const seriesCount = computed(() => chartSeries.value.length)
 .history-dropdown {
   position: absolute;
   top: calc(100% + 4px);
-  right: 0;
-  width: 300px;
+  left: 0;
+  width: 350px;
   max-height: 300px;
   overflow-y: auto;
   background: var(--bg-secondary);
@@ -428,9 +377,8 @@ const seriesCount = computed(() => chartSeries.value.length)
 
 .query-actions {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding-top: 1.625rem;
+  align-items: center;
+  gap: 1rem;
 }
 
 .btn-run {

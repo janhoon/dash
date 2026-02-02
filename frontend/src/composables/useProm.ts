@@ -66,6 +66,49 @@ export function transformToChartData(result: PrometheusQueryResult): ChartData {
   return { series }
 }
 
+// Metadata response type
+export interface MetadataResponse {
+  status: 'success' | 'error'
+  data?: string[]
+  error?: string
+}
+
+// Fetch available metric names from Prometheus
+export async function fetchMetrics(): Promise<string[]> {
+  const response = await fetch(`${API_BASE_URL}/api/datasources/prometheus/metrics`)
+  const data: MetadataResponse = await response.json()
+
+  if (data.status !== 'success' || !data.data) {
+    throw new Error(data.error || 'Failed to fetch metrics')
+  }
+
+  return data.data
+}
+
+// Fetch available label names from Prometheus
+export async function fetchLabels(): Promise<string[]> {
+  const response = await fetch(`${API_BASE_URL}/api/datasources/prometheus/labels`)
+  const data: MetadataResponse = await response.json()
+
+  if (data.status !== 'success' || !data.data) {
+    throw new Error(data.error || 'Failed to fetch labels')
+  }
+
+  return data.data
+}
+
+// Fetch label values for a specific label
+export async function fetchLabelValues(labelName: string): Promise<string[]> {
+  const response = await fetch(`${API_BASE_URL}/api/datasources/prometheus/label/${encodeURIComponent(labelName)}/values`)
+  const data: MetadataResponse = await response.json()
+
+  if (data.status !== 'success' || !data.data) {
+    throw new Error(data.error || 'Failed to fetch label values')
+  }
+
+  return data.data
+}
+
 // Query Prometheus via backend API
 export async function queryPrometheus(
   query: string,

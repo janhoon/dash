@@ -62,6 +62,9 @@ func main() {
 	// Prometheus data source routes
 	prometheusHandler := handlers.NewPrometheusHandler(prometheusURL)
 	mux.HandleFunc("GET /api/datasources/prometheus/query", prometheusHandler.Query)
+	mux.HandleFunc("GET /api/datasources/prometheus/metrics", prometheusHandler.Metrics)
+	mux.HandleFunc("GET /api/datasources/prometheus/labels", prometheusHandler.Labels)
+	mux.HandleFunc("GET /api/datasources/prometheus/label/{name}/values", prometheusHandler.LabelValues)
 
 	// Apply CORS middleware
 	handler := corsMiddleware(mux)

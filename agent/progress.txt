@@ -340,3 +340,46 @@ This file tracks progress on the dash project features.
   - frontend/src/components/Sidebar.vue - added Explore nav item
   - agent/prd.json - added Feature 10 specification
 - PR: (pending)
+
+## Feature 1: PromQL Query Builder - 2026-02-02
+- What was done:
+  - Backend: Added Prometheus metadata endpoints:
+    - GET /api/datasources/prometheus/metrics - returns all metric names
+    - GET /api/datasources/prometheus/labels - returns all label names
+    - GET /api/datasources/prometheus/label/{name}/values - returns label values
+    - Added 5-minute caching for metadata to reduce API calls
+    - Added LabelNames() and LabelValues() methods to Prometheus client
+  - Frontend: Created useQueryBuilder.ts composable:
+    - State management for metric, label filters, aggregation, group-by
+    - PromQL generation logic with proper syntax
+    - Support for all aggregation functions (sum, avg, rate, topk, etc.)
+    - Label filter operators (=, !=, =~, !~)
+    - Builder/Code mode toggle
+    - Caching for metrics/labels metadata
+  - Frontend: Created QueryBuilder.vue component:
+    - Visual metric selector with searchable dropdown
+    - Label filters section with add/remove functionality
+    - Aggregation dropdown with range interval and K-value inputs
+    - Group-by labels multi-select
+    - Live PromQL preview
+    - Builder/Code mode toggle
+  - Integrated QueryBuilder into:
+    - Explore.vue page (replaced textarea)
+    - PanelEditModal.vue (replaced QueryEditor)
+  - Updated tests:
+    - PanelEditModal.spec.ts - updated for QueryBuilder component
+    - Explore.spec.ts - updated for QueryBuilder component
+    - All 168 frontend tests passing
+    - All backend tests passing
+- Files changed:
+  - backend/pkg/prometheus/client.go - added LabelNames and LabelValues methods
+  - backend/internal/handlers/prometheus.go - added metadata endpoints and caching
+  - backend/cmd/api/main.go - registered new routes
+  - frontend/src/composables/useProm.ts - added fetchMetrics, fetchLabels, fetchLabelValues
+  - frontend/src/composables/useQueryBuilder.ts (new)
+  - frontend/src/components/QueryBuilder.vue (new)
+  - frontend/src/views/Explore.vue - integrated QueryBuilder
+  - frontend/src/components/PanelEditModal.vue - integrated QueryBuilder
+  - frontend/src/components/PanelEditModal.spec.ts - updated tests
+  - frontend/src/views/Explore.spec.ts - updated tests
+- PR: (pending)

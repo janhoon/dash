@@ -93,6 +93,46 @@ func (c *Client) Query(ctx context.Context, query string, ts time.Time) (*QueryR
 	return transformResult(result), nil
 }
 
+// LabelNames returns all label names from Prometheus
+func (c *Client) LabelNames(ctx context.Context) ([]string, error) {
+	names, warnings, err := c.api.LabelNames(ctx, nil, time.Now().Add(-24*time.Hour), time.Now())
+
+	if len(warnings) > 0 {
+		for _, w := range warnings {
+			fmt.Printf("Prometheus warning: %s\n", w)
+		}
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get label names: %w", err)
+	}
+
+	return names, nil
+}
+
+// LabelValues returns all values for a given label name from Prometheus
+func (c *Client) LabelValues(ctx context.Context, label string) ([]string, error) {
+	values, warnings, err := c.api.LabelValues(ctx, label, nil, time.Now().Add(-24*time.Hour), time.Now())
+
+	if len(warnings) > 0 {
+		for _, w := range warnings {
+			fmt.Printf("Prometheus warning: %s\n", w)
+		}
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get label values for %s: %w", label, err)
+	}
+
+	// Convert model.LabelValues to []string
+	result := make([]string, len(values))
+	for i, v := range values {
+		result[i] = string(v)
+	}
+
+	return result, nil
+}
+
 // transformResult converts Prometheus model.Value to our QueryResult format
 func transformResult(value model.Value) *QueryResult {
 	result := &QueryResult{

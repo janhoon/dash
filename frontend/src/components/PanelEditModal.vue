@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { X } from 'lucide-vue-next'
 import type { Panel } from '../types/panel'
 import { createPanel, updatePanel } from '../api/panels'
-import QueryEditor from './QueryEditor.vue'
+import QueryBuilder from './QueryBuilder.vue'
 
 const props = defineProps<{
   panel?: Panel
@@ -100,8 +100,9 @@ async function handleSubmit() {
           </div>
         </div>
 
-        <div class="form-group">
-          <QueryEditor
+        <div class="form-group query-builder-group">
+          <label>Query</label>
+          <QueryBuilder
             v-model="promqlQuery"
             :disabled="loading"
           />
@@ -219,6 +220,11 @@ form {
 
 .form-group-small {
   min-width: 160px;
+}
+
+.query-builder-group {
+  border-top: 1px solid var(--border-primary);
+  padding-top: 1.25rem;
 }
 
 .form-group label {

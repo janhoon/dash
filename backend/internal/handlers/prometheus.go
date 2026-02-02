@@ -4,18 +4,62 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/janhoon/dash/backend/pkg/prometheus"
 )
 
+// CacheEntry holds cached data with expiration
+type CacheEntry struct {
+	Data      interface{}
+	ExpiresAt time.Time
+}
+
+// MetadataCache provides thread-safe caching for Prometheus metadata
+type MetadataCache struct {
+	mu      sync.RWMutex
+	entries map[string]CacheEntry
+	ttl     time.Duration
+}
+
+func NewMetadataCache(ttl time.Duration) *MetadataCache {
+	return &MetadataCache{
+		entries: make(map[string]CacheEntry),
+		ttl:     ttl,
+	}
+}
+
+func (c *MetadataCache) Get(key string) (interface{}, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	entry, ok := c.entries[key]
+	if !ok || time.Now().After(entry.ExpiresAt) {
+		return nil, false
+	}
+	return entry.Data, true
+}
+
+func (c *MetadataCache) Set(key string, data interface{}) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.entries[key] = CacheEntry{
+		Data:      data,
+		ExpiresAt: time.Now().Add(c.ttl),
+	}
+}
+
 type PrometheusHandler struct {
 	prometheusURL string
+	cache         *MetadataCache
 }
 
 func NewPrometheusHandler(prometheusURL string) *PrometheusHandler {
 	return &PrometheusHandler{
 		prometheusURL: prometheusURL,
+		cache:         NewMetadataCache(5 * time.Minute),
 	}
 }
 
@@ -132,4 +176,155 @@ func (h *PrometheusHandler) Query(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(result)
+}
+
+// MetricsResponse contains the list of metric names
+type MetricsResponse struct {
+	Status string   `json:"status"`
+	Data   []string `json:"data"`
+}
+
+// Labels returns all available label names (GET /api/datasources/prometheus/labels)
+func (h *PrometheusHandler) Labels(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Check cache first
+	if cached, ok := h.cache.Get("labels"); ok {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(MetricsResponse{
+			Status: "success",
+			Data:   cached.([]string),
+		})
+		return
+	}
+
+	client, err := prometheus.NewClient(h.prometheusURL)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Status: "error",
+			Error:  "failed to create Prometheus client: " + err.Error(),
+		})
+		return
+	}
+
+	labels, err := client.LabelNames(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Status: "error",
+			Error:  "failed to get labels: " + err.Error(),
+		})
+		return
+	}
+
+	// Cache the result
+	h.cache.Set("labels", labels)
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(MetricsResponse{
+		Status: "success",
+		Data:   labels,
+	})
+}
+
+// Metrics returns all available metric names (GET /api/datasources/prometheus/metrics)
+func (h *PrometheusHandler) Metrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Check cache first
+	if cached, ok := h.cache.Get("metrics"); ok {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(MetricsResponse{
+			Status: "success",
+			Data:   cached.([]string),
+		})
+		return
+	}
+
+	client, err := prometheus.NewClient(h.prometheusURL)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Status: "error",
+			Error:  "failed to create Prometheus client: " + err.Error(),
+		})
+		return
+	}
+
+	// Get values for __name__ label to get all metric names
+	metrics, err := client.LabelValues(r.Context(), "__name__")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Status: "error",
+			Error:  "failed to get metrics: " + err.Error(),
+		})
+		return
+	}
+
+	// Cache the result
+	h.cache.Set("metrics", metrics)
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(MetricsResponse{
+		Status: "success",
+		Data:   metrics,
+	})
+}
+
+// LabelValues returns all values for a specific label (GET /api/datasources/prometheus/label/{name}/values)
+func (h *PrometheusHandler) LabelValues(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	labelName := r.PathValue("name")
+	if labelName == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Status: "error",
+			Error:  "label name is required",
+		})
+		return
+	}
+
+	cacheKey := "label_values:" + labelName
+
+	// Check cache first
+	if cached, ok := h.cache.Get(cacheKey); ok {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(MetricsResponse{
+			Status: "success",
+			Data:   cached.([]string),
+		})
+		return
+	}
+
+	client, err := prometheus.NewClient(h.prometheusURL)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Status: "error",
+			Error:  "failed to create Prometheus client: " + err.Error(),
+		})
+		return
+	}
+
+	values, err := client.LabelValues(r.Context(), labelName)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Status: "error",
+			Error:  "failed to get label values: " + err.Error(),
+		})
+		return
+	}
+
+	// Cache the result
+	h.cache.Set(cacheKey, values)
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(MetricsResponse{
+		Status: "success",
+		Data:   values,
+	})
 }
