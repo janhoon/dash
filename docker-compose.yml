@@ -16,6 +16,19 @@ services:
       timeout: 5s
       retries: 5
 
+  valkey:
+    image: valkey/valkey:7
+    container_name: dash-valkey
+    ports:
+      - "6379:6379"
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   prometheus:
     image: prom/prometheus:v2.48.0
     container_name: dash-prometheus
@@ -31,4 +44,5 @@ services:
 
 volumes:
   postgres_data:
+  valkey_data:
   prometheus_data:
