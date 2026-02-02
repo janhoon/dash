@@ -31,7 +31,7 @@ async function fetchOrganizations() {
     }
     // If no current org selected, select the first one
     if (!currentOrgId.value && organizations.value.length > 0) {
-      currentOrgId.value = organizations.value[0].id
+      currentOrgId.value = organizations.value[0]?.id ?? null
     }
   } catch (e) {
     error.value = 'Failed to load organizations'

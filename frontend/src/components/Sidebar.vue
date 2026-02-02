@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { LayoutDashboard, Settings, Activity, ChevronLeft, ChevronRight, Compass } from 'lucide-vue-next'
+import { LayoutDashboard, Settings, Activity, ChevronLeft, ChevronRight, Compass, LogOut } from 'lucide-vue-next'
 import OrganizationDropdown from './OrganizationDropdown.vue'
 import CreateOrganizationModal from './CreateOrganizationModal.vue'
 import { useOrganization } from '../composables/useOrganization'
+import { useAuth } from '../composables/useAuth'
 
 const route = useRoute()
 const router = useRouter()
-const { fetchOrganizations } = useOrganization()
+const { fetchOrganizations, clearOrganizations } = useOrganization()
+const { logout, user } = useAuth()
 
 const isExpanded = ref(true)
 const showCreateOrgModal = ref(false)
@@ -43,6 +45,12 @@ function toggleSidebar() {
 function handleOrgCreated() {
   showCreateOrgModal.value = false
   fetchOrganizations()
+}
+
+async function handleLogout() {
+  await logout()
+  clearOrganizations()
+  router.push('/login')
 }
 
 defineExpose({ isExpanded })
@@ -90,6 +98,18 @@ defineExpose({ isExpanded })
           <component :is="item.icon" :size="20" />
           <span v-if="isExpanded" class="nav-label">{{ item.label }}</span>
           <span v-else class="nav-tooltip">{{ item.label }}</span>
+        </button>
+        <div v-if="isExpanded && user" class="user-info">
+          <span class="user-email">{{ user.email }}</span>
+        </div>
+        <button
+          class="nav-item logout-btn"
+          @click="handleLogout"
+          :title="isExpanded ? undefined : 'Log out'"
+        >
+          <LogOut :size="20" />
+          <span v-if="isExpanded" class="nav-label">Log out</span>
+          <span v-else class="nav-tooltip">Log out</span>
         </button>
       </div>
     </nav>
@@ -280,5 +300,25 @@ defineExpose({ isExpanded })
 .sidebar:not(.expanded) .nav-item:hover .nav-tooltip {
   opacity: 1;
   visibility: visible;
+}
+
+.user-info {
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem 0.5rem 0;
+  border-top: 1px solid var(--border-primary);
+}
+
+.user-email {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 107, 107, 0.15);
+  color: var(--accent-danger);
 }
 </style>

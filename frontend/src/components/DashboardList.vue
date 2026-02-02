@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus, Pencil, Trash2, LayoutDashboard, AlertCircle } from 'lucide-vue-next'
 import type { Dashboard } from '../types/dashboard'
 import { listDashboards, deleteDashboard } from '../api/dashboards'
+import { useOrganization } from '../composables/useOrganization'
 import CreateDashboardModal from './CreateDashboardModal.vue'
 import EditDashboardModal from './EditDashboardModal.vue'
 
 const router = useRouter()
+const { currentOrgId } = useOrganization()
 
 const dashboards = ref<Dashboard[]>([])
 const loading = ref(true)
@@ -19,16 +21,27 @@ const showDeleteConfirm = ref(false)
 const deletingDashboard = ref<Dashboard | null>(null)
 
 async function fetchDashboards() {
+  if (!currentOrgId.value) {
+    dashboards.value = []
+    loading.value = false
+    return
+  }
+
   loading.value = true
   error.value = null
   try {
-    dashboards.value = await listDashboards()
+    dashboards.value = await listDashboards(currentOrgId.value)
   } catch (e) {
-    error.value = 'Failed to load dashboards'
+    error.value = e instanceof Error ? e.message : 'Failed to load dashboards'
   } finally {
     loading.value = false
   }
 }
+
+// Refetch dashboards when organization changes
+watch(currentOrgId, () => {
+  fetchDashboards()
+})
 
 function openCreateModal() {
   showCreateModal.value = true

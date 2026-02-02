@@ -196,13 +196,19 @@ const isStatPanel = computed(() => props.panel.type === 'stat')
 
 <style scoped>
 .panel {
-  background: white;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
   border-radius: 8px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   height: 100%;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.panel:hover {
+  border-color: var(--border-secondary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .panel-header {
@@ -210,14 +216,14 @@ const isStatPanel = computed(() => props.panel.type === 'stat')
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border-bottom: 1px solid var(--border-primary);
+  background: var(--bg-tertiary);
 }
 
 .panel-title {
   font-size: 14px;
   font-weight: 600;
-  color: #334155;
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -230,7 +236,7 @@ const isStatPanel = computed(() => props.panel.type === 'stat')
   padding: 4px;
   background: transparent;
   border: none;
-  color: #64748b;
+  color: var(--text-tertiary);
   cursor: pointer;
   border-radius: 4px;
   display: flex;
@@ -240,8 +246,8 @@ const isStatPanel = computed(() => props.panel.type === 'stat')
 }
 
 .panel-action-btn:hover {
-  background: #e2e8f0;
-  color: #334155;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .panel-body {
@@ -268,33 +274,33 @@ const isStatPanel = computed(() => props.panel.type === 'stat')
 
 .panel-no-query,
 .panel-no-data {
-  color: #94a3b8;
+  color: var(--text-tertiary);
 }
 
 .panel-error {
-  color: #ef4444;
+  color: var(--accent-danger);
 }
 
 .icon-muted {
-  color: #cbd5e1;
+  color: var(--text-tertiary);
 }
 
 .icon-warning {
-  color: #f59e0b;
+  color: var(--accent-warning);
 }
 
 .icon-error {
-  color: #ef4444;
+  color: var(--accent-danger);
 }
 
 .text-muted {
-  color: #64748b;
+  color: var(--text-secondary);
   font-size: 14px;
   margin: 0;
 }
 
 .error-text {
-  color: #dc2626;
+  color: var(--accent-danger);
   font-size: 14px;
   margin: 0;
 }
@@ -302,8 +308,8 @@ const isStatPanel = computed(() => props.panel.type === 'stat')
 .spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid #e2e8f0;
-  border-top-color: #3b82f6;
+  border: 3px solid var(--border-primary);
+  border-top-color: var(--accent-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -316,7 +322,7 @@ const isStatPanel = computed(() => props.panel.type === 'stat')
 
 .btn-primary {
   padding: 8px 16px;
-  background: #3b82f6;
+  background: var(--accent-primary);
   color: white;
   border: none;
   border-radius: 6px;
@@ -327,6 +333,6 @@ const isStatPanel = computed(() => props.panel.type === 'stat')
 }
 
 .btn-primary:hover {
-  background: #2563eb;
+  background: var(--accent-primary-hover);
 }
 </style>

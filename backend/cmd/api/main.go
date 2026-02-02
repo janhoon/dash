@@ -104,13 +104,13 @@ func main() {
 	mux.HandleFunc("PUT /api/orgs/{id}/members/{userId}/role", auth.RequireAuth(jwtManager, orgHandler.UpdateMemberRole))
 	mux.HandleFunc("DELETE /api/orgs/{id}/members/{userId}", auth.RequireAuth(jwtManager, orgHandler.RemoveMember))
 
-	// Dashboard routes
+	// Dashboard routes (org-scoped for list/create, dashboard ID for get/update/delete)
 	dashboardHandler := handlers.NewDashboardHandler(pool)
-	mux.HandleFunc("POST /api/dashboards", dashboardHandler.Create)
-	mux.HandleFunc("GET /api/dashboards", dashboardHandler.List)
-	mux.HandleFunc("GET /api/dashboards/{id}", dashboardHandler.Get)
-	mux.HandleFunc("PUT /api/dashboards/{id}", dashboardHandler.Update)
-	mux.HandleFunc("DELETE /api/dashboards/{id}", dashboardHandler.Delete)
+	mux.HandleFunc("POST /api/orgs/{orgId}/dashboards", auth.RequireAuth(jwtManager, dashboardHandler.Create))
+	mux.HandleFunc("GET /api/orgs/{orgId}/dashboards", auth.RequireAuth(jwtManager, dashboardHandler.List))
+	mux.HandleFunc("GET /api/dashboards/{id}", auth.RequireAuth(jwtManager, dashboardHandler.Get))
+	mux.HandleFunc("PUT /api/dashboards/{id}", auth.RequireAuth(jwtManager, dashboardHandler.Update))
+	mux.HandleFunc("DELETE /api/dashboards/{id}", auth.RequireAuth(jwtManager, dashboardHandler.Delete))
 
 	// Panel routes
 	panelHandler := handlers.NewPanelHandler(pool)

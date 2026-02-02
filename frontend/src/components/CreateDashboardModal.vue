@@ -2,11 +2,14 @@
 import { ref } from 'vue'
 import { X } from 'lucide-vue-next'
 import { createDashboard } from '../api/dashboards'
+import { useOrganization } from '../composables/useOrganization'
 
 const emit = defineEmits<{
   close: []
   created: []
 }>()
+
+const { currentOrgId } = useOrganization()
 
 const title = ref('')
 const description = ref('')
@@ -19,17 +22,22 @@ async function handleSubmit() {
     return
   }
 
+  if (!currentOrgId.value) {
+    error.value = 'No organization selected'
+    return
+  }
+
   loading.value = true
   error.value = null
 
   try {
-    await createDashboard({
+    await createDashboard(currentOrgId.value, {
       title: title.value.trim(),
       description: description.value.trim() || undefined
     })
     emit('created')
   } catch (e) {
-    error.value = 'Failed to create dashboard'
+    error.value = e instanceof Error ? e.message : 'Failed to create dashboard'
   } finally {
     loading.value = false
   }
