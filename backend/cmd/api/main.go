@@ -12,6 +12,8 @@ import (
 	"github.com/janhoon/dash/backend/internal/auth"
 	"github.com/janhoon/dash/backend/internal/db"
 	"github.com/janhoon/dash/backend/internal/handlers"
+	"github.com/janhoon/dash/backend/internal/valkey"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -45,6 +47,15 @@ func main() {
 		log.Fatalf("Failed to initialize JWT manager: %v", err)
 	}
 
+	// Initialize Valkey client (optional - refresh tokens won't work without it)
+	valkeyClient, err := valkey.NewClient()
+	if err != nil {
+		log.Printf("Warning: Valkey not available, refresh tokens disabled: %v", err)
+	} else {
+		defer valkeyClient.Close()
+		log.Println("Valkey connected successfully")
+	}
+
 	// Setup router
 	mux := http.NewServeMux()
 
@@ -52,12 +63,33 @@ func main() {
 	mux.HandleFunc("GET /api/health", handlers.HealthCheck)
 
 	// Auth routes
-	authHandler := handlers.NewAuthHandler(pool, jwtManager)
+	var rdb *redis.Client
+	if valkeyClient != nil {
+		rdb = valkeyClient.GetRedis()
+	}
+	authHandler := handlers.NewAuthHandler(pool, jwtManager, rdb)
 	mux.HandleFunc("POST /api/auth/register", authHandler.Register)
 	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
 	mux.HandleFunc("GET /api/auth/me", auth.RequireAuth(jwtManager, authHandler.Me))
 	mux.HandleFunc("GET /api/auth/me/methods", auth.RequireAuth(jwtManager, authHandler.GetAuthMethods))
 	mux.HandleFunc("DELETE /api/auth/me/methods/{id}", auth.RequireAuth(jwtManager, authHandler.UnlinkAuthMethod))
+	mux.HandleFunc("POST /api/auth/refresh", authHandler.Refresh)
+	mux.HandleFunc("POST /api/auth/logout", authHandler.Logout)
+	mux.HandleFunc("POST /api/auth/logout-all", auth.RequireAuth(jwtManager, authHandler.LogoutAll))
+
+	// Google SSO routes
+	googleSSOHandler := handlers.NewGoogleSSOHandler(pool, jwtManager)
+	mux.HandleFunc("GET /api/auth/google/login", googleSSOHandler.Login)
+	mux.HandleFunc("GET /api/auth/google/callback", googleSSOHandler.Callback)
+	mux.HandleFunc("POST /api/orgs/{id}/sso/google", auth.RequireAuth(jwtManager, googleSSOHandler.ConfigureSSO))
+	mux.HandleFunc("GET /api/orgs/{id}/sso/google", auth.RequireAuth(jwtManager, googleSSOHandler.GetSSOConfig))
+
+	// Microsoft SSO routes
+	microsoftSSOHandler := handlers.NewMicrosoftSSOHandler(pool, jwtManager)
+	mux.HandleFunc("GET /api/auth/microsoft/login", microsoftSSOHandler.Login)
+	mux.HandleFunc("GET /api/auth/microsoft/callback", microsoftSSOHandler.Callback)
+	mux.HandleFunc("POST /api/orgs/{id}/sso/microsoft", auth.RequireAuth(jwtManager, microsoftSSOHandler.ConfigureSSO))
+	mux.HandleFunc("GET /api/orgs/{id}/sso/microsoft", auth.RequireAuth(jwtManager, microsoftSSOHandler.GetSSOConfig))
 
 	// Dashboard routes
 	dashboardHandler := handlers.NewDashboardHandler(pool)

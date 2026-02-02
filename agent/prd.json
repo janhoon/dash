@@ -52,7 +52,7 @@
       "TEST: Logout → token deleted",
       "TEST: Logout-all → all user tokens deleted"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "Auth - Google SSO",
@@ -76,7 +76,7 @@
       "TEST: Existing user → account linked",
       "TEST: Admin configures SSO → saved"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "Auth - Microsoft SSO",
@@ -99,7 +99,7 @@
       "TEST: Microsoft OAuth flow works",
       "TEST: User provisioning works"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "Auth - Multi-Auth Linking",

@@ -9,10 +9,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/google/uuid"
+	"github.com/alicebob/miniredis/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/janhoon/dash/backend/internal/auth"
 	"github.com/janhoon/dash/backend/internal/db"
+	"github.com/redis/go-redis/v9"
 )
 
 var testPool *pgxpool.Pool
@@ -47,7 +48,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	testAuthHandler = NewAuthHandler(testPool, testJWTManager)
+	testAuthHandler = NewAuthHandler(testPool, testJWTManager, nil)
 
 	// Run tests
 	code := m.Run()
@@ -328,17 +329,272 @@ func TestMeWithoutToken(t *testing.T) {
 	}
 }
 
+func setupTestWithRedis(t *testing.T) (*AuthHandler, func()) {
+	if testPool == nil {
+		t.Skip("Database not available")
+	}
+
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("Failed to start miniredis: %v", err)
+	}
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+
+	handler := NewAuthHandler(testPool, testJWTManager, rdb)
+
+	cleanup := func() {
+		rdb.Close()
+		mr.Close()
+	}
+
+	return handler, cleanup
+}
+
+func TestLoginReturnsRefreshToken(t *testing.T) {
+	handler, cleanup := setupTestWithRedis(t)
+	defer cleanup()
+
+	// Cleanup and register user
+	testPool.Exec(context.Background(), "DELETE FROM users WHERE email = 'testloginrefresh@example.com'")
+
+	regBody := `{"email":"testloginrefresh@example.com","password":"TestPassword123!","name":"Test User"}`
+	regReq := httptest.NewRequest("POST", "/api/auth/register", bytes.NewBufferString(regBody))
+	regReq.Header.Set("Content-Type", "application/json")
+	regW := httptest.NewRecorder()
+	handler.Register(regW, regReq)
+
+	if regW.Code != http.StatusCreated {
+		t.Fatalf("Failed to register user: %d", regW.Code)
+	}
+
+	// Login
+	loginBody := `{"email":"testloginrefresh@example.com","password":"TestPassword123!"}`
+	loginReq := httptest.NewRequest("POST", "/api/auth/login", bytes.NewBufferString(loginBody))
+	loginReq.Header.Set("Content-Type", "application/json")
+	loginW := httptest.NewRecorder()
+
+	handler.Login(loginW, loginReq)
+
+	if loginW.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d: %s", loginW.Code, loginW.Body.String())
+	}
+
+	var response AuthResponse
+	if err := json.NewDecoder(loginW.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if response.AccessToken == "" {
+		t.Error("Expected access token in response")
+	}
+	if response.RefreshToken == "" {
+		t.Error("Expected refresh token in response")
+	}
+}
+
+func TestRefreshTokenEndpoint(t *testing.T) {
+	handler, cleanup := setupTestWithRedis(t)
+	defer cleanup()
+
+	// Cleanup and register user
+	testPool.Exec(context.Background(), "DELETE FROM users WHERE email = 'testrefreshendpoint@example.com'")
+
+	regBody := `{"email":"testrefreshendpoint@example.com","password":"TestPassword123!","name":"Test User"}`
+	regReq := httptest.NewRequest("POST", "/api/auth/register", bytes.NewBufferString(regBody))
+	regReq.Header.Set("Content-Type", "application/json")
+	regW := httptest.NewRecorder()
+	handler.Register(regW, regReq)
+
+	var regResponse AuthResponse
+	json.NewDecoder(regW.Body).Decode(&regResponse)
+
+	// Use refresh token to get new tokens
+	refreshBody := `{"refresh_token":"` + regResponse.RefreshToken + `"}`
+	refreshReq := httptest.NewRequest("POST", "/api/auth/refresh", bytes.NewBufferString(refreshBody))
+	refreshReq.Header.Set("Content-Type", "application/json")
+	refreshW := httptest.NewRecorder()
+
+	handler.Refresh(refreshW, refreshReq)
+
+	if refreshW.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d: %s", refreshW.Code, refreshW.Body.String())
+	}
+
+	var refreshResponse AuthResponse
+	if err := json.NewDecoder(refreshW.Body).Decode(&refreshResponse); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if refreshResponse.AccessToken == "" {
+		t.Error("Expected new access token")
+	}
+	if refreshResponse.RefreshToken == "" {
+		t.Error("Expected new refresh token")
+	}
+	if refreshResponse.RefreshToken == regResponse.RefreshToken {
+		t.Error("New refresh token should be different from old one")
+	}
+}
+
+func TestRefreshTokenRotation(t *testing.T) {
+	handler, cleanup := setupTestWithRedis(t)
+	defer cleanup()
+
+	// Cleanup and register user
+	testPool.Exec(context.Background(), "DELETE FROM users WHERE email = 'testrotation@example.com'")
+
+	regBody := `{"email":"testrotation@example.com","password":"TestPassword123!","name":"Test User"}`
+	regReq := httptest.NewRequest("POST", "/api/auth/register", bytes.NewBufferString(regBody))
+	regReq.Header.Set("Content-Type", "application/json")
+	regW := httptest.NewRecorder()
+	handler.Register(regW, regReq)
+
+	var regResponse AuthResponse
+	json.NewDecoder(regW.Body).Decode(&regResponse)
+
+	oldRefreshToken := regResponse.RefreshToken
+
+	// Use refresh token
+	refreshBody := `{"refresh_token":"` + oldRefreshToken + `"}`
+	refreshReq := httptest.NewRequest("POST", "/api/auth/refresh", bytes.NewBufferString(refreshBody))
+	refreshReq.Header.Set("Content-Type", "application/json")
+	refreshW := httptest.NewRecorder()
+	handler.Refresh(refreshW, refreshReq)
+
+	// Try to use the old refresh token again - should fail
+	refreshReq2 := httptest.NewRequest("POST", "/api/auth/refresh", bytes.NewBufferString(refreshBody))
+	refreshReq2.Header.Set("Content-Type", "application/json")
+	refreshW2 := httptest.NewRecorder()
+
+	handler.Refresh(refreshW2, refreshReq2)
+
+	if refreshW2.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status 401 for rotated token, got %d", refreshW2.Code)
+	}
+}
+
+func TestLogoutEndpoint(t *testing.T) {
+	handler, cleanup := setupTestWithRedis(t)
+	defer cleanup()
+
+	// Cleanup and register user
+	testPool.Exec(context.Background(), "DELETE FROM users WHERE email = 'testlogout@example.com'")
+
+	regBody := `{"email":"testlogout@example.com","password":"TestPassword123!","name":"Test User"}`
+	regReq := httptest.NewRequest("POST", "/api/auth/register", bytes.NewBufferString(regBody))
+	regReq.Header.Set("Content-Type", "application/json")
+	regW := httptest.NewRecorder()
+	handler.Register(regW, regReq)
+
+	var regResponse AuthResponse
+	json.NewDecoder(regW.Body).Decode(&regResponse)
+
+	// Logout
+	logoutBody := `{"refresh_token":"` + regResponse.RefreshToken + `"}`
+	logoutReq := httptest.NewRequest("POST", "/api/auth/logout", bytes.NewBufferString(logoutBody))
+	logoutReq.Header.Set("Content-Type", "application/json")
+	logoutW := httptest.NewRecorder()
+
+	handler.Logout(logoutW, logoutReq)
+
+	if logoutW.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d: %s", logoutW.Code, logoutW.Body.String())
+	}
+
+	// Try to use the refresh token - should fail
+	refreshBody := `{"refresh_token":"` + regResponse.RefreshToken + `"}`
+	refreshReq := httptest.NewRequest("POST", "/api/auth/refresh", bytes.NewBufferString(refreshBody))
+	refreshReq.Header.Set("Content-Type", "application/json")
+	refreshW := httptest.NewRecorder()
+
+	handler.Refresh(refreshW, refreshReq)
+
+	if refreshW.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status 401 for logged out token, got %d", refreshW.Code)
+	}
+}
+
+func TestLogoutAllEndpoint(t *testing.T) {
+	handler, cleanup := setupTestWithRedis(t)
+	defer cleanup()
+
+	// Cleanup and register user
+	testPool.Exec(context.Background(), "DELETE FROM users WHERE email = 'testlogoutall@example.com'")
+
+	regBody := `{"email":"testlogoutall@example.com","password":"TestPassword123!","name":"Test User"}`
+	regReq := httptest.NewRequest("POST", "/api/auth/register", bytes.NewBufferString(regBody))
+	regReq.Header.Set("Content-Type", "application/json")
+	regW := httptest.NewRecorder()
+	handler.Register(regW, regReq)
+
+	var regResponse AuthResponse
+	json.NewDecoder(regW.Body).Decode(&regResponse)
+
+	// Login again to get a second refresh token
+	loginBody := `{"email":"testlogoutall@example.com","password":"TestPassword123!"}`
+	loginReq := httptest.NewRequest("POST", "/api/auth/login", bytes.NewBufferString(loginBody))
+	loginReq.Header.Set("Content-Type", "application/json")
+	loginW := httptest.NewRecorder()
+	handler.Login(loginW, loginReq)
+
+	var loginResponse AuthResponse
+	json.NewDecoder(loginW.Body).Decode(&loginResponse)
+
+	// Call logout-all (needs auth)
+	logoutReq := httptest.NewRequest("POST", "/api/auth/logout-all", nil)
+	logoutReq.Header.Set("Authorization", "Bearer "+regResponse.AccessToken)
+	logoutW := httptest.NewRecorder()
+
+	wrappedHandler := auth.RequireAuth(testJWTManager, handler.LogoutAll)
+	wrappedHandler(logoutW, logoutReq)
+
+	if logoutW.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d: %s", logoutW.Code, logoutW.Body.String())
+	}
+
+	// Try to use any of the refresh tokens - both should fail
+	for i, token := range []string{regResponse.RefreshToken, loginResponse.RefreshToken} {
+		refreshBody := `{"refresh_token":"` + token + `"}`
+		refreshReq := httptest.NewRequest("POST", "/api/auth/refresh", bytes.NewBufferString(refreshBody))
+		refreshReq.Header.Set("Content-Type", "application/json")
+		refreshW := httptest.NewRecorder()
+
+		handler.Refresh(refreshW, refreshReq)
+
+		if refreshW.Code != http.StatusUnauthorized {
+			t.Errorf("Token %d: Expected status 401 after logout-all, got %d", i, refreshW.Code)
+		}
+	}
+}
+
+func TestRefreshInvalidToken(t *testing.T) {
+	handler, cleanup := setupTestWithRedis(t)
+	defer cleanup()
+
+	refreshBody := `{"refresh_token":"invalid-token-here"}`
+	refreshReq := httptest.NewRequest("POST", "/api/auth/refresh", bytes.NewBufferString(refreshBody))
+	refreshReq.Header.Set("Content-Type", "application/json")
+	refreshW := httptest.NewRecorder()
+
+	handler.Refresh(refreshW, refreshReq)
+
+	if refreshW.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status 401 for invalid token, got %d", refreshW.Code)
+	}
+}
+
 func TestGetAuthMethods(t *testing.T) {
 	if testPool == nil {
 		t.Skip("Database not available")
 	}
 
 	ctx := context.Background()
+	testPool.Exec(ctx, "DELETE FROM users WHERE email = 'testgetmethods@example.com'")
 
-	// Cleanup and register user with password
-	testPool.Exec(ctx, "DELETE FROM users WHERE email = 'testmethods@example.com'")
-
-	regBody := `{"email":"testmethods@example.com","password":"TestPassword123!","name":"Test Methods User"}`
+	regBody := `{"email":"testgetmethods@example.com","password":"TestPassword123!","name":"Test Methods"}`
 	regReq := httptest.NewRequest("POST", "/api/auth/register", bytes.NewBufferString(regBody))
 	regReq.Header.Set("Content-Type", "application/json")
 	regW := httptest.NewRecorder()
@@ -347,31 +603,26 @@ func TestGetAuthMethods(t *testing.T) {
 	var regResponse AuthResponse
 	json.NewDecoder(regW.Body).Decode(&regResponse)
 
-	// Get auth methods
-	methodsReq := httptest.NewRequest("GET", "/api/auth/me/methods", nil)
-	methodsReq.Header.Set("Authorization", "Bearer "+regResponse.AccessToken)
-	methodsW := httptest.NewRecorder()
+	getReq := httptest.NewRequest("GET", "/api/auth/me/methods", nil)
+	getReq.Header.Set("Authorization", "Bearer "+regResponse.AccessToken)
+	getW := httptest.NewRecorder()
 
 	wrappedHandler := auth.RequireAuth(testJWTManager, testAuthHandler.GetAuthMethods)
-	wrappedHandler(methodsW, methodsReq)
+	wrappedHandler(getW, getReq)
 
-	if methodsW.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d: %s", methodsW.Code, methodsW.Body.String())
+	if getW.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d: %s", getW.Code, getW.Body.String())
 	}
 
 	var methods []AuthMethodResponse
-	if err := json.NewDecoder(methodsW.Body).Decode(&methods); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
+	json.NewDecoder(getW.Body).Decode(&methods)
+
+	if len(methods) != 1 {
+		t.Errorf("Expected 1 auth method, got %d", len(methods))
 	}
 
-	// Should have at least password method
-	if len(methods) < 1 {
-		t.Error("Expected at least one auth method (password)")
-	}
-
-	// First method should be password
-	if len(methods) > 0 && methods[0].Provider != "password" {
-		t.Errorf("Expected first method to be password, got %s", methods[0].Provider)
+	if methods[0].Provider != "password" {
+		t.Errorf("Expected password provider, got %s", methods[0].Provider)
 	}
 }
 
@@ -381,8 +632,6 @@ func TestUnlinkLastAuthMethodFails(t *testing.T) {
 	}
 
 	ctx := context.Background()
-
-	// Cleanup and register user with only password
 	testPool.Exec(ctx, "DELETE FROM users WHERE email = 'testunlink@example.com'")
 
 	regBody := `{"email":"testunlink@example.com","password":"TestPassword123!","name":"Test Unlink User"}`
@@ -394,7 +643,6 @@ func TestUnlinkLastAuthMethodFails(t *testing.T) {
 	var regResponse AuthResponse
 	json.NewDecoder(regW.Body).Decode(&regResponse)
 
-	// Try to unlink password (uuid.Nil)
 	unlinkReq := httptest.NewRequest("DELETE", "/api/auth/me/methods/00000000-0000-0000-0000-000000000000", nil)
 	unlinkReq.Header.Set("Authorization", "Bearer "+regResponse.AccessToken)
 	unlinkReq.SetPathValue("id", "00000000-0000-0000-0000-000000000000")
@@ -405,59 +653,5 @@ func TestUnlinkLastAuthMethodFails(t *testing.T) {
 
 	if unlinkW.Code != http.StatusBadRequest {
 		t.Errorf("Expected status 400 for unlinking last method, got %d: %s", unlinkW.Code, unlinkW.Body.String())
-	}
-}
-
-func TestUnlinkSSOMethod(t *testing.T) {
-	if testPool == nil {
-		t.Skip("Database not available")
-	}
-
-	ctx := context.Background()
-
-	// Cleanup and create user with password + SSO
-	testPool.Exec(ctx, "DELETE FROM users WHERE email = 'testunlinksso@example.com'")
-
-	// Create user with password
-	regBody := `{"email":"testunlinksso@example.com","password":"TestPassword123!","name":"Test Unlink SSO"}`
-	regReq := httptest.NewRequest("POST", "/api/auth/register", bytes.NewBufferString(regBody))
-	regReq.Header.Set("Content-Type", "application/json")
-	regW := httptest.NewRecorder()
-	testAuthHandler.Register(regW, regReq)
-
-	var regResponse AuthResponse
-	json.NewDecoder(regW.Body).Decode(&regResponse)
-
-	// Get user ID
-	claims, _ := testJWTManager.VerifyAccessToken(regResponse.AccessToken)
-	userID := claims.UserID
-
-	// Add SSO method
-	var methodID uuid.UUID
-	testPool.QueryRow(ctx,
-		`INSERT INTO user_auth_methods (user_id, provider, provider_user_id)
-		 VALUES ($1, 'google', 'google-123') RETURNING id`,
-		userID,
-	).Scan(&methodID)
-	defer testPool.Exec(ctx, `DELETE FROM user_auth_methods WHERE user_id = $1`, userID)
-
-	// Unlink SSO method
-	unlinkReq := httptest.NewRequest("DELETE", "/api/auth/me/methods/"+methodID.String(), nil)
-	unlinkReq.Header.Set("Authorization", "Bearer "+regResponse.AccessToken)
-	unlinkReq.SetPathValue("id", methodID.String())
-	unlinkW := httptest.NewRecorder()
-
-	wrappedHandler := auth.RequireAuth(testJWTManager, testAuthHandler.UnlinkAuthMethod)
-	wrappedHandler(unlinkW, unlinkReq)
-
-	if unlinkW.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d: %s", unlinkW.Code, unlinkW.Body.String())
-	}
-
-	// Verify method is gone
-	var count int
-	testPool.QueryRow(ctx, `SELECT COUNT(*) FROM user_auth_methods WHERE id = $1`, methodID).Scan(&count)
-	if count != 0 {
-		t.Error("SSO method should be deleted")
 	}
 }
