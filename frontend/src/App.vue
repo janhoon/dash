@@ -10,7 +10,7 @@ const { isAuthenticated } = useAuth()
 const sidebarRef = ref<InstanceType<typeof Sidebar> | null>(null)
 
 const sidebarWidth = computed(() => {
-  return sidebarRef.value?.isExpanded ? '200px' : '56px'
+  return sidebarRef.value?.isExpanded ? '232px' : '64px'
 })
 
 const showSidebar = computed(() => {
@@ -32,6 +32,7 @@ const showSidebar = computed(() => {
   display: flex;
   min-height: 100vh;
   width: 100%;
+  position: relative;
 }
 
 .app-layout.no-sidebar {
@@ -40,13 +41,19 @@ const showSidebar = computed(() => {
 
 .main-content {
   flex: 1;
-  margin-left: 200px;
+  margin-left: 232px;
   min-height: 100vh;
-  background: var(--bg-primary);
-  transition: margin-left 0.2s ease;
+  background: transparent;
+  transition: margin-left 0.24s ease;
 }
 
 .no-sidebar .main-content {
   margin-left: 0;
+}
+
+@media (max-width: 900px) {
+  .main-content {
+    margin-left: 64px;
+  }
 }
 </style>

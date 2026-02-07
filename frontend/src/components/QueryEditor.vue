@@ -202,7 +202,7 @@ const previewData = computed(() => {
 .query-textarea:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+  box-shadow: var(--focus-ring);
 }
 
 .query-textarea:disabled {

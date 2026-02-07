@@ -233,19 +233,27 @@ const seriesCount = computed(() => chartSeries.value.length)
   display: flex;
   flex-direction: column;
   min-height: 100%;
-  padding: 1.5rem 2rem;
+  padding: 1.25rem 1.8rem;
 }
 
 .explore-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
+  padding: 0.95rem 1.15rem;
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+  background: var(--surface-1);
+  box-shadow: var(--shadow-sm);
 }
 
 .explore-header h1 {
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: 1.08rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
   color: var(--text-primary);
   margin: 0;
 }
@@ -267,10 +275,11 @@ const seriesCount = computed(() => chartSeries.value.length)
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 1.5rem;
-  background: var(--bg-secondary);
+  padding: 1.2rem;
+  background: var(--surface-1);
   border: 1px solid var(--border-primary);
-  border-radius: 12px;
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
 }
 
 .query-builder-wrapper {
@@ -290,7 +299,7 @@ const seriesCount = computed(() => chartSeries.value.length)
   padding: 0.5rem 1rem;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-primary);
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--text-secondary);
   font-size: 0.8125rem;
   cursor: pointer;
@@ -311,9 +320,9 @@ const seriesCount = computed(() => chartSeries.value.length)
   width: 350px;
   max-height: 300px;
   overflow-y: auto;
-  background: var(--bg-secondary);
+  background: rgba(11, 21, 33, 0.98);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   z-index: 100;
 }
@@ -388,7 +397,7 @@ const seriesCount = computed(() => chartSeries.value.length)
   padding: 0.625rem 1.25rem;
   background: var(--accent-success);
   border: 1px solid var(--accent-success);
-  border-radius: 8px;
+  border-radius: 10px;
   color: white;
   font-size: 0.875rem;
   font-weight: 500;
@@ -398,8 +407,8 @@ const seriesCount = computed(() => chartSeries.value.length)
 }
 
 .btn-run:hover:not(:disabled) {
-  background: #00c49a;
-  border-color: #00c49a;
+  background: #0ea67d;
+  border-color: #0ea67d;
 }
 
 .btn-run:disabled {
@@ -417,8 +426,8 @@ const seriesCount = computed(() => chartSeries.value.length)
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  background: rgba(255, 107, 107, 0.1);
-  border: 1px solid rgba(255, 107, 107, 0.3);
+  background: rgba(251, 113, 133, 0.1);
+  border: 1px solid rgba(251, 113, 133, 0.3);
   border-radius: 8px;
   color: var(--accent-danger);
   font-size: 0.875rem;
@@ -428,11 +437,12 @@ const seriesCount = computed(() => chartSeries.value.length)
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: var(--bg-secondary);
+  background: var(--surface-1);
   border: 1px solid var(--border-primary);
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
   min-height: 400px;
+  box-shadow: var(--shadow-sm);
 }
 
 .loading-state {
@@ -449,7 +459,7 @@ const seriesCount = computed(() => chartSeries.value.length)
 .loading-spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid var(--border-primary);
+  border: 3px solid rgba(50, 81, 115, 0.65);
   border-top-color: var(--accent-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -471,7 +481,7 @@ const seriesCount = computed(() => chartSeries.value.length)
   align-items: center;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border-primary);
-  background: var(--bg-tertiary);
+  background: rgba(20, 32, 50, 0.9);
 }
 
 .result-count {
@@ -513,6 +523,18 @@ const seriesCount = computed(() => chartSeries.value.length)
   border-radius: 4px;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 0.8125rem;
-  color: var(--accent-primary);
+  color: var(--text-accent);
+}
+
+@media (max-width: 900px) {
+  .explore-page {
+    padding: 0.9rem;
+  }
+
+  .explore-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
 }
 </style>

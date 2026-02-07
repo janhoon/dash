@@ -400,8 +400,9 @@ function getLabelValues(labelName: string): string[] {
 
 .mode-toggle {
   display: flex;
-  background: var(--bg-tertiary);
-  border-radius: 6px;
+  background: rgba(20, 33, 52, 0.8);
+  border-radius: 10px;
+  border: 1px solid var(--border-primary);
   padding: 2px;
   width: fit-content;
 }
@@ -413,7 +414,7 @@ function getLabelValues(labelName: string): string[] {
   padding: 0.5rem 1rem;
   background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--text-secondary);
@@ -431,9 +432,10 @@ function getLabelValues(labelName: string): string[] {
 }
 
 .mode-btn.active {
-  background: var(--bg-secondary);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(52, 211, 153, 0.14));
+  border: 1px solid rgba(56, 189, 248, 0.24);
   color: var(--text-primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 10px rgba(2, 8, 23, 0.28);
 }
 
 .builder-mode,
@@ -513,7 +515,7 @@ function getLabelValues(labelName: string): string[] {
   padding: 0.625rem 1rem 0.625rem 2.25rem;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-primary);
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 0.875rem;
   color: var(--text-primary);
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -522,7 +524,7 @@ function getLabelValues(labelName: string): string[] {
 .search-input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+  box-shadow: var(--focus-ring);
 }
 
 .selected-metric {
@@ -543,9 +545,9 @@ function getLabelValues(labelName: string): string[] {
   right: 0;
   max-height: 250px;
   overflow-y: auto;
-  background: var(--bg-secondary);
+  background: rgba(11, 21, 33, 0.98);
   border: 1px solid var(--border-primary);
-  border-radius: 6px;
+  border-radius: 10px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   z-index: 100;
 }
@@ -782,7 +784,7 @@ function getLabelValues(labelName: string): string[] {
   padding: 0.75rem 1rem;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-primary);
-  border-radius: 6px;
+  border-radius: 10px;
   min-height: 48px;
 }
 
@@ -819,7 +821,7 @@ function getLabelValues(labelName: string): string[] {
 .code-textarea:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+  box-shadow: var(--focus-ring);
 }
 
 .code-textarea:disabled {

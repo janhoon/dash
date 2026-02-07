@@ -323,64 +323,46 @@ export function definePromQLTheme(monaco: typeof Monaco) {
     base: 'vs-dark',
     inherit: true,
     rules: [
-      // Comments - muted
-      { token: 'comment', foreground: '666666', fontStyle: 'italic' },
-      // Strings - warning yellow
-      { token: 'string', foreground: 'feca57' },
-      { token: 'string.escape', foreground: 'feca57' },
-      { token: 'string.invalid', foreground: 'ff6b6b' },
-      // Numbers - light purple
-      { token: 'number', foreground: 'a78bfa' },
-      { token: 'number.duration', foreground: 'a78bfa', fontStyle: 'bold' },
-      // Operators - text primary
-      { token: 'operator', foreground: 'f5f5f5' },
-      // Keywords (by, without, on, ignoring, etc.) - accent primary purple
-      { token: 'keyword', foreground: '667eea', fontStyle: 'bold' },
-      // Functions (rate, sum, avg, etc.) - success teal
-      { token: 'function', foreground: '00d4aa' },
-      // Metric names - light blue
-      { token: 'identifier', foreground: '60a5fa' },
-      // Label names - secondary purple
-      { token: 'label', foreground: '764ba2' }
+      { token: 'comment', foreground: '6d7f9c', fontStyle: 'italic' },
+      { token: 'string', foreground: 'f59e0b' },
+      { token: 'string.escape', foreground: 'f59e0b' },
+      { token: 'string.invalid', foreground: 'fb7185' },
+      { token: 'number', foreground: '7dd3fc' },
+      { token: 'number.duration', foreground: '7dd3fc', fontStyle: 'bold' },
+      { token: 'operator', foreground: 'ecf3ff' },
+      { token: 'keyword', foreground: '38bdf8', fontStyle: 'bold' },
+      { token: 'function', foreground: '34d399' },
+      { token: 'identifier', foreground: '93c5fd' },
+      { token: 'label', foreground: '22d3ee' }
     ],
     colors: {
-      // Editor backgrounds - match app bg-secondary
-      'editor.background': '#141414',
-      'editor.foreground': '#f5f5f5',
-      'editor.lineHighlightBackground': '#1a1a1a',
-      'editor.lineHighlightBorder': '#2a2a2a',
-      // Cursor - accent primary
-      'editorCursor.foreground': '#667eea',
-      // Selection - hover background
-      'editor.selectionBackground': '#333333',
-      'editor.selectionHighlightBackground': '#2a2a2a',
-      // Line numbers
-      'editorLineNumber.foreground': '#666666',
-      'editorLineNumber.activeForeground': '#a0a0a0',
-      // Gutter
-      'editorGutter.background': '#141414',
-      // Widget (autocomplete dropdown)
-      'editorWidget.background': '#1a1a1a',
-      'editorWidget.border': '#2a2a2a',
-      'editorSuggestWidget.background': '#1a1a1a',
-      'editorSuggestWidget.border': '#2a2a2a',
-      'editorSuggestWidget.selectedBackground': '#242424',
-      'editorSuggestWidget.highlightForeground': '#667eea',
-      'editorSuggestWidget.focusHighlightForeground': '#667eea',
-      // Hover widget
-      'editorHoverWidget.background': '#1a1a1a',
-      'editorHoverWidget.border': '#2a2a2a',
-      // Scrollbar
-      'scrollbarSlider.background': '#333333',
-      'scrollbarSlider.hoverBackground': '#444444',
-      'scrollbarSlider.activeBackground': '#555555',
-      // Input (find widget)
-      'input.background': '#1a1a1a',
-      'input.border': '#2a2a2a',
-      'input.foreground': '#f5f5f5',
-      'inputOption.activeBorder': '#667eea',
-      // Focus border
-      'focusBorder': '#667eea'
+      'editor.background': '#0e1622',
+      'editor.foreground': '#ecf3ff',
+      'editor.lineHighlightBackground': '#16243a',
+      'editor.lineHighlightBorder': '#223954',
+      'editorCursor.foreground': '#38bdf8',
+      'editor.selectionBackground': '#243750',
+      'editor.selectionHighlightBackground': '#1b2b42',
+      'editorLineNumber.foreground': '#6d7f9c',
+      'editorLineNumber.activeForeground': '#9eb0ca',
+      'editorGutter.background': '#0e1622',
+      'editorWidget.background': '#141f30',
+      'editorWidget.border': '#223954',
+      'editorSuggestWidget.background': '#141f30',
+      'editorSuggestWidget.border': '#223954',
+      'editorSuggestWidget.selectedBackground': '#1a2a3f',
+      'editorSuggestWidget.highlightForeground': '#38bdf8',
+      'editorSuggestWidget.focusHighlightForeground': '#38bdf8',
+      'editorHoverWidget.background': '#141f30',
+      'editorHoverWidget.border': '#223954',
+      'scrollbarSlider.background': '#2d4665',
+      'scrollbarSlider.hoverBackground': '#3e628d',
+      'scrollbarSlider.activeBackground': '#5078a8',
+      'input.background': '#141f30',
+      'input.border': '#223954',
+      'input.foreground': '#ecf3ff',
+      'inputOption.activeBorder': '#38bdf8',
+      'focusBorder': '#38bdf8'
     }
   })
 }

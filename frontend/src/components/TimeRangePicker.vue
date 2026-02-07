@@ -239,10 +239,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  background: var(--bg-secondary);
+  padding: 0.52rem 0.75rem;
+  background: var(--surface-2);
   border: 1px solid var(--border-primary);
-  border-radius: 6px;
+  border-radius: 10px;
   cursor: pointer;
   font-size: 0.8125rem;
   color: var(--text-primary);
@@ -256,7 +256,7 @@ onUnmounted(() => {
 
 .time-display.active {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+  box-shadow: var(--focus-ring);
 }
 
 .clock-icon {
@@ -265,6 +265,8 @@ onUnmounted(() => {
 
 .display-text {
   min-width: 100px;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
 }
 
 .dropdown-arrow {
@@ -275,11 +277,11 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  background: var(--bg-secondary);
+  width: 36px;
+  height: 36px;
+  background: var(--surface-2);
   border: 1px solid var(--border-primary);
-  border-radius: 6px;
+  border-radius: 10px;
   cursor: pointer;
   color: var(--text-secondary);
   transition: all 0.2s;
@@ -311,10 +313,10 @@ onUnmounted(() => {
 }
 
 .refresh-interval-selector select {
-  padding: 0.5rem 2rem 0.5rem 0.75rem;
-  background: var(--bg-secondary);
+  padding: 0.52rem 2rem 0.52rem 0.75rem;
+  background: var(--surface-2);
   border: 1px solid var(--border-primary);
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 0.8125rem;
   color: var(--text-primary);
   cursor: pointer;
@@ -332,7 +334,7 @@ onUnmounted(() => {
 .refresh-interval-selector select:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+  box-shadow: var(--focus-ring);
 }
 
 .dropdown {
@@ -340,9 +342,9 @@ onUnmounted(() => {
   top: calc(100% + 4px);
   left: 0;
   min-width: 220px;
-  background: var(--bg-secondary);
+  background: rgba(11, 21, 33, 0.98);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   z-index: 1000;
   animation: fadeIn 0.15s ease-out;
@@ -384,7 +386,7 @@ onUnmounted(() => {
 }
 
 .preset-item.selected {
-  background: rgba(102, 126, 234, 0.15);
+  background: rgba(56, 189, 248, 0.16);
   color: var(--accent-primary);
   font-weight: 500;
 }
@@ -429,7 +431,7 @@ onUnmounted(() => {
 .form-group input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+  box-shadow: var(--focus-ring);
 }
 
 .error-message {

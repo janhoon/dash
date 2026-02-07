@@ -309,33 +309,37 @@ const isLogPanel = computed(() => props.panel.type === 'logs')
 
 <style scoped>
 .panel {
-  background: var(--bg-secondary);
+  background: linear-gradient(180deg, rgba(16, 27, 42, 0.94), rgba(13, 23, 36, 0.92));
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   height: 100%;
   transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: var(--shadow-sm);
 }
 
 .panel:hover {
-  border-color: var(--border-secondary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-color: rgba(56, 189, 248, 0.34);
+  box-shadow: var(--shadow-md);
 }
 
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--border-primary);
-  background: var(--bg-tertiary);
+  background: rgba(21, 34, 52, 0.9);
 }
 
 .panel-title {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--text-primary);
   margin: 0;
 }
@@ -346,12 +350,12 @@ const isLogPanel = computed(() => props.panel.type === 'logs')
 }
 
 .panel-action-btn {
-  padding: 4px;
+  padding: 5px;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   color: var(--text-tertiary);
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -359,13 +363,14 @@ const isLogPanel = computed(() => props.panel.type === 'logs')
 }
 
 .panel-action-btn:hover {
-  background: var(--bg-hover);
+  background: rgba(31, 49, 73, 0.8);
+  border-color: rgba(125, 211, 252, 0.2);
   color: var(--text-primary);
 }
 
 .panel-body {
   flex: 1;
-  padding: 16px;
+  padding: 14px;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -421,7 +426,7 @@ const isLogPanel = computed(() => props.panel.type === 'logs')
 .spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid var(--border-primary);
+  border: 3px solid rgba(50, 81, 115, 0.65);
   border-top-color: var(--accent-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -435,10 +440,10 @@ const isLogPanel = computed(() => props.panel.type === 'logs')
 
 .btn-primary {
   padding: 8px 16px;
-  background: var(--accent-primary);
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -446,6 +451,6 @@ const isLogPanel = computed(() => props.panel.type === 'logs')
 }
 
 .btn-primary:hover {
-  background: var(--accent-primary-hover);
+  transform: translateY(-1px);
 }
 </style>

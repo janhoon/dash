@@ -335,16 +335,21 @@ function goBack() {
 
 <style scoped>
 .org-settings {
-  padding: 2rem;
-  max-width: 800px;
+  padding: 1.35rem 1.5rem;
+  max-width: 980px;
   margin: 0 auto;
 }
 
 .page-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.2rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+  background: var(--surface-1);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-back {
@@ -353,9 +358,9 @@ function goBack() {
   justify-content: center;
   width: 40px;
   height: 40px;
-  background: var(--bg-secondary);
+  background: var(--surface-2);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  border-radius: 10px;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s;
@@ -368,8 +373,11 @@ function goBack() {
 
 .header-content h1 {
   margin: 0 0 0.25rem 0;
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: 1.03rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--text-primary);
 }
 
@@ -393,14 +401,15 @@ function goBack() {
 .settings-content {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .settings-section {
-  background: var(--bg-secondary);
+  background: var(--surface-1);
   border: 1px solid var(--border-primary);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
 }
 
 .section-header {
@@ -455,7 +464,7 @@ function goBack() {
 }
 
 .role-badge.admin {
-  background: rgba(102, 126, 234, 0.15);
+  background: rgba(56, 189, 248, 0.18);
   color: var(--accent-primary);
 }
 
@@ -472,8 +481,9 @@ function goBack() {
 .edit-form,
 .invite-form {
   padding: 1rem;
-  background: var(--bg-tertiary);
-  border-radius: 8px;
+  background: rgba(20, 33, 52, 0.8);
+  border-radius: 10px;
+  border: 1px solid var(--border-primary);
   margin-bottom: 1rem;
 }
 
@@ -558,8 +568,9 @@ select:focus {
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem;
-  background: var(--bg-tertiary);
-  border-radius: 8px;
+  background: rgba(20, 33, 52, 0.75);
+  border-radius: 10px;
+  border: 1px solid var(--border-primary);
 }
 
 .member-avatar {
@@ -642,7 +653,7 @@ select:focus {
 
 .danger-content {
   padding: 1rem;
-  background: rgba(255, 107, 107, 0.05);
+  background: rgba(251, 113, 133, 0.08);
   border-radius: 8px;
 }
 
@@ -691,7 +702,7 @@ select:focus {
 }
 
 .btn-secondary {
-  background: var(--bg-tertiary);
+  background: var(--surface-2);
   border-color: var(--border-primary);
   color: var(--text-primary);
 }
@@ -724,8 +735,8 @@ select:focus {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
+  background: rgba(3, 10, 18, 0.76);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -733,9 +744,9 @@ select:focus {
 }
 
 .modal {
-  background: var(--bg-secondary);
+  background: var(--surface-1);
   border: 1px solid var(--border-primary);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 1.5rem;
   max-width: 400px;
 }
@@ -757,5 +768,28 @@ select:focus {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .org-settings {
+    padding: 0.9rem;
+  }
+
+  .page-header {
+    align-items: flex-start;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+
+  .danger-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>

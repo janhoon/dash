@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { Plus, Trash2, Pencil, Database, X, Check, ExternalLink } from 'lucide-vue-next'
+import { ref, onMounted, computed, watch } from 'vue'
+import { Plus, Trash2, Pencil, Database, X, Check, ExternalLink, HeartPulse, CircleAlert, Loader2 } from 'lucide-vue-next'
 import { useOrganization } from '../composables/useOrganization'
 import { useDatasource } from '../composables/useDatasource'
+import { queryDataSource } from '../api/datasources'
 import type { DataSource, DataSourceType, CreateDataSourceRequest } from '../types/datasource'
 import { dataSourceTypeLabels } from '../types/datasource'
 
@@ -27,6 +28,9 @@ const formUrl = ref('')
 const formIsDefault = ref(false)
 const formError = ref<string | null>(null)
 const formLoading = ref(false)
+const testAllLoading = ref(false)
+const healthStatus = ref<Record<string, 'unknown' | 'checking' | 'healthy' | 'unhealthy'>>({})
+const healthErrors = ref<Record<string, string>>({})
 
 const isEditing = computed(() => !!editingDs.value)
 
@@ -53,6 +57,66 @@ function openEditModal(ds: DataSource) {
 function closeModal() {
   showModal.value = false
   editingDs.value = null
+}
+
+function getHealthStatus(dsId: string) {
+  return healthStatus.value[dsId] || 'unknown'
+}
+
+function getHealthLabel(dsId: string) {
+  const status = getHealthStatus(dsId)
+  if (status === 'healthy') return 'Healthy'
+  if (status === 'unhealthy') return 'Unhealthy'
+  if (status === 'checking') return 'Checking...'
+  return 'Unknown'
+}
+
+function getSmokeQuery(type_: DataSourceType) {
+  if (type_ === 'prometheus' || type_ === 'victoriametrics') {
+    return 'up'
+  }
+  if (type_ === 'loki') {
+    return '{job=~".+"}'
+  }
+  return '*'
+}
+
+async function testDatasource(ds: DataSource) {
+  healthStatus.value[ds.id] = 'checking'
+  delete healthErrors.value[ds.id]
+
+  const end = Math.floor(Date.now() / 1000)
+  const start = end - 15 * 60
+
+  try {
+    const result = await queryDataSource(ds.id, {
+      query: getSmokeQuery(ds.type),
+      start,
+      end,
+      step: 15,
+      limit: 100,
+    })
+
+    if (result.status === 'error') {
+      throw new Error(result.error || 'Query failed')
+    }
+
+    healthStatus.value[ds.id] = 'healthy'
+  } catch (e) {
+    healthStatus.value[ds.id] = 'unhealthy'
+    healthErrors.value[ds.id] = e instanceof Error ? e.message : 'Connection test failed'
+  }
+}
+
+async function testAllDatasources() {
+  testAllLoading.value = true
+  try {
+    for (const ds of datasources.value) {
+      await testDatasource(ds)
+    }
+  } finally {
+    testAllLoading.value = false
+  }
 }
 
 async function handleSubmit() {
@@ -119,6 +183,15 @@ onMounted(() => {
     fetchDatasources(currentOrg.value.id)
   }
 })
+
+watch(
+  () => currentOrg.value?.id,
+  (orgId, prevOrgId) => {
+    if (orgId && orgId !== prevOrgId) {
+      fetchDatasources(orgId)
+    }
+  },
+)
 </script>
 
 <template>
@@ -128,10 +201,21 @@ onMounted(() => {
         <h1>Data Sources</h1>
         <p class="page-subtitle">Manage connections to your monitoring systems</p>
       </div>
-      <button class="btn btn-primary" @click="openCreateModal">
-        <Plus :size="16" />
-        Add Data Source
-      </button>
+      <div class="header-actions">
+        <button
+          class="btn btn-secondary btn-header btn-test-all"
+          :disabled="datasources.length === 0 || testAllLoading"
+          @click="testAllDatasources"
+        >
+          <Loader2 v-if="testAllLoading" :size="16" class="icon-spin" />
+          <HeartPulse v-else :size="16" />
+          {{ testAllLoading ? 'Testing...' : 'Test All' }}
+        </button>
+        <button class="btn btn-primary btn-header" @click="openCreateModal">
+          <Plus :size="16" />
+          Add Data Source
+        </button>
+      </div>
     </header>
 
     <div v-if="error" class="error-banner">{{ error }}</div>
@@ -177,11 +261,37 @@ onMounted(() => {
           </div>
         </div>
         <div class="card-body">
-          <h3 class="ds-name">{{ ds.name }}</h3>
-          <div class="ds-url">
-            <ExternalLink :size="14" />
-            <span>{{ ds.url }}</span>
+          <div class="card-main">
+            <h3 class="ds-name">{{ ds.name }}</h3>
+            <div class="ds-url">
+              <ExternalLink :size="14" />
+              <span>{{ ds.url }}</span>
+            </div>
           </div>
+          <div class="card-footer">
+            <span
+              class="health-badge"
+              :class="`health-${getHealthStatus(ds.id)}`"
+              :title="healthErrors[ds.id] || getHealthLabel(ds.id)"
+            >
+              <Loader2 v-if="getHealthStatus(ds.id) === 'checking'" :size="12" class="icon-spin" />
+              <HeartPulse v-else-if="getHealthStatus(ds.id) === 'healthy'" :size="12" />
+              <CircleAlert v-else-if="getHealthStatus(ds.id) === 'unhealthy'" :size="12" />
+              <span>{{ getHealthLabel(ds.id) }}</span>
+            </span>
+
+            <button
+              class="btn btn-secondary btn-test"
+              :disabled="getHealthStatus(ds.id) === 'checking'"
+              @click="testDatasource(ds)"
+              title="Run connection test"
+            >
+              <Loader2 v-if="getHealthStatus(ds.id) === 'checking'" :size="14" class="icon-spin" />
+              <HeartPulse v-else :size="14" />
+              {{ getHealthStatus(ds.id) === 'checking' ? 'Testing...' : 'Test' }}
+            </button>
+          </div>
+          <div v-if="healthErrors[ds.id]" class="health-error">{{ healthErrors[ds.id] }}</div>
         </div>
       </div>
     </div>
@@ -256,21 +366,46 @@ onMounted(() => {
 
 <style scoped>
 .datasource-settings {
-  padding: 2rem;
-  max-width: 1000px;
+  padding: 1.25rem 1.5rem;
+  max-width: 1120px;
   margin: 0 auto;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 2rem;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+  background: var(--surface-1);
+  box-shadow: var(--shadow-sm);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.btn-header {
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  border-radius: 10px;
+}
+
+.btn-test-all {
+  min-width: 96px;
 }
 
 .page-header h1 {
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: 1.03rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--text-primary);
   margin: 0;
 }
@@ -333,20 +468,22 @@ onMounted(() => {
 
 .datasource-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1rem;
 }
 
 .datasource-card {
-  background: var(--bg-secondary);
+  background: linear-gradient(180deg, rgba(16, 27, 42, 0.92), rgba(13, 23, 36, 0.9));
   border: 1px solid var(--border-primary);
-  border-radius: 10px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  border-radius: 12px;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  box-shadow: var(--shadow-sm);
 }
 
 .datasource-card:hover {
-  border-color: var(--border-secondary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-color: rgba(56, 189, 248, 0.35);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .card-header {
@@ -380,7 +517,7 @@ onMounted(() => {
   border-radius: 999px;
   font-size: 0.7rem;
   font-weight: 500;
-  background: rgba(102, 126, 234, 0.15);
+  background: rgba(56, 189, 248, 0.16);
   color: var(--accent-primary);
 }
 
@@ -390,23 +527,114 @@ onMounted(() => {
 }
 
 .card-body {
-  padding: 0.75rem 1rem 1rem;
+  padding: 0.875rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .ds-name {
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0 0 0.5rem;
+  margin: 0;
 }
 
 .ds-url {
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--text-tertiary);
   word-break: break-all;
+  padding: 0.45rem 0.6rem;
+  border-radius: 7px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.health-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-primary);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+.health-unknown {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border-color: var(--border-primary);
+}
+
+.health-checking {
+  color: #6ec6ff;
+  background: rgba(110, 198, 255, 0.12);
+  border-color: rgba(110, 198, 255, 0.35);
+}
+
+.health-healthy {
+  color: #59a14f;
+  background: rgba(89, 161, 79, 0.12);
+  border-color: rgba(89, 161, 79, 0.35);
+}
+
+.health-unhealthy {
+  color: var(--accent-danger);
+  background: rgba(255, 107, 107, 0.12);
+  border-color: rgba(255, 107, 107, 0.35);
+}
+
+.btn-test {
+  padding: 0.28rem 0.55rem;
+  font-size: 0.72rem;
+  border-radius: 999px;
+  min-height: 28px;
+  line-height: 1;
+}
+
+.health-error {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--accent-danger);
+  line-height: 1.4;
+}
+
+.icon-spin {
+  animation: spin 0.8s linear infinite;
+}
+
+@media (max-width: 840px) {
+  .datasource-settings {
+    padding: 0.9rem;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
 }
 
 .btn-icon {
@@ -430,7 +658,7 @@ onMounted(() => {
 }
 
 .btn-icon-danger:hover {
-  background: rgba(255, 107, 107, 0.15);
+  background: rgba(251, 113, 133, 0.15);
   color: var(--accent-danger);
 }
 
@@ -441,8 +669,8 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
+  background: rgba(3, 10, 18, 0.76);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -450,9 +678,9 @@ onMounted(() => {
 }
 
 .modal {
-  background: var(--bg-secondary);
+  background: var(--surface-1);
   border: 1px solid var(--border-primary);
-  border-radius: 12px;
+  border-radius: 14px;
   width: 100%;
   max-width: 480px;
   max-height: 90vh;
@@ -533,7 +761,7 @@ form {
 .form-group select:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+  box-shadow: var(--focus-ring);
 }
 
 .form-group select {

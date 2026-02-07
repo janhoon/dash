@@ -205,7 +205,7 @@ onMounted(fetchDashboards)
 
 <style scoped>
 .dashboard-list {
-  padding: 2rem;
+  padding: 2rem 2.25rem;
   max-width: 1400px;
   margin: 0 auto;
 }
@@ -213,46 +213,57 @@ onMounted(fetchDashboards)
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--border-primary);
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+  background: var(--surface-1);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-sm);
 }
 
 .header-content h1 {
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 1.12rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .header-subtitle {
   color: var(--text-secondary);
-  font-size: 0.875rem;
+  font-size: 0.9rem;
 }
 
-/* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.625rem 1rem;
+  padding: 0.62rem 1.05rem;
   border: 1px solid transparent;
-  border-radius: 6px;
-  font-size: 0.875rem;
+  border-radius: 10px;
+  font-size: 0.84rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 .btn-primary {
-  background: var(--accent-primary);
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  border-color: rgba(125, 211, 252, 0.4);
   color: white;
+  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.24);
 }
 
 .btn-primary:hover {
-  background: var(--accent-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(14, 165, 233, 0.28);
 }
 
 .btn-secondary {
-  background: var(--bg-tertiary);
+  background: var(--surface-2);
   border-color: var(--border-primary);
   color: var(--text-primary);
 }
@@ -305,6 +316,10 @@ onMounted(fetchDashboards)
   padding: 4rem 2rem;
   text-align: center;
   color: var(--text-secondary);
+  background: var(--surface-1);
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+  min-height: 320px;
 }
 
 .state-container.error {
@@ -323,7 +338,7 @@ onMounted(fetchDashboards)
 .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid var(--border-primary);
+  border: 3px solid rgba(50, 81, 115, 0.65);
   border-top-color: var(--accent-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -340,33 +355,46 @@ onMounted(fetchDashboards)
   justify-content: center;
   width: 120px;
   height: 120px;
-  background: var(--bg-secondary);
+  background: linear-gradient(160deg, rgba(56, 189, 248, 0.14), rgba(52, 211, 153, 0.08));
   border: 1px solid var(--border-primary);
-  border-radius: 16px;
+  border-radius: 20px;
   color: var(--text-tertiary);
   margin-bottom: 1rem;
 }
 
-/* Dashboard Grid */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
   gap: 1.5rem;
 }
 
 .dashboard-card {
-  background: var(--bg-secondary);
+  background: linear-gradient(180deg, rgba(16, 27, 42, 0.92), rgba(14, 24, 38, 0.9));
   border: 1px solid var(--border-primary);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 1.5rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.22s ease;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+  opacity: 0.5;
 }
 
 .dashboard-card:hover {
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 0 1px var(--accent-primary), 0 8px 24px rgba(0, 0, 0, 0.3);
-  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.5);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-4px);
 }
 
 .card-header {
@@ -380,13 +408,15 @@ onMounted(fetchDashboards)
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
+  max-width: 70%;
+  line-height: 1.4;
 }
 
 .card-actions {
   display: flex;
   gap: 0.25rem;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s ease;
 }
 
 .dashboard-card:hover .card-actions {
@@ -395,7 +425,7 @@ onMounted(fetchDashboards)
 
 .card-description {
   color: var(--text-secondary);
-  font-size: 0.875rem;
+  font-size: 0.84rem;
   margin-bottom: 1rem;
   line-height: 1.5;
   display: -webkit-box;
@@ -405,19 +435,21 @@ onMounted(fetchDashboards)
 }
 
 .card-meta {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-/* Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
+  background: rgba(3, 10, 18, 0.76);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -431,9 +463,9 @@ onMounted(fetchDashboards)
 }
 
 .modal {
-  background: var(--bg-secondary);
+  background: var(--surface-1);
   border: 1px solid var(--border-primary);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 2rem;
   width: 100%;
   max-width: 400px;
@@ -461,7 +493,7 @@ onMounted(fetchDashboards)
   justify-content: center;
   width: 48px;
   height: 48px;
-  background: rgba(255, 107, 107, 0.15);
+  background: rgba(251, 113, 133, 0.15);
   border-radius: 50%;
   color: var(--accent-danger);
   margin-bottom: 1rem;
@@ -487,5 +519,20 @@ onMounted(fetchDashboards)
   justify-content: center;
   gap: 0.75rem;
   margin-top: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .dashboard-list {
+    padding: 1.1rem;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

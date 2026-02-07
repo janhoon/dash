@@ -115,9 +115,9 @@ function getDropdownPosition() {
   gap: 0.5rem;
   width: 100%;
   padding: 0.5rem;
-  background: var(--bg-tertiary);
+  background: rgba(20, 33, 52, 0.85);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -139,7 +139,7 @@ function getDropdownPosition() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--accent-primary);
+  background: linear-gradient(145deg, var(--accent-primary), var(--accent-secondary));
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -170,9 +170,9 @@ function getDropdownPosition() {
 
 .dropdown-menu {
   width: 260px;
-  background: var(--bg-secondary);
+  background: rgba(11, 21, 33, 0.98);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   overflow: hidden;
   animation: fadeIn 0.15s ease-out;
@@ -220,7 +220,7 @@ function getDropdownPosition() {
 }
 
 .org-item.active {
-  background: rgba(102, 126, 234, 0.1);
+  background: rgba(56, 189, 248, 0.14);
 }
 
 .org-item-avatar {
@@ -229,7 +229,7 @@ function getDropdownPosition() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--accent-primary);
+  background: linear-gradient(145deg, var(--accent-primary), var(--accent-secondary));
   border-radius: 6px;
   font-size: 0.875rem;
   font-weight: 600;

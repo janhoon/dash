@@ -37,16 +37,16 @@ const chartRef = ref<typeof VChart | null>(null)
 
 // Color palette matching the dashboard theme
 const pieColors = [
-  '#667eea', // Primary purple-blue
-  '#764ba2', // Secondary purple
-  '#00d4aa', // Success green
-  '#feca57', // Warning yellow
-  '#ff6b6b', // Danger red
-  '#a78bfa', // Light purple
-  '#60a5fa', // Light blue
-  '#34d399', // Emerald
-  '#f472b6', // Pink
-  '#fb923c', // Orange
+  '#38bdf8',
+  '#34d399',
+  '#f59e0b',
+  '#fb7185',
+  '#22d3ee',
+  '#a3e635',
+  '#f97316',
+  '#0ea5e9',
+  '#14b8a6',
+  '#eab308',
 ]
 
 // Calculate total for percentage display

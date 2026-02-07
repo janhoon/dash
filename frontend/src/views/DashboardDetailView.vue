@@ -322,7 +322,7 @@ onUnmounted(() => {
 
 <style scoped>
 .dashboard-detail {
-  padding: 1.5rem 2rem;
+  padding: 1.35rem 1.8rem;
   max-width: 1600px;
   margin: 0 auto;
 }
@@ -331,9 +331,13 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--border-primary);
+  margin-bottom: 1.15rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+  background: var(--surface-1);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-sm);
 }
 
 .header-left {
@@ -346,11 +350,11 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: var(--bg-secondary);
+  width: 38px;
+  height: 38px;
+  background: var(--surface-2);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  border-radius: 10px;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s;
@@ -364,6 +368,10 @@ onUnmounted(() => {
 
 .header-title h1 {
   margin-bottom: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .header-description {
@@ -384,8 +392,8 @@ onUnmounted(() => {
   gap: 0.5rem;
   padding: 0.625rem 1rem;
   border: 1px solid transparent;
-  border-radius: 6px;
-  font-size: 0.875rem;
+  border-radius: 10px;
+  font-size: 0.84rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -397,12 +405,13 @@ onUnmounted(() => {
 }
 
 .btn-primary {
-  background: var(--accent-primary);
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  border-color: rgba(125, 211, 252, 0.4);
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--accent-primary-hover);
+  transform: translateY(-1px);
 }
 
 .btn-secondary {
@@ -434,6 +443,10 @@ onUnmounted(() => {
   padding: 4rem 2rem;
   text-align: center;
   color: var(--text-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+  background: var(--surface-1);
+  min-height: 320px;
 }
 
 .state-container.error {
@@ -452,7 +465,7 @@ onUnmounted(() => {
 .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid var(--border-primary);
+  border: 3px solid rgba(50, 81, 115, 0.65);
   border-top-color: var(--accent-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -469,7 +482,7 @@ onUnmounted(() => {
   justify-content: center;
   width: 120px;
   height: 120px;
-  background: var(--bg-secondary);
+  background: linear-gradient(160deg, rgba(56, 189, 248, 0.14), rgba(52, 211, 153, 0.08));
   border: 1px solid var(--border-primary);
   border-radius: 16px;
   color: var(--text-tertiary);
@@ -479,6 +492,7 @@ onUnmounted(() => {
 /* Grid Layout */
 .grid-layout {
   min-height: 400px;
+  padding-bottom: 0.7rem;
 }
 
 /* Modal Styles */
@@ -488,8 +502,8 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
+  background: rgba(3, 10, 18, 0.76);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -503,9 +517,9 @@ onUnmounted(() => {
 }
 
 .modal {
-  background: var(--bg-secondary);
+  background: var(--surface-1);
   border: 1px solid var(--border-primary);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 2rem;
   width: 100%;
   max-width: 400px;
@@ -533,7 +547,7 @@ onUnmounted(() => {
   justify-content: center;
   width: 48px;
   height: 48px;
-  background: rgba(255, 107, 107, 0.15);
+  background: rgba(251, 113, 133, 0.15);
   border-radius: 50%;
   color: var(--accent-danger);
   margin-bottom: 1rem;
@@ -573,7 +587,7 @@ onUnmounted(() => {
 }
 
 .vue-grid-item.vue-grid-placeholder {
-  background: rgba(102, 126, 234, 0.15);
+  background: rgba(56, 189, 248, 0.18);
   border: 2px dashed var(--accent-primary);
   border-radius: 8px;
 }
@@ -585,7 +599,7 @@ onUnmounted(() => {
   bottom: 0;
   right: 0;
   cursor: se-resize;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 6' fill='%23666'%3E%3Cpolygon points='6 0 0 6 6 6'/%3E%3C/svg%3E") no-repeat;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 6' fill='%239eb0ca'%3E%3Cpolygon points='6 0 0 6 6 6'/%3E%3C/svg%3E") no-repeat;
   background-position: bottom right;
   padding: 0 3px 3px 0;
   background-repeat: no-repeat;
@@ -601,5 +615,22 @@ onUnmounted(() => {
 
 .vue-grid-item.vue-resizable-resizing {
   z-index: 100;
+}
+
+@media (max-width: 900px) {
+  .dashboard-detail {
+    padding: 0.9rem;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.85rem;
+  }
+
+  .header-right {
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
 }
 </style>

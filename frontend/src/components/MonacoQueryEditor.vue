@@ -171,7 +171,7 @@ defineExpose({ focus })
 
 .monaco-query-editor:focus-within {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+  box-shadow: var(--focus-ring);
 }
 
 .monaco-query-editor.disabled {

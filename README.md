@@ -37,18 +37,26 @@ A Grafana-like monitoring dashboard built with Vue.js, Go, and Prometheus.
 
 2. Start the backend API:
    ```bash
+   make backend
+   ```
+   The API will be available at http://localhost:8080 and auto-reloads on Go file changes.
+
+   If you want to run without hot reload:
+   ```bash
    cd backend
    go run ./cmd/api
    ```
-   The API will be available at http://localhost:8080
 
 3. Start the frontend dev server:
    ```bash
    cd frontend
    npm install
-   npm run dev
+   cd ..
+   make frontend
    ```
    The frontend will be available at http://localhost:5173
+
+   You can also still run backend/frontend commands directly from their folders.
 
 ### Running Tests
 

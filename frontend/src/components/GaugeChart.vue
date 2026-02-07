@@ -54,7 +54,7 @@ function formatValue(value: number): string {
 // Build color stops for gauge based on thresholds
 function buildAxisLineColors(): Array<[number, string]> {
   if (!props.thresholds || props.thresholds.length === 0) {
-    return [[1, '#667eea']] // Default primary color
+    return [[1, '#38bdf8']]
   }
 
   const range = props.max - props.min
@@ -63,7 +63,7 @@ function buildAxisLineColors(): Array<[number, string]> {
 
   // Add segments based on thresholds
   let prevStop = 0
-  let prevColor = '#4ecdc4' // Default green for values below first threshold
+  let prevColor = '#34d399'
 
   for (const threshold of sortedThresholds) {
     const stop = (threshold.value - props.min) / range
@@ -79,19 +79,19 @@ function buildAxisLineColors(): Array<[number, string]> {
     colors.push([1, prevColor])
   }
 
-  return colors.length > 0 ? colors : [[1, '#667eea']]
+  return colors.length > 0 ? colors : [[1, '#38bdf8']]
 }
 
 // Get color for current value
 function getValueColor(): string {
   if (!props.thresholds || props.thresholds.length === 0) {
-    return '#667eea'
+    return '#38bdf8'
   }
 
   const sortedThresholds = [...props.thresholds].sort((a, b) => a.value - b.value)
 
   // Find the highest threshold that is below or equal to the value
-  let color = '#4ecdc4' // Default green
+  let color = '#34d399'
   for (const threshold of sortedThresholds) {
     if (props.value >= threshold.value) {
       color = threshold.color

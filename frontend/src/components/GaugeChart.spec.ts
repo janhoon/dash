@@ -146,7 +146,7 @@ describe('GaugeChart', () => {
     const option = JSON.parse(chart.attributes('data-option') || '{}')
 
     // Should use default color
-    expect(option.series[0].itemStyle.color).toBe('#667eea')
+    expect(option.series[0].itemStyle.color).toBe('#38bdf8')
   })
 
   it('shows value above threshold in correct color', () => {
@@ -176,7 +176,7 @@ describe('GaugeChart', () => {
     const option = JSON.parse(chart.attributes('data-option') || '{}')
 
     // Value 30 is below all thresholds, so should be default green
-    expect(option.series[0].itemStyle.color).toBe('#4ecdc4')
+    expect(option.series[0].itemStyle.color).toBe('#34d399')
   })
 
   it('handles large values with K suffix', () => {

@@ -141,17 +141,48 @@ function switchMode() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-primary);
+  background: transparent;
   padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-page::before,
+.login-page::after {
+  content: '';
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(70px);
+  pointer-events: none;
+}
+
+.login-page::before {
+  width: 340px;
+  height: 340px;
+  background: rgba(56, 189, 248, 0.28);
+  top: -110px;
+  left: -100px;
+}
+
+.login-page::after {
+  width: 360px;
+  height: 360px;
+  background: rgba(52, 211, 153, 0.2);
+  right: -120px;
+  bottom: -160px;
 }
 
 .login-container {
   width: 100%;
-  max-width: 400px;
-  background: var(--bg-secondary);
+  max-width: 440px;
+  background: linear-gradient(180deg, rgba(16, 27, 43, 0.94), rgba(13, 22, 36, 0.92));
   border: 1px solid var(--border-primary);
-  border-radius: 12px;
-  padding: 40px;
+  border-radius: 18px;
+  padding: 38px;
+  position: relative;
+  z-index: 1;
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(8px);
 }
 
 .login-header {
@@ -170,12 +201,13 @@ function switchMode() {
 .logo-icon {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-  border-radius: 10px;
+  background: linear-gradient(140deg, var(--accent-primary), var(--accent-secondary));
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
+  box-shadow: 0 10px 22px rgba(14, 165, 233, 0.3);
 }
 
 .logo-icon svg {
@@ -184,13 +216,16 @@ function switchMode() {
 }
 
 .logo-text {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--text-primary);
 }
 
 .login-header h1 {
-  font-size: 24px;
+  font-size: 23px;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0 0 8px 0;
@@ -198,7 +233,7 @@ function switchMode() {
 
 .subtitle {
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 13px;
   margin: 0;
 }
 
@@ -213,7 +248,7 @@ function switchMode() {
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  background: rgba(255, 107, 107, 0.1);
+  background: rgba(251, 113, 133, 0.1);
   border: 1px solid var(--accent-danger);
   border-radius: 8px;
   color: var(--accent-danger);
@@ -250,7 +285,7 @@ function switchMode() {
   padding: 12px 14px 12px 44px;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  border-radius: 10px;
   color: var(--text-primary);
   font-size: 14px;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -263,7 +298,7 @@ function switchMode() {
 .input-wrapper input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+  box-shadow: var(--focus-ring);
 }
 
 .input-wrapper input:disabled {
@@ -286,15 +321,16 @@ function switchMode() {
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s, transform 0.2s;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 10px 24px rgba(14, 165, 233, 0.24);
 }
 
 .btn-primary:hover:not(:disabled) {
-  opacity: 0.9;
+  opacity: 0.96;
   transform: translateY(-1px);
 }
 
@@ -325,7 +361,7 @@ function switchMode() {
 
 .login-footer p {
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 13px;
   margin: 0;
 }
 
@@ -333,7 +369,7 @@ function switchMode() {
   background: none;
   border: none;
   color: var(--accent-primary);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   padding: 0;
@@ -342,5 +378,16 @@ function switchMode() {
 
 .link-btn:hover {
   text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .login-page {
+    padding: 14px;
+  }
+
+  .login-container {
+    padding: 24px;
+    border-radius: 14px;
+  }
 }
 </style>

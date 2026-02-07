@@ -190,8 +190,8 @@ const displayLogs = computed(() => props.logs.slice(0, 1000))
 }
 
 .level-info .level-badge {
-  background: rgba(102, 126, 234, 0.15);
-  color: #667eea;
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--accent-primary);
 }
 
 .level-debug .level-badge {
