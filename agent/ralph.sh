@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /bin/bash
 
 set -e
 
@@ -27,8 +27,6 @@ for i in $(seq 1 "$iterations"); do
     echo "All features complete!"
     exit 0
   fi
-  
-  # Note: No longer stopping at PR_CREATED - keep working on next feature!
 done
 
 echo "Reached iteration limit. Review progress and continue if needed."

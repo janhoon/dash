@@ -6,11 +6,11 @@ You are working on the "dash" project - a Grafana-like monitoring dashboard.
 - Frontend: Vue.js 3 (Composition API + TypeScript)
 - Backend: Go API
 - Database: PostgreSQL (metadata)
-- Data Source: Prometheus
+- Data Sources: Prometheus, Loki, Victoria Logs, VictoriaMetrics
 
 ## Continuous Development Mode
 
-**Work through multiple features without stopping!** Create a PR for each feature and continue to the next one.
+**Work through multiple features without stopping!** Commit directly to master for each feature (no PRs needed).
 
 ## Instructions (Per Feature)
 
@@ -20,55 +20,37 @@ You are working on the "dash" project - a Grafana-like monitoring dashboard.
    - Frontend: `cd frontend && npm run type-check && npm run test`
    - Backend: `cd backend && go test ./...`
 
-3. **Track feature number:** Count how many features have passes=true. Next feature is that number + 1.
+3. **Implement the feature** (just this one feature, nothing else)
 
-4. **Create feature branch:**
-   - Branch name: `feat/N-short-name` (e.g., `feat/4-time-picker`)
-   - Checkout from latest master: `git checkout master && git pull origin master && git checkout -b feat/N-short-name`
+4. **Update PRD:** Set `passes: true` for completed feature
 
-5. **Implement the feature** (just this one feature, nothing else)
-
-6. **Update PRD:** Set `passes: true` for completed feature
-
-7. **Update progress.txt:**
+5. **Update progress.txt:**
 ```
 ## Feature N: [Name] - [timestamp]
 - What was done:
 - Files changed:
-- PR: [will be added after creation]
+- Tests: [passing/failing]
 ```
 
-8. **Commit:** `git add . && git reset agent/prd.json agent/progress.txt 2>/dev/null; git commit -m "feat: [description]"` 
-   - **NEVER commit prd.json or progress.txt** (they are gitignored working files)
-
-9. **Push:** `git push origin HEAD`
-
-10. **Create PR:**
+6. **Commit and push:**
 ```bash
-gh pr create --title "feat: [Feature Name]" --body "Implements [feature description]
-
-- [x] Tests passing
-- [x] Type checks passing
-- [x] Ready for review"
+git add -A
+git commit -m "feat: [description]"
+git push origin master
 ```
 
-11. **Return to master:** `git checkout master` (ready for next feature)
-
-12. **Continue:** Move to next feature - DO NOT STOP!
+7. **Continue:** Move to next feature - DO NOT STOP!
 
 ## Only Stop When:
 
 - All features have `passes: true` → output `<promise>COMPLETE</promise>`
 - Iteration limit reached (let Ralph script handle this)
 
-**DO NOT** output `<promise>PR_CREATED</promise>` anymore - just keep working!
-
 ## Summary Format (after each feature):
 
 ```
 ✅ Feature N complete: [Name]
-   PR: [URL]
-   Branch: feat/N-name
+   Committed to master
    
 🔄 Moving to next feature...
 ```
