@@ -248,6 +248,140 @@ func TestAnthropicChat_MergesSystemAndConsecutiveRoles(t *testing.T) {
 	}
 }
 
+func TestAnthropicChat_ToolsFailClosed(t *testing.T) {
+	called := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		t.Error("upstream must not be called when tools are present")
+		http.Error(w, "unreachable", http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	p, err := NewAnthropic(LLMConfig{BaseURL: server.URL, APIKey: "k"})
+	if err != nil {
+		t.Fatalf("NewAnthropic: %v", err)
+	}
+	err = p.Chat(context.Background(), ChatRequest{
+		Model:    "claude-sonnet-5",
+		Messages: []json.RawMessage{json.RawMessage(`{"role":"user","content":"hi"}`)},
+		Tools:    []json.RawMessage{json.RawMessage(`{"type":"function","function":{"name":"query_prometheus"}}`)},
+	}, httptest.NewRecorder())
+	if err == nil {
+		t.Fatal("expected tools to fail closed")
+	}
+	if !isToolIncompatibilityError(err.Error()) {
+		t.Fatalf("error must match host tool-degradation predicate, got %v", err)
+	}
+	if called {
+		t.Fatal("must not call Anthropic when tools are present")
+	}
+}
+
+func TestChat_Anthropic_ToolsTriggerHostRetry(t *testing.T) {
+	hits := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		raw, _ := io.ReadAll(r.Body)
+		var body map[string]any
+		if err := json.Unmarshal(raw, &body); err != nil {
+			t.Errorf("upstream body: %v", err)
+		}
+		if _, ok := body["tools"]; ok {
+			t.Errorf("retry must not forward tools, body=%v", body)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"content":[{"type":"text","text":"retried-without-tools"}]}`))
+	}))
+	defer server.Close()
+
+	h := NewAIHandler(nil, nil)
+	rowID := uuid.New()
+	orgID := uuid.New()
+	h.testProviderRow = &providerRow{
+		ID:           rowID,
+		ProviderType: "anthropic",
+		DisplayName:  "Anthropic",
+		BaseURL:      server.URL,
+	}
+
+	body, _ := json.Marshal(map[string]any{
+		"provider_id": rowID.String(),
+		"model":       "claude-sonnet-5",
+		"messages":    []map[string]string{{"role": "user", "content": "hi"}},
+		"tools": []map[string]any{
+			{"type": "function", "function": map[string]string{"name": "query_prometheus"}},
+		},
+	})
+	req := httptest.NewRequest(http.MethodPost, "/api/orgs/"+orgID.String()+"/ai/chat", strings.NewReader(string(body)))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(ctxWithUserAndOrg(uuid.New(), orgID))
+
+	rr := httptest.NewRecorder()
+	h.Chat(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 after tool retry, got %d: %s", rr.Code, rr.Body.String())
+	}
+	if rr.Header().Get("X-Tools-Unsupported") != "true" {
+		t.Error("expected X-Tools-Unsupported after Anthropic tool rejection")
+	}
+	if hits != 1 {
+		t.Fatalf("expected one upstream call (retry only), got %d", hits)
+	}
+	if !strings.Contains(rr.Body.String(), "retried-without-tools") {
+		t.Errorf("expected retried content, got %s", rr.Body.String())
+	}
+}
+
+func TestAnthropicChat_OmitsEmptyAssistantAndToolTurns(t *testing.T) {
+	var gotBody map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		if err := json.Unmarshal(raw, &gotBody); err != nil {
+			t.Errorf("upstream body: %v", err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"content":[{"type":"text","text":"ok"}]}`))
+	}))
+	defer server.Close()
+
+	p, err := NewAnthropic(LLMConfig{BaseURL: server.URL, APIKey: "k"})
+	if err != nil {
+		t.Fatalf("NewAnthropic: %v", err)
+	}
+	err = p.Chat(context.Background(), ChatRequest{
+		Model: "claude-sonnet-5",
+		Messages: []json.RawMessage{
+			json.RawMessage(`{"role":"user","content":"hi"}`),
+			json.RawMessage(`{"role":"assistant","content":null,"tool_calls":[{"id":"call_1","type":"function","function":{"name":"query_prometheus","arguments":"{}"}}]}`),
+			json.RawMessage(`{"role":"tool","tool_call_id":"call_1","content":"metric=1"}`),
+			json.RawMessage(`{"role":"assistant","content":""}`),
+			json.RawMessage(`{"role":"user","content":"what next"}`),
+		},
+	}, httptest.NewRecorder())
+	if err != nil {
+		t.Fatalf("Chat: %v", err)
+	}
+
+	msgs, _ := gotBody["messages"].([]any)
+	if len(msgs) != 1 {
+		t.Fatalf("expected one merged user message, got %#v", gotBody["messages"])
+	}
+	first, _ := msgs[0].(map[string]any)
+	if first["role"] != "user" {
+		t.Errorf("first role: %#v", first["role"])
+	}
+	if first["content"] != "hi\n\nwhat next" {
+		t.Errorf("content: %#v", first["content"])
+	}
+	for _, raw := range msgs {
+		m, _ := raw.(map[string]any)
+		content, _ := m["content"].(string)
+		if content == "" {
+			t.Errorf("empty content block: %#v", m)
+		}
+	}
+}
+
 func TestAnthropicChat_UpstreamError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)

@@ -78,12 +78,19 @@ type openAIDelta struct {
 
 // Chat sends Messages API requests and writes OpenAI-shaped JSON or SSE to w.
 func (p *AnthropicProvider) Chat(ctx context.Context, chatReq ChatRequest, w http.ResponseWriter) error {
+	if len(chatReq.Tools) > 0 {
+		return fmt.Errorf("provider returned 400: tools not supported")
+	}
+
 	system, messages, err := openaiToAnthropicMessages(chatReq.Messages)
 	if err != nil {
 		return err
 	}
 	if len(messages) == 0 {
 		return fmt.Errorf("anthropic chat requires at least one user or assistant message")
+	}
+	if messages[0].Role != "user" {
+		return fmt.Errorf("anthropic chat requires the first message to be from the user")
 	}
 
 	body := map[string]any{
@@ -139,6 +146,9 @@ func openaiToAnthropicMessages(raw []json.RawMessage) (system string, messages [
 				systemParts = append(systemParts, text)
 			}
 		case "user", "assistant":
+			if text == "" {
+				continue
+			}
 			if len(messages) > 0 && messages[len(messages)-1].Role == role {
 				messages[len(messages)-1].Content += "\n\n" + text
 				continue
