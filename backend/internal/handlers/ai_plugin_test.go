@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+
+	"github.com/aceobservability/ace/backend/internal/crypto"
 )
 
 type probeProvider struct {
@@ -31,9 +33,6 @@ func TestNewLLMProvider_UnknownTypeFailsClosed(t *testing.T) {
 	}
 	if p != nil {
 		t.Fatalf("unknown type must not construct a provider, got %T", p)
-	}
-	if _, ok := p.(*OpenAICompatibleProvider); ok {
-		t.Fatal("unknown provider_type must not fall through to OpenAICompatibleProvider")
 	}
 }
 
@@ -119,6 +118,60 @@ func TestNewLLMProvider_CopilotRegistered(t *testing.T) {
 	}
 	if cp.EncryptedGHToken != "encrypted-gh-token" {
 		t.Errorf("expected EncryptedGHToken from LLMConfig.APIKey, got %q", cp.EncryptedGHToken)
+	}
+}
+
+func TestInstantiateDBProvider_CopilotKeepsCiphertext(t *testing.T) {
+	t.Setenv("JWT_SECRET", "test-secret-for-plugin-tests")
+	// DecryptToken rejects this blob (invalid encoding). If build/instantiate
+	// decrypted before the factory, this would fail instead of constructing.
+	ciphertext := "not-valid-aes-gcm-ciphertext"
+	if _, err := crypto.DecryptToken(ciphertext); err == nil {
+		t.Fatal("sanity: blob must fail DecryptToken so a double-decrypt would be visible")
+	}
+
+	p, _, err := instantiateDBProvider(providerRow{
+		ID:           uuid.New(),
+		ProviderType: "copilot",
+		DisplayName:  "Copilot",
+		APIKey:       &ciphertext,
+	})
+	if err != nil {
+		t.Fatalf("copilot DB path must not decrypt API key: %v", err)
+	}
+	cp, ok := p.(*CopilotProvider)
+	if !ok {
+		t.Fatalf("expected *CopilotProvider, got %T", p)
+	}
+	if cp.EncryptedGHToken != ciphertext {
+		t.Errorf("expected ciphertext EncryptedGHToken, got %q", cp.EncryptedGHToken)
+	}
+}
+
+func TestInstantiateDBProvider_OpenAIDecryptsAPIKey(t *testing.T) {
+	t.Setenv("JWT_SECRET", "test-secret-for-plugin-tests")
+	plain := "sk-test-openai-key"
+	enc, err := crypto.EncryptToken(plain)
+	if err != nil {
+		t.Fatalf("EncryptToken: %v", err)
+	}
+
+	p, _, err := instantiateDBProvider(providerRow{
+		ID:           uuid.New(),
+		ProviderType: "openai",
+		DisplayName:  "OpenAI",
+		BaseURL:      "https://api.openai.com/v1",
+		APIKey:       &enc,
+	})
+	if err != nil {
+		t.Fatalf("openai DB path: %v", err)
+	}
+	op, ok := p.(*OpenAICompatibleProvider)
+	if !ok {
+		t.Fatalf("expected *OpenAICompatibleProvider, got %T", p)
+	}
+	if op.APIKey != plain {
+		t.Errorf("openai factory must receive plaintext, got %q", op.APIKey)
 	}
 }
 

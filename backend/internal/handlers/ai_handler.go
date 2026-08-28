@@ -307,12 +307,7 @@ type providerQuota struct {
 
 func (h *AIHandler) buildDBProvider(ctx context.Context, providerID, orgID uuid.UUID) (AIProvider, providerQuota, error) {
 	if h.testProviderRow != nil {
-		p := *h.testProviderRow
-		apiKey := ""
-		if p.APIKey != nil {
-			apiKey = *p.APIKey
-		}
-		return instantiateDBProvider(p, apiKey)
+		return instantiateDBProvider(*h.testProviderRow)
 	}
 
 	if h.pool == nil {
@@ -331,23 +326,35 @@ func (h *AIHandler) buildDBProvider(ctx context.Context, providerID, orgID uuid.
 		return nil, providerQuota{}, fmt.Errorf("provider not found")
 	}
 
-	apiKey := ""
-	if p.APIKey != nil && *p.APIKey != "" {
-		decrypted, err := crypto.DecryptToken(*p.APIKey)
-		if err != nil {
-			return nil, providerQuota{}, fmt.Errorf("failed to decrypt provider API key: %w", err)
-		}
-		apiKey = decrypted
-	}
-
-	return instantiateDBProvider(p, apiKey)
+	return instantiateDBProvider(p)
 }
 
-func instantiateDBProvider(p providerRow, apiKey string) (AIProvider, providerQuota, error) {
+// dbAPIKeyForFactory returns LLMConfig.APIKey for a stored ai_providers row.
+// OpenAI-compat types get decrypted plaintext. Copilot keeps ciphertext because
+// CopilotProvider decrypts EncryptedGHToken on ListModels/Chat.
+func dbAPIKeyForFactory(providerType string, stored *string) (string, error) {
+	if stored == nil || *stored == "" {
+		return "", nil
+	}
+	if providerType == "copilot" {
+		return *stored, nil
+	}
+	decrypted, err := crypto.DecryptToken(*stored)
+	if err != nil {
+		return "", fmt.Errorf("failed to decrypt provider API key: %w", err)
+	}
+	return decrypted, nil
+}
+
+func instantiateDBProvider(p providerRow) (AIProvider, providerQuota, error) {
 	quota := providerQuota{
 		ProviderID: p.ID,
 		Limit:      p.RateLimitPerUser,
 		WindowSecs: p.RateLimitWindowSeconds,
+	}
+	apiKey, err := dbAPIKeyForFactory(p.ProviderType, p.APIKey)
+	if err != nil {
+		return nil, quota, err
 	}
 	provider, err := newLLMProvider(p.ProviderType, LLMConfig{
 		BaseURL:     p.BaseURL,

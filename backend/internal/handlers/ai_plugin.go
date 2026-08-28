@@ -6,11 +6,12 @@ import (
 	"sync"
 )
 
-const pluginKindLLM = "llm"
-
 // LLMConfig is the in-process config passed to an LLM plugin factory.
 type LLMConfig struct {
-	BaseURL     string
+	BaseURL string
+	// APIKey is decrypted plaintext for openai/openrouter/ollama/custom.
+	// For copilot it is still-encrypted GH token; CopilotProvider decrypts
+	// EncryptedGHToken on ListModels/Chat.
 	APIKey      string
 	DisplayName string
 }
@@ -23,17 +24,15 @@ type LLMFactory func(LLMConfig) (AIProvider, error)
 // OpenAI-compat.
 var ErrUnknownProviderType = errors.New("unknown provider_type")
 
-// pluginRegistry is kind → id → factory. v1 wires kind=llm only.
+// pluginRegistry maps provider_type to factory.
 var pluginRegistry = struct {
 	mu sync.RWMutex
-	m  map[string]map[string]LLMFactory
+	m  map[string]LLMFactory
 }{
-	m: map[string]map[string]LLMFactory{
-		pluginKindLLM: {},
-	},
+	m: map[string]LLMFactory{},
 }
 
-// RegisterLLM records a factory for provider_type under kind=llm.
+// RegisterLLM records a factory for provider_type.
 func RegisterLLM(providerType string, factory LLMFactory) {
 	if providerType == "" {
 		panic("RegisterLLM: empty provider_type")
@@ -43,24 +42,20 @@ func RegisterLLM(providerType string, factory LLMFactory) {
 	}
 	pluginRegistry.mu.Lock()
 	defer pluginRegistry.mu.Unlock()
-	pluginRegistry.m[pluginKindLLM][providerType] = factory
+	pluginRegistry.m[providerType] = factory
 }
 
 func lookupLLM(providerType string) (LLMFactory, bool) {
 	pluginRegistry.mu.RLock()
 	defer pluginRegistry.mu.RUnlock()
-	kind, ok := pluginRegistry.m[pluginKindLLM]
-	if !ok {
-		return nil, false
-	}
-	f, ok := kind[providerType]
+	f, ok := pluginRegistry.m[providerType]
 	return f, ok
 }
 
 func unregisterLLM(providerType string) {
 	pluginRegistry.mu.Lock()
 	defer pluginRegistry.mu.Unlock()
-	delete(pluginRegistry.m[pluginKindLLM], providerType)
+	delete(pluginRegistry.m, providerType)
 }
 
 func newLLMProvider(providerType string, cfg LLMConfig) (AIProvider, error) {
@@ -88,7 +83,8 @@ func init() {
 	RegisterLLM("custom", openaiCompat)
 	// Copilot's live chat path remains provider_id=="copilot" (user GH token).
 	// Registering the type means a stored provider_type=copilot does not
-	// impersonate OpenAI-compat. LLMConfig.APIKey is the encrypted GH token.
+	// impersonate OpenAI-compat. LLMConfig.APIKey is ciphertext; the factory
+	// must not receive a decrypted key (CopilotProvider decrypts on use).
 	RegisterLLM("copilot", func(cfg LLMConfig) (AIProvider, error) {
 		return &CopilotProvider{EncryptedGHToken: cfg.APIKey}, nil
 	})
