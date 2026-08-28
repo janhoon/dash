@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -129,6 +130,10 @@ type AIHandler struct {
 
 	// testProvider allows tests to inject a mock AIProvider, bypassing DB resolution.
 	testProvider AIProvider
+
+	// testProviderRow, if set, is dispatched by provider_type in buildDBProvider
+	// without hitting the database. Tests use this to exercise register+dispatch.
+	testProviderRow *providerRow
 }
 
 // NewAIHandler creates a new AI handler.
@@ -264,6 +269,14 @@ func (h *AIHandler) resolveProvider(ctx context.Context, providerID string, user
 	return h.buildDBProvider(ctx, pid, orgID)
 }
 
+func writeResolveError(w http.ResponseWriter, err error) {
+	status := http.StatusNotFound
+	if errors.Is(err, ErrUnknownProviderType) {
+		status = http.StatusBadRequest
+	}
+	jsonError(w, err.Error(), status)
+}
+
 func (h *AIHandler) buildCopilotProvider(ctx context.Context, userID uuid.UUID) (*CopilotProvider, error) {
 	if h.pool == nil {
 		return nil, fmt.Errorf("failed to load copilot connection")
@@ -292,7 +305,11 @@ type providerQuota struct {
 	WindowSecs int
 }
 
-func (h *AIHandler) buildDBProvider(ctx context.Context, providerID, orgID uuid.UUID) (*OpenAICompatibleProvider, providerQuota, error) {
+func (h *AIHandler) buildDBProvider(ctx context.Context, providerID, orgID uuid.UUID) (AIProvider, providerQuota, error) {
+	if h.testProviderRow != nil {
+		return instantiateDBProvider(*h.testProviderRow)
+	}
+
 	if h.pool == nil {
 		return nil, providerQuota{}, fmt.Errorf("failed to load provider")
 	}
@@ -309,22 +326,45 @@ func (h *AIHandler) buildDBProvider(ctx context.Context, providerID, orgID uuid.
 		return nil, providerQuota{}, fmt.Errorf("provider not found")
 	}
 
-	apiKey := ""
-	if p.APIKey != nil && *p.APIKey != "" {
-		decrypted, err := crypto.DecryptToken(*p.APIKey)
-		if err != nil {
-			return nil, providerQuota{}, fmt.Errorf("failed to decrypt provider API key: %w", err)
-		}
-		apiKey = decrypted
-	}
+	return instantiateDBProvider(p)
+}
 
+// dbAPIKeyForFactory returns LLMConfig.APIKey for a stored ai_providers row.
+// OpenAI-compat types get decrypted plaintext. Copilot keeps ciphertext because
+// CopilotProvider decrypts EncryptedGHToken on ListModels/Chat.
+func dbAPIKeyForFactory(providerType string, stored *string) (string, error) {
+	if stored == nil || *stored == "" {
+		return "", nil
+	}
+	if providerType == "copilot" {
+		return *stored, nil
+	}
+	decrypted, err := crypto.DecryptToken(*stored)
+	if err != nil {
+		return "", fmt.Errorf("failed to decrypt provider API key: %w", err)
+	}
+	return decrypted, nil
+}
+
+func instantiateDBProvider(p providerRow) (AIProvider, providerQuota, error) {
 	quota := providerQuota{
 		ProviderID: p.ID,
 		Limit:      p.RateLimitPerUser,
 		WindowSecs: p.RateLimitWindowSeconds,
 	}
-
-	return NewOpenAICompatibleProvider(p.BaseURL, apiKey, p.DisplayName), quota, nil
+	apiKey, err := dbAPIKeyForFactory(p.ProviderType, p.APIKey)
+	if err != nil {
+		return nil, quota, err
+	}
+	provider, err := newLLMProvider(p.ProviderType, LLMConfig{
+		BaseURL:     p.BaseURL,
+		APIKey:      apiKey,
+		DisplayName: p.DisplayName,
+	})
+	if err != nil {
+		return nil, quota, err
+	}
+	return provider, quota, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -446,7 +486,7 @@ func (h *AIHandler) ListModels(w http.ResponseWriter, r *http.Request) {
 
 	provider, _, err := h.resolveProvider(ctx, providerID, userID, orgID)
 	if err != nil {
-		jsonError(w, err.Error(), http.StatusNotFound)
+		writeResolveError(w, err)
 		return
 	}
 
@@ -540,7 +580,7 @@ func (h *AIHandler) Chat(w http.ResponseWriter, r *http.Request) {
 	// Resolve provider
 	provider, quota, err := h.resolveProvider(ctx, reqBody.ProviderID, userID, orgID)
 	if err != nil {
-		jsonError(w, err.Error(), http.StatusNotFound)
+		writeResolveError(w, err)
 		return
 	}
 
@@ -650,6 +690,11 @@ func (h *AIHandler) CreateProvider(w http.ResponseWriter, r *http.Request) {
 
 	if reqBody.ProviderType == "" || reqBody.DisplayName == "" || reqBody.BaseURL == "" {
 		jsonError(w, "provider_type, display_name, and base_url are required", http.StatusBadRequest)
+		return
+	}
+
+	if err := requireKnownLLMType(reqBody.ProviderType); err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -780,6 +825,11 @@ func (h *AIHandler) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 	}
 	if reqBody.RateLimitWindowSeconds != nil {
 		existing.RateLimitWindowSeconds = *reqBody.RateLimitWindowSeconds
+	}
+
+	if err := requireKnownLLMType(existing.ProviderType); err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	// Fix #1: SSRF validation on base_url (validate the final URL after applying updates)
