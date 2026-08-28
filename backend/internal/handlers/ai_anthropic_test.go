@@ -382,6 +382,57 @@ func TestAnthropicChat_OmitsEmptyAssistantAndToolTurns(t *testing.T) {
 	}
 }
 
+func TestOpenAIToAnthropicMessages_DoesNotMergeOntoSkippedEmpty(t *testing.T) {
+	_, messages, err := openaiToAnthropicMessages([]json.RawMessage{
+		json.RawMessage(`{"role":"user","content":"one"}`),
+		json.RawMessage(`{"role":"assistant","content":""}`),
+		json.RawMessage(`{"role":"assistant","content":"two"}`),
+		json.RawMessage(`{"role":"user","content":""}`),
+		json.RawMessage(`{"role":"user","content":"three"}`),
+	})
+	if err != nil {
+		t.Fatalf("convert: %v", err)
+	}
+	if len(messages) != 3 {
+		t.Fatalf("expected user/assistant/user, got %#v", messages)
+	}
+	if messages[0] != (anthropicMessage{Role: "user", Content: "one"}) {
+		t.Errorf("first: %#v", messages[0])
+	}
+	if messages[1] != (anthropicMessage{Role: "assistant", Content: "two"}) {
+		t.Errorf("assistant must not start with skipped empty blob, got %#v", messages[1])
+	}
+	if messages[2] != (anthropicMessage{Role: "user", Content: "three"}) {
+		t.Errorf("user must not start with skipped empty blob, got %#v", messages[2])
+	}
+}
+
+func TestAnthropicChat_FirstMessageMustBeUser(t *testing.T) {
+	called := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+	}))
+	defer server.Close()
+
+	p, err := NewAnthropic(LLMConfig{BaseURL: server.URL, APIKey: "k"})
+	if err != nil {
+		t.Fatalf("NewAnthropic: %v", err)
+	}
+	err = p.Chat(context.Background(), ChatRequest{
+		Model:    "claude-sonnet-5",
+		Messages: []json.RawMessage{json.RawMessage(`{"role":"assistant","content":"I started"}`)},
+	}, httptest.NewRecorder())
+	if err == nil {
+		t.Fatal("expected first-message-must-be-user error")
+	}
+	if !strings.Contains(err.Error(), "first message") {
+		t.Errorf("expected clear first-message error, got %v", err)
+	}
+	if called {
+		t.Error("must not call Anthropic when the first message is not user")
+	}
+}
+
 func TestAnthropicChat_UpstreamError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
