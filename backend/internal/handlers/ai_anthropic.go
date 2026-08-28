@@ -17,7 +17,6 @@ const (
 	anthropicMaxTokens  = 4096
 )
 
-// AnthropicProvider implements AIProvider for the Anthropic Messages API.
 // Outbound HTTP uses Go's default http.Client (timeout only). Base URLs are
 // checked at save time by validateBaseURL, not by ssrf.SafeClient or
 // ssrf.DatasourceClient — see docs/adr/0003-outbound-http-ssrf-policy-seams.md.
@@ -27,7 +26,6 @@ type AnthropicProvider struct {
 	DisplayName string
 }
 
-// NewAnthropic constructs an Anthropic Messages adapter from LLMConfig.
 func NewAnthropic(cfg LLMConfig) (AIProvider, error) {
 	return &AnthropicProvider{
 		BaseURL:     strings.TrimRight(cfg.BaseURL, "/"),
@@ -43,7 +41,6 @@ var anthropicAllowList = []AIModel{
 	{ID: "claude-fable-5", Name: "Claude Fable 5", Vendor: "anthropic"},
 }
 
-// ListModels returns the static allow-list of Anthropic model ids.
 func (p *AnthropicProvider) ListModels(ctx context.Context) ([]AIModel, error) {
 	out := make([]AIModel, len(anthropicAllowList))
 	copy(out, anthropicAllowList)
