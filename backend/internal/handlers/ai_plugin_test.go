@@ -37,18 +37,24 @@ func TestNewLLMProvider_UnknownTypeFailsClosed(t *testing.T) {
 	}
 }
 
-func TestNewLLMProvider_AnthropicNotRegistered(t *testing.T) {
-	// Anthropic is #416. Until that lands, a stored type must 400, not impersonate OpenAI.
+func TestNewLLMProvider_AnthropicRegistered(t *testing.T) {
 	p, err := newLLMProvider("anthropic", LLMConfig{
 		BaseURL:     "https://api.anthropic.com",
 		APIKey:      "sk-ant",
 		DisplayName: "Anthropic",
 	})
-	if !errors.Is(err, ErrUnknownProviderType) {
-		t.Fatalf("expected ErrUnknownProviderType for anthropic, got %v", err)
+	if err != nil {
+		t.Fatalf("anthropic should be registered: %v", err)
 	}
-	if p != nil {
-		t.Fatalf("anthropic must not construct a provider yet, got %T", p)
+	ap, ok := p.(*AnthropicProvider)
+	if !ok {
+		t.Fatalf("expected *AnthropicProvider, got %T", p)
+	}
+	if ap.APIKey != "sk-ant" {
+		t.Errorf("expected plaintext APIKey, got %q", ap.APIKey)
+	}
+	if ap.BaseURL != "https://api.anthropic.com" {
+		t.Errorf("expected BaseURL trimmed from config, got %q", ap.BaseURL)
 	}
 }
 
@@ -352,6 +358,9 @@ func TestChat_RegisteredTypeIsDispatched(t *testing.T) {
 func TestRequireKnownLLMType(t *testing.T) {
 	if err := requireKnownLLMType("openai"); err != nil {
 		t.Errorf("openai should be known: %v", err)
+	}
+	if err := requireKnownLLMType("anthropic"); err != nil {
+		t.Errorf("anthropic should be known: %v", err)
 	}
 	if err := requireKnownLLMType("nope"); !errors.Is(err, ErrUnknownProviderType) {
 		t.Errorf("nope should fail closed, got %v", err)
