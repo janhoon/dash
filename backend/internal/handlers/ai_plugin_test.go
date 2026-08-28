@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -145,6 +146,85 @@ func TestInstantiateDBProvider_CopilotKeepsCiphertext(t *testing.T) {
 	}
 	if cp.EncryptedGHToken != ciphertext {
 		t.Errorf("expected ciphertext EncryptedGHToken, got %q", cp.EncryptedGHToken)
+	}
+}
+
+func TestInstantiateDBProvider_CopilotEncryptedKeyListsAndChats(t *testing.T) {
+	t.Setenv("JWT_SECRET", "test-secret-for-copilot-tests")
+
+	copilotToken := "tid=uuid-copilot-row-token"
+	expiresAt := time.Now().Unix() + 3600
+	chatJSON := `{"id":"chatcmpl-uuid","choices":[{"index":0,"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}]}`
+
+	copilotAPI := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/models":
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(copilotModelsPayload()))
+		case r.Method == http.MethodPost && r.URL.Path == "/chat/completions":
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(chatJSON))
+		default:
+			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+			http.NotFound(w, r)
+		}
+	}))
+	defer copilotAPI.Close()
+
+	tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{
+			"token":      copilotToken,
+			"expires_at": expiresAt,
+			"endpoints":  map[string]string{"api": copilotAPI.URL},
+		})
+	}))
+	defer tokenServer.Close()
+
+	enc := encryptTestToken(t, "ghp_uuid_copilot_row")
+	row := providerRow{
+		ID:           uuid.New(),
+		ProviderType: "copilot",
+		DisplayName:  "Copilot",
+		APIKey:       &enc,
+	}
+
+	copilotTokenCache.Range(func(key, value any) bool {
+		copilotTokenCache.Delete(key)
+		return true
+	})
+
+	p, _, err := instantiateDBProvider(row)
+	if err != nil {
+		t.Fatalf("instantiateDBProvider: %v", err)
+	}
+	cp, ok := p.(*CopilotProvider)
+	if !ok {
+		t.Fatalf("expected *CopilotProvider, got %T", p)
+	}
+	if cp.EncryptedGHToken != enc {
+		t.Fatal("EncryptedGHToken must still be the stored ciphertext")
+	}
+	cp.tokenEndpoint = tokenServer.URL + "/copilot_internal/v2/token"
+
+	models, err := cp.ListModels(context.Background())
+	if err != nil {
+		t.Fatalf("ListModels after one decrypt: %v", err)
+	}
+	if len(models) == 0 {
+		t.Fatal("expected copilot models")
+	}
+
+	rr := httptest.NewRecorder()
+	err = cp.Chat(context.Background(), ChatRequest{
+		Model:    "gpt-4o",
+		Messages: []json.RawMessage{json.RawMessage(`{"role":"user","content":"hi"}`)},
+	}, rr)
+	if err != nil {
+		t.Fatalf("Chat after one decrypt: %v", err)
+	}
+	if !strings.Contains(rr.Body.String(), `"content":"ok"`) {
+		t.Fatalf("chat body missing content, got %s", rr.Body.String())
 	}
 }
 
