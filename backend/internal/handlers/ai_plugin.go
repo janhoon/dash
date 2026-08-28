@@ -9,7 +9,7 @@ import (
 // LLMConfig is the in-process config passed to an LLM plugin factory.
 type LLMConfig struct {
 	BaseURL string
-	// APIKey is decrypted plaintext for openai/openrouter/ollama/custom.
+	// APIKey is decrypted plaintext for openai/openrouter/ollama/custom/anthropic.
 	// For copilot it is still-encrypted GH token; CopilotProvider decrypts
 	// EncryptedGHToken on ListModels/Chat.
 	APIKey      string
@@ -81,6 +81,7 @@ func init() {
 	RegisterLLM("openrouter", openaiCompat)
 	RegisterLLM("ollama", openaiCompat)
 	RegisterLLM("custom", openaiCompat)
+	RegisterLLM("anthropic", NewAnthropic)
 	// Copilot's live chat path remains provider_id=="copilot" (user GH token).
 	// Registering the type means a stored provider_type=copilot does not
 	// impersonate OpenAI-compat. LLMConfig.APIKey is ciphertext; the factory

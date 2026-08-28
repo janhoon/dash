@@ -31,6 +31,7 @@ const URL_HINTS: Record<string, string> = {
   openai: 'https://api.openai.com/v1',
   openrouter: 'https://openrouter.ai/api/v1',
   ollama: 'http://localhost:11434/v1',
+  anthropic: 'https://api.anthropic.com',
   custom: '',
 }
 
@@ -452,6 +453,7 @@ export function AIProviderSettings({
               <option value="openai">OpenAI</option>
               <option value="openrouter">OpenRouter</option>
               <option value="ollama">Ollama</option>
+              <option value="anthropic">Anthropic</option>
               <option value="custom">Custom</option>
             </select>
           </label>
