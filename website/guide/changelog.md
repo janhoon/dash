@@ -4,6 +4,14 @@ title: "Changelog"
 
 # Changelog
 
+## [0.21.0](https://github.com/aceobservability/ace/compare/v0.20.0...v0.21.0) (2026-08-28)
+
+
+### Features
+
+* **ai:** register Anthropic Messages LLM plugin ([#419](https://github.com/aceobservability/ace/issues/419)) ([179a1ec](https://github.com/aceobservability/ace/commit/179a1ecc2dca8b58d3865dfb9af4015846d71ef8))
+* in-process LLM plugin register and provider_type dispatch ([#417](https://github.com/aceobservability/ace/issues/417)) ([5d314a2](https://github.com/aceobservability/ace/commit/5d314a23964c2f38cb0191837e46d17ba2861aa8))
+
 ## [0.20.0](https://github.com/aceobservability/ace/compare/v0.19.2...v0.20.0) (2026-08-21)
 
 
