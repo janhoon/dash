@@ -145,6 +145,7 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
   const hasResults = result?.status === 'success' && chartSeries.length > 0
   const seriesCount = chartSeries.length
   const queryLanguageLabel = getQueryLanguageLabel(activeDatasource?.type)
+  const compactQueryEditor = isPrometheusLike(activeDatasource?.type ?? 'prometheus')
 
   const addToHistory = useCallback((q: string) => {
     setQueryHistory((prev) => pushQueryHistory(METRICS_HISTORY_KEY, prev, q))
@@ -171,11 +172,15 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
 
   const runQuery = useCallback(async () => {
     if (!selectedDatasourceId) {
+      queryGenerationRef.current += 1
+      setLoading(false)
       setError('Select a metrics datasource')
       return
     }
 
     if (!query.trim()) {
+      queryGenerationRef.current += 1
+      setLoading(false)
       setError('Query is required')
       return
     }
@@ -586,8 +591,8 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
           onChange={setQuery}
           onSubmit={() => void runQuery()}
           disabled={!hasMetricsDatasources}
-          compact
-          height={40}
+          compact={compactQueryEditor}
+          height={compactQueryEditor ? 40 : 160}
           placeholder={queryPlaceholder}
         />
 
