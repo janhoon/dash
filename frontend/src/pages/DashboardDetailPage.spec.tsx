@@ -1,12 +1,12 @@
-import type { ReactNode } from 'react'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { createMemoryRouter } from 'react-router'
 import { RouterProvider } from 'react-router/dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('echarts/core', async importOriginal => {
+vi.mock('echarts/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('echarts/core')>()
   return {
     ...actual,
@@ -28,17 +28,11 @@ vi.mock('react-grid-layout/legacy', () => ({
 }))
 
 vi.mock('@/components/QueryBuilder', () => ({
-  QueryBuilder: ({
-    value,
-    onChange,
-  }: {
-    value: string
-    onChange: (value: string) => void
-  }) => (
+  QueryBuilder: ({ value, onChange }: { value: string; onChange: (value: string) => void }) => (
     <textarea
       data-testid="promql-query-input"
       value={value}
-      onChange={event => onChange(event.target.value)}
+      onChange={(event) => onChange(event.target.value)}
     />
   ),
 }))
@@ -70,8 +64,8 @@ import * as dashboardApi from '@/api/dashboards'
 import * as datasourceApi from '@/api/datasources'
 import * as panelApi from '@/api/panels'
 import * as variableApi from '@/api/variables'
-import * as promqlClient from '@/promql/client'
 import { DashboardDetailPage } from '@/pages/DashboardDetailPage'
+import * as promqlClient from '@/promql/client'
 import { useFavoritesStore } from '@/stores/favoritesStore'
 import { useTimeRangeStore } from '@/stores/timeRangeStore'
 import { createTestQueryClient } from '@/test/renderWithProviders'
@@ -226,18 +220,21 @@ describe('DashboardDetailPage', () => {
     expect(screen.getByText('Dashboard not found')).toBeTruthy()
   })
 
-  it('navigates back to dashboards list', async () => {
-    const user = userEvent.setup()
+  it('renders loaded header with time range, datasource, and solid gold add panel', async () => {
     renderDashboardDetail()
 
     await waitFor(() => {
-      expect(screen.getByTestId('dashboard-back-btn')).toBeTruthy()
+      expect(screen.getByTestId('dashboard-title').textContent).toContain('Test Dashboard')
     })
 
-    await user.click(screen.getByTestId('dashboard-back-btn'))
-    await waitFor(() => {
-      expect(screen.getByText('Dashboards list')).toBeTruthy()
-    })
+    const header = screen.getByTestId('dashboard-loaded-header')
+    expect(header.getAttribute('style')).toBeNull()
+    expect(screen.getByTestId('dashboard-header-meta').textContent).toBe('Last 1 hour · Prometheus')
+
+    const addPanel = screen.getByTestId('dashboard-add-panel-btn')
+    expect(addPanel.textContent).toBe('Add panel')
+    expect(addPanel.style.backgroundColor).toBe('var(--color-primary)')
+    expect(addPanel.style.color).toBe('#0B0D0F')
   })
 
   it('opens create panel modal from Add Panel button', async () => {

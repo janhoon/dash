@@ -96,6 +96,11 @@ describe('Panel', () => {
   it('renders line chart content for metrics panels', () => {
     render(<Panel panel={basePanel} />)
     expect(screen.getByTestId('line-chart')).toBeTruthy()
+    const chrome = screen.getByTestId('dashboard-panel-p1')
+    expect(chrome.style.backgroundColor).toBe('var(--color-surface-container-low)')
+    expect(chrome.style.borderColor).toBe('var(--color-stroke-subtle)')
+    expect(chrome.style.borderWidth).toBe('1px')
+    expect(screen.getByTestId('panel-header-meta').textContent).toBe('1h')
   })
 
   it('renders stat panels', () => {
@@ -121,6 +126,23 @@ describe('Panel', () => {
 
     render(<Panel panel={{ ...basePanel, type: 'stat' }} />)
     expect(screen.getByTestId('stat-panel')).toBeTruthy()
+  })
+
+  it('shows the live query on wide chart panel chrome', () => {
+    render(
+      <Panel
+        panel={{
+          ...basePanel,
+          grid_pos: { x: 0, y: 2, w: 8, h: 4 },
+          query: { expr: 'rate(http_requests_total[5m])', datasource_id: 'ds-1' },
+        }}
+      />,
+    )
+    expect(screen.getByTestId('line-chart')).toBeTruthy()
+    expect(screen.getByTestId('panel-header-meta').textContent).toBe(
+      'rate(http_requests_total[5m])',
+    )
+    expect(screen.getByTestId('panel-title').className).toContain('text-[13px]')
   })
 
   it('renders logs and trace list panels', () => {
