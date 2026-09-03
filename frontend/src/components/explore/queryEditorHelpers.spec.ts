@@ -4,6 +4,7 @@ import {
   formatLastRanStatus,
   formatUnknownMetricError,
   getQueryLanguageLabel,
+  isUnknownMetricError,
   parseMetricSuggestionFromError,
   suggestMetricCorrection,
 } from '@/components/explore/queryEditorHelpers'
@@ -69,5 +70,20 @@ describe('queryEditorHelpers', () => {
       unknown: 'http_requests_totall',
       suggestion: 'http_requests_total',
     })
+  })
+
+  it('detects unknown-metric provider errors without treating generic failures as typos', () => {
+    expect(isUnknownMetricError('unknown metric name')).toBe(true)
+    expect(isUnknownMetricError('parse error: unknown metric name "http_requests_totall"')).toBe(
+      true,
+    )
+    expect(
+      isUnknownMetricError(
+        'Unknown metric http_requests_totall. Did you mean http_requests_total?',
+      ),
+    ).toBe(true)
+    expect(isUnknownMetricError('Selected datasource did not return metric results')).toBe(false)
+    expect(isUnknownMetricError('query timed out')).toBe(false)
+    expect(isUnknownMetricError('Query failed')).toBe(false)
   })
 })

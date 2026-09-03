@@ -6,12 +6,9 @@ export type MetricSuggestion = {
   suggestion: string
 }
 
-export const QUERY_LOADING_BAR_HEIGHTS = [
-  80, 110, 90, 140, 120, 160, 130, 180, 150, 200, 170, 140, 160, 190, 170, 150,
-] as const
-
 const PROMQL_METRIC_TOKEN = /[a-zA-Z_:][a-zA-Z0-9_:]*/g
 const UNKNOWN_METRIC_ERROR = /^Unknown metric (\S+)\. Did you mean ([^\s.?]+)\??\.?$/
+const UNKNOWN_METRIC_CLASS = /unknown[\s_-]*metric(?:[\s_-]*name)?/i
 
 const SKIP_IDENTIFIERS = new Set([
   ...Object.keys(PROMQL_FUNCTIONS),
@@ -53,6 +50,12 @@ export function parseMetricSuggestionFromError(error: string): MetricSuggestion 
   const match = UNKNOWN_METRIC_ERROR.exec(error.trim())
   if (!match?.[1] || !match[2]) return null
   return { unknown: match[1], suggestion: match[2] }
+}
+
+export function isUnknownMetricError(error: string): boolean {
+  const trimmed = error.trim()
+  if (!trimmed) return false
+  return parseMetricSuggestionFromError(trimmed) !== null || UNKNOWN_METRIC_CLASS.test(trimmed)
 }
 
 export function applyMetricSuggestion(query: string, suggestion: MetricSuggestion): string {

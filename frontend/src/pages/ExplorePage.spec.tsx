@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryRouter } from 'react-router'
@@ -595,6 +595,8 @@ describe('ExplorePage', () => {
     expect(screen.getByTestId('explore-run-query-btn').textContent).toBe('Running')
     expect(screen.getByTestId('explore-query-language').textContent).toBe('PromQL')
     expect(screen.getByTestId('monaco-query-editor-mock')).toBeTruthy()
+    expect(screen.getByTestId('monaco-query-editor-mock').hasAttribute('disabled')).toBe(false)
+    expect(screen.getByTestId('explore-datasource-btn').hasAttribute('disabled')).toBe(false)
     expect(screen.queryByText('Executing query...')).toBeNull()
     expect(screen.queryByText('Loading...')).toBeNull()
     expect(screen.queryByText('Never a centered Loading…')).toBeNull()
@@ -654,5 +656,130 @@ describe('ExplorePage', () => {
 
     expect((queryInput as HTMLTextAreaElement).value).toBe('rate(http_requests_total[5m])')
     expect(screen.queryByTestId('explore-query-error')).toBeNull()
+  })
+
+  it('keeps the provider error when the failure is not an unknown metric', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(datasourcesApi, 'queryDataSource').mockImplementation(async (_id, payload) => {
+      if (payload.limit === 100) {
+        return mockQueryResponse
+      }
+      return {
+        status: 'error',
+        resultType: 'metrics',
+        error: 'query timed out',
+        data: { resultType: 'matrix', result: [] },
+      }
+    })
+
+    renderExplore()
+
+    await waitFor(() => {
+      expect(datasourcesApi.fetchDataSourceMetricNames).toHaveBeenCalled()
+    })
+    await vi.mocked(datasourcesApi.fetchDataSourceMetricNames).mock.results[0]!.value
+
+    const queryInput = await screen.findByTestId('monaco-query-editor-mock')
+    fireEvent.change(queryInput, {
+      target: { value: 'rate(http_requests_totall[5m])' },
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-run-query-btn').hasAttribute('disabled')).toBe(false)
+    })
+
+    await user.click(screen.getByTestId('explore-run-query-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-query-error').textContent).toContain('query timed out')
+    })
+
+    expect(screen.queryByTestId('explore-query-suggestion-btn')).toBeNull()
+    expect(screen.queryByText(/Did you mean/)).toBeNull()
+    expect(screen.getByTestId('explore-query-empty').textContent).toContain(
+      'No series. Fix the query to see a chart.',
+    )
+  })
+
+  it('ignores a stale in-flight query completion after a newer run', async () => {
+    const user = userEvent.setup()
+    let releaseStale!: (value: DataSourceQueryResult) => void
+    let releaseCurrent!: (value: DataSourceQueryResult) => void
+    const staleQuery = new Promise<DataSourceQueryResult>((resolve) => {
+      releaseStale = resolve
+    })
+    const currentQuery = new Promise<DataSourceQueryResult>((resolve) => {
+      releaseCurrent = resolve
+    })
+
+    vi.spyOn(datasourcesApi, 'queryDataSource').mockImplementation(async (_id, payload) => {
+      if (payload.limit === 100) {
+        return mockQueryResponse
+      }
+      if (payload.query === 'up') {
+        return staleQuery
+      }
+      return currentQuery
+    })
+
+    renderExplore()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-datasource-btn').textContent).toContain('Prometheus Prod')
+    })
+
+    const queryInput = await screen.findByTestId('monaco-query-editor-mock')
+    fireEvent.change(queryInput, { target: { value: 'up' } })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-run-query-btn').hasAttribute('disabled')).toBe(false)
+    })
+
+    await user.click(screen.getByTestId('explore-run-query-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-query-loading')).toBeTruthy()
+    })
+
+    expect(screen.getByTestId('monaco-query-editor-mock').hasAttribute('disabled')).toBe(false)
+    expect(screen.getByTestId('explore-datasource-btn').hasAttribute('disabled')).toBe(false)
+
+    fireEvent.change(queryInput, { target: { value: 'http_requests_total' } })
+
+    await waitFor(() => {
+      expect((queryInput as HTMLTextAreaElement).value).toBe('http_requests_total')
+    })
+
+    fireEvent.keyDown(screen.getByTestId('explore-query-editor'), {
+      key: 'Enter',
+      ctrlKey: true,
+    })
+
+    await waitFor(() => {
+      expect(datasourcesApi.queryDataSource).toHaveBeenCalledWith(
+        'ds-1',
+        expect.objectContaining({ query: 'http_requests_total' }),
+      )
+    })
+
+    releaseCurrent(mockQueryResponse)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('line-chart')).toBeTruthy()
+    })
+
+    await act(async () => {
+      releaseStale({
+        status: 'error',
+        resultType: 'metrics',
+        error: 'stale query should not appear',
+        data: { resultType: 'matrix', result: [] },
+      })
+    })
+
+    expect(screen.getByTestId('line-chart')).toBeTruthy()
+    expect(screen.queryByText('stale query should not appear')).toBeNull()
+    expect(screen.queryByTestId('explore-query-error')).toBeNull()
+    expect(screen.getByTestId('line-chart').getAttribute('data-series-count')).toBe('1')
   })
 })

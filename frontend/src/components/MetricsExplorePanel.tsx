@@ -41,14 +41,66 @@ import {
   formatLastRanStatus,
   formatUnknownMetricError,
   getQueryLanguageLabel,
+  isUnknownMetricError,
   type MetricSuggestion,
-  parseMetricSuggestionFromError,
-  QUERY_LOADING_BAR_HEIGHTS,
   suggestMetricCorrection,
 } from '@/components/explore/queryEditorHelpers'
 
 type MetricsExplorePanelProps = {
   onDatasourceChanged?: (payload: ExploreDatasourceChanged) => void
+}
+
+const QUERY_LOADING_BAR_HEIGHTS = [
+  80, 110, 90, 140, 120, 160, 130, 180, 150, 200, 170, 140, 160, 190, 170, 150,
+] as const
+
+function LastRanStatus({ lastRanAt, seriesCount }: { lastRanAt: number; seriesCount: number }) {
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  return (
+    <span
+      className="text-[11px] text-[var(--color-on-surface-variant)]"
+      data-testid="explore-query-status"
+    >
+      {formatLastRanStatus(lastRanAt, seriesCount, now)}
+    </span>
+  )
+}
+
+function QueryLoadingSkeleton() {
+  return (
+    <div className="flex flex-1 flex-col gap-3 p-4" data-testid="explore-query-loading">
+      <div className="absolute inset-x-0 top-0 h-px overflow-hidden bg-[var(--color-surface-container-high)]">
+        <div className="animate-explore-query-progress h-full w-1/3 bg-[var(--color-on-surface)]" />
+      </div>
+      <div className="h-3 w-40 rounded-sm bg-[var(--color-surface-bright)] animate-shimmer" />
+      <div className="flex flex-1 items-end gap-2 overflow-hidden">
+        {QUERY_LOADING_BAR_HEIGHTS.map((height, index) => (
+          <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton bars
+            key={index}
+            className="w-14 shrink-0 rounded-sm bg-[var(--color-surface-bright)] animate-shimmer"
+            style={{ height: `${height}px` }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function QueryEmptyResult() {
+  return (
+    <div className="flex flex-1 flex-col p-6" data-testid="explore-query-empty">
+      <p className="m-0 text-[13px] text-[var(--color-on-surface-variant)]">
+        No series. Fix the query to see a chart.
+      </p>
+    </div>
+  )
 }
 
 export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanelProps) {
@@ -79,7 +131,6 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
   const [metricNames, setMetricNames] = useState<string[]>([])
   const [metricSuggestion, setMetricSuggestion] = useState<MetricSuggestion | null>(null)
   const [lastRanAt, setLastRanAt] = useState<number | null>(null)
-  const [now, setNow] = useState(() => Date.now())
 
   const datasourceMenuRef = useRef<HTMLDivElement | null>(null)
   const pendingNavigationRef = useRef({
@@ -87,6 +138,10 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
     startMs: null as number | null,
     endMs: null as number | null,
   })
+  const queryGenerationRef = useRef(0)
+  const selectedDatasourceIdRef = useRef(selectedDatasourceId)
+  const previousDatasourceIdRef = useRef(selectedDatasourceId)
+  selectedDatasourceIdRef.current = selectedDatasourceId
 
   const activeDatasource = useMemo(
     () => metricsDatasources.find((ds) => ds.id === selectedDatasourceId) ?? null,
@@ -97,10 +152,6 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
   const hasResults = result?.status === 'success' && chartSeries.length > 0
   const seriesCount = chartSeries.length
   const queryLanguageLabel = getQueryLanguageLabel(activeDatasource?.type)
-  const lastRanStatus =
-    lastRanAt !== null && !loading && !error
-      ? formatLastRanStatus(lastRanAt, seriesCount, now)
-      : null
   const activeDatasourceHealth = activeDatasource
     ? datasourceHealth[activeDatasource.id] || 'unknown'
     : 'unknown'
@@ -112,13 +163,11 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
   }, [])
 
   const applyQueryError = useCallback(
-    (message: string) => {
-      const parsed = parseMetricSuggestionFromError(message)
+    (message: string, executedQuery: string) => {
       const suggestion =
-        parsed ??
-        (isPrometheusLike(activeDatasource?.type ?? 'prometheus')
-          ? suggestMetricCorrection(query, metricNames)
-          : null)
+        isUnknownMetricError(message) && isPrometheusLike(activeDatasource?.type ?? 'prometheus')
+          ? suggestMetricCorrection(executedQuery, metricNames)
+          : null
 
       if (suggestion) {
         setMetricSuggestion(suggestion)
@@ -129,7 +178,7 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
       setMetricSuggestion(null)
       setError(message)
     },
-    [activeDatasource?.type, metricNames, query],
+    [activeDatasource?.type, metricNames],
   )
 
   const runQuery = useCallback(async () => {
@@ -142,6 +191,13 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
       setError('Query is required')
       return
     }
+
+    const generation = ++queryGenerationRef.current
+    const executedQuery = query
+    const requestedDatasourceId = selectedDatasourceId
+    const isCurrent = () =>
+      queryGenerationRef.current === generation &&
+      selectedDatasourceIdRef.current === requestedDatasourceId
 
     setLoading(true)
     setError(null)
@@ -156,8 +212,8 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
       const step = Math.max(15, Math.floor(duration / 200))
       const dsType = activeDatasource?.type
 
-      const response = await queryDataSource(selectedDatasourceId, {
-        query,
+      const response = await queryDataSource(requestedDatasourceId, {
+        query: executedQuery,
         signal:
           dsType === 'clickhouse' || dsType === 'cloudwatch' || dsType === 'elasticsearch'
             ? 'metrics'
@@ -167,10 +223,13 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
         step,
       })
 
+      if (!isCurrent()) return
+
       if (response.status === 'error') {
-        applyQueryError(response.error || 'Query failed')
+        applyQueryError(response.error || 'Query failed', executedQuery)
       } else if (response.resultType !== 'metrics') {
-        applyQueryError('Selected datasource did not return metric results')
+        setMetricSuggestion(null)
+        setError('Selected datasource did not return metric results')
       } else {
         const metricsResponse: PrometheusQueryResult = {
           status: response.status,
@@ -187,12 +246,15 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
           })),
         )
         setLastRanAt(Date.now())
-        addToHistory(query)
+        addToHistory(executedQuery)
       }
     } catch (e) {
-      applyQueryError(e instanceof Error ? e.message : 'Failed to execute query')
+      if (!isCurrent()) return
+      applyQueryError(e instanceof Error ? e.message : 'Failed to execute query', executedQuery)
     } finally {
-      setLoading(false)
+      if (isCurrent()) {
+        setLoading(false)
+      }
     }
   }, [
     activeDatasource?.type,
@@ -304,10 +366,19 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
   }, [searchParams])
 
   useEffect(() => {
-    if (lastRanAt === null) return
-    const timer = window.setInterval(() => setNow(Date.now()), 1000)
-    return () => window.clearInterval(timer)
-  }, [lastRanAt])
+    return () => {
+      queryGenerationRef.current += 1
+    }
+  }, [])
+
+  useEffect(() => {
+    const previousId = previousDatasourceIdRef.current
+    previousDatasourceIdRef.current = selectedDatasourceId
+    if (previousId && previousId !== selectedDatasourceId) {
+      queryGenerationRef.current += 1
+      setLoading(false)
+    }
+  }, [selectedDatasourceId])
 
   useEffect(() => {
     if (!activeDatasource || !isPrometheusLike(activeDatasource.type)) {
@@ -340,6 +411,7 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
       setResult(null)
       setChartSeries([])
       setError(null)
+      setLastRanAt(null)
     }
     previousOrgIdRef.current = currentOrgId
   }, [currentOrgId])
@@ -732,13 +804,8 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
             </div>
           ) : null}
 
-          {lastRanStatus ? (
-            <span
-              className="text-[11px] text-[var(--color-on-surface-variant)]"
-              data-testid="explore-query-status"
-            >
-              {lastRanStatus}
-            </span>
+          {lastRanAt !== null && !loading && !error ? (
+            <LastRanStatus lastRanAt={lastRanAt} seriesCount={seriesCount} />
           ) : null}
         </div>
       </div>
@@ -748,22 +815,7 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
         data-testid="explore-query-result"
       >
         {loading ? (
-          <div className="flex flex-1 flex-col gap-3 p-4" data-testid="explore-query-loading">
-            <div className="absolute inset-x-0 top-0 h-px overflow-hidden bg-[var(--color-surface-container-high)]">
-              <div className="animate-explore-query-progress h-full w-1/3 bg-[var(--color-on-surface)]" />
-            </div>
-            <div className="h-3 w-40 rounded-sm bg-[var(--color-surface-bright)] animate-shimmer" />
-            <div className="flex flex-1 items-end gap-2 overflow-hidden">
-              {QUERY_LOADING_BAR_HEIGHTS.map((height, index) => (
-                <div
-                  // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton bars
-                  key={index}
-                  className="w-14 shrink-0 rounded-sm bg-[var(--color-surface-bright)] animate-shimmer"
-                  style={{ height: `${height}px` }}
-                />
-              ))}
-            </div>
-          </div>
+          <QueryLoadingSkeleton />
         ) : hasResults ? (
           <div className="flex flex-1 flex-col gap-2 p-4">
             <div className="flex items-start justify-between text-[13px]">
@@ -794,18 +846,8 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
               <LineChart series={chartSeries} height={400} group="explore-metrics" />
             </div>
           </div>
-        ) : error ? (
-          <div className="flex flex-1 flex-col p-6" data-testid="explore-query-empty">
-            <p className="m-0 text-[13px] text-[var(--color-on-surface-variant)]">
-              No series. Fix the query to see a chart.
-            </p>
-          </div>
-        ) : result?.status === 'success' && chartSeries.length === 0 ? (
-          <div className="flex flex-1 flex-col p-6" data-testid="explore-query-empty">
-            <p className="m-0 text-[13px] text-[var(--color-on-surface-variant)]">
-              No series. Fix the query to see a chart.
-            </p>
-          </div>
+        ) : error || (result?.status === 'success' && chartSeries.length === 0) ? (
+          <QueryEmptyResult />
         ) : !hasMetricsDatasources ? (
           <div className="flex flex-1 flex-col p-6">
             <p className="m-0 text-[13px] text-[var(--color-on-surface-variant)]">
