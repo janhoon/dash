@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryRouter } from 'react-router'
@@ -23,16 +23,22 @@ vi.mock('@/components/MonacoQueryEditor', () => ({
     value,
     onChange,
     disabled,
+    compact,
+    height,
   }: {
     value: string
     onChange: (value: string) => void
     disabled?: boolean
+    compact?: boolean
+    height?: number
   }) => (
     <textarea
       data-testid="monaco-query-editor-mock"
+      data-compact={compact ? 'true' : 'false'}
+      data-height={height ?? ''}
       value={value}
       disabled={disabled}
-      onChange={event => onChange(event.target.value)}
+      onChange={(event) => onChange(event.target.value)}
     />
   ),
 }))
@@ -51,7 +57,7 @@ vi.mock('@/components/QueryBuilder', () => ({
       data-testid="query-builder-mock"
       value={value}
       disabled={disabled}
-      onChange={event => onChange(event.target.value)}
+      onChange={(event) => onChange(event.target.value)}
     />
   ),
 }))
@@ -70,7 +76,7 @@ vi.mock('@/components/LogQLQueryBuilder', () => ({
       data-testid="logql-query-builder-mock"
       value={value}
       disabled={disabled}
-      onChange={event => onChange(event.target.value)}
+      onChange={(event) => onChange(event.target.value)}
     />
   ),
 }))
@@ -78,7 +84,7 @@ vi.mock('@/components/LogQLQueryBuilder', () => ({
 vi.mock('@/components/LogViewer', () => ({
   LogViewer: ({ logs }: { logs: Array<{ line: string }> }) => (
     <div data-testid="log-viewer-mock" data-log-count={logs.length}>
-      {logs.map(log => (
+      {logs.map((log) => (
         <div key={log.line} data-testid="log-viewer-row-mock">
           {log.line}
         </div>
@@ -187,7 +193,10 @@ describe('ExplorePage', () => {
 
     vi.spyOn(dashboardsApi, 'listDashboards').mockResolvedValue([])
     vi.spyOn(datasourcesApi, 'listDataSources').mockResolvedValue([mockMetricsDatasource])
-    vi.spyOn(datasourcesApi, 'fetchDataSourceMetricNames').mockResolvedValue(['up', 'http_requests_total'])
+    vi.spyOn(datasourcesApi, 'fetchDataSourceMetricNames').mockResolvedValue([
+      'up',
+      'http_requests_total',
+    ])
     vi.spyOn(datasourcesApi, 'fetchDataSourceLabels').mockResolvedValue(['instance', 'job'])
     vi.spyOn(datasourcesApi, 'fetchDataSourceLabelValues').mockResolvedValue(['localhost:9090'])
     vi.spyOn(datasourcesApi, 'queryDataSource').mockImplementation(async (_id, payload) => {
@@ -304,7 +313,9 @@ describe('ExplorePage', () => {
     renderExplore('/app/explore/traces')
 
     await waitFor(() => {
-      expect(screen.getByTestId('explore-traces-datasource-btn').textContent).toContain('Tempo Prod')
+      expect(screen.getByTestId('explore-traces-datasource-btn').textContent).toContain(
+        'Tempo Prod',
+      )
     })
 
     await waitFor(() => {
@@ -320,7 +331,10 @@ describe('ExplorePage', () => {
     fireEvent.click(screen.getByText('trace-abc-123'))
 
     await waitFor(() => {
-      expect(datasourcesApi.fetchDataSourceTrace).toHaveBeenCalledWith('ds-traces-1', 'trace-abc-123')
+      expect(datasourcesApi.fetchDataSourceTrace).toHaveBeenCalledWith(
+        'ds-traces-1',
+        'trace-abc-123',
+      )
     })
 
     await waitFor(() => {
@@ -477,13 +491,7 @@ describe('ExplorePage', () => {
       expect(screen.getByTestId('explore-datasource-btn').textContent).toContain('Prometheus Prod')
     })
 
-    await waitFor(() => {
-      expect(datasourcesApi.queryDataSource).toHaveBeenCalled()
-    })
-
-    vi.mocked(datasourcesApi.queryDataSource).mockClear()
-
-    const queryInput = await screen.findByTestId('query-builder-mock')
+    const queryInput = await screen.findByTestId('monaco-query-editor-mock')
     await user.clear(queryInput)
     await user.type(queryInput, 'up')
 
@@ -507,6 +515,9 @@ describe('ExplorePage', () => {
 
     expect(screen.getByTestId('line-chart').getAttribute('data-series-count')).toBe('1')
     expect(screen.getByText('1 series')).toBeTruthy()
+    expect(screen.getByTestId('explore-query-status').textContent).toMatch(
+      /Last ran \d+s · 1 series/,
+    )
   })
 
   it('opens export to dashboard modal', async () => {
@@ -517,7 +528,7 @@ describe('ExplorePage', () => {
       expect(screen.getByTestId('explore-datasource-btn').textContent).toContain('Prometheus Prod')
     })
 
-    const queryInput = await screen.findByTestId('query-builder-mock')
+    const queryInput = await screen.findByTestId('monaco-query-editor-mock')
     await user.type(queryInput, 'up')
 
     await waitFor(() => {
@@ -528,5 +539,383 @@ describe('ExplorePage', () => {
     await user.click(screen.getByTestId('explore-export-btn'))
 
     expect(screen.getByTestId('export-dashboard-modal')).toBeTruthy()
+  })
+
+  it('renders the Refresh query editor chrome', async () => {
+    renderExplore()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-datasource-btn').textContent).toContain('Prometheus Prod')
+    })
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-subtitle').textContent).toBe('Metrics · Prometheus Prod')
+    })
+
+    expect(screen.getByTestId('explore-query-editor')).toBeTruthy()
+    expect(screen.getByTestId('explore-query-language').textContent).toBe('PromQL')
+    expect(screen.getByTestId('explore-query-datasource').textContent).toBe('Prometheus Prod')
+    expect(screen.getByTestId('explore-datasource-btn').getAttribute('title')).toBe('Prometheus Prod')
+    expect(screen.getByTestId('explore-run-query-btn').textContent).toBe('Run query')
+    expect(screen.getByTestId('explore-export-btn').textContent).toBe('Add to dashboard')
+    expect(screen.getByTestId('explore-subtitle').textContent).toBe('Metrics · Prometheus Prod')
+    expect(screen.getByTestId('monaco-query-editor-mock')).toBeTruthy()
+    expect(screen.getByTestId('monaco-query-editor-mock').getAttribute('data-compact')).toBe('true')
+    expect(screen.getByTestId('monaco-query-editor-mock').getAttribute('data-height')).toBe('40')
+  })
+
+  it('uses a taller non-compact editor for ClickHouse metrics queries', async () => {
+    const user = userEvent.setup()
+    const clickhouseDatasource: DataSource = {
+      ...mockMetricsDatasource,
+      id: 'ds-clickhouse-1',
+      name: 'ClickHouse Prod',
+      type: 'clickhouse',
+      url: 'http://clickhouse:8123',
+      is_default: false,
+    }
+
+    vi.spyOn(datasourcesApi, 'listDataSources').mockResolvedValue([
+      mockMetricsDatasource,
+      clickhouseDatasource,
+    ])
+
+    renderExplore()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-datasource-btn').textContent).toContain('Prometheus Prod')
+    })
+
+    await user.click(screen.getByTestId('explore-datasource-btn'))
+    await user.click(screen.getByRole('button', { name: /ClickHouse Prod/ }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-query-datasource').textContent).toBe('ClickHouse Prod')
+    })
+
+    expect(screen.getByTestId('explore-query-language').textContent).toBe('SQL')
+    expect(screen.getByTestId('monaco-query-editor-mock').getAttribute('data-compact')).toBe(
+      'false',
+    )
+    expect(screen.getByTestId('monaco-query-editor-mock').getAttribute('data-height')).toBe('160')
+  })
+
+  it('keeps editor chrome and shimmers the result in place while a query runs', async () => {
+    const user = userEvent.setup()
+    let releaseQuery!: (value: DataSourceQueryResult) => void
+    const pendingQuery = new Promise<DataSourceQueryResult>((resolve) => {
+      releaseQuery = resolve
+    })
+
+    vi.spyOn(datasourcesApi, 'queryDataSource').mockImplementation(async () => pendingQuery)
+
+    renderExplore()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-datasource-btn').textContent).toContain('Prometheus Prod')
+    })
+
+    const queryInput = await screen.findByTestId('monaco-query-editor-mock')
+    fireEvent.change(queryInput, {
+      target: { value: 'histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))' },
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-run-query-btn').hasAttribute('disabled')).toBe(false)
+    })
+
+    await user.click(screen.getByTestId('explore-run-query-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-query-loading')).toBeTruthy()
+    })
+
+    expect(screen.getByTestId('explore-run-query-btn').textContent).toBe('Running')
+    expect(screen.getByTestId('explore-query-language').textContent).toBe('PromQL')
+    expect(screen.getByTestId('monaco-query-editor-mock')).toBeTruthy()
+    expect(screen.getByTestId('monaco-query-editor-mock').hasAttribute('disabled')).toBe(false)
+    expect(screen.getByTestId('explore-datasource-btn').hasAttribute('disabled')).toBe(false)
+    expect(screen.queryByText('Executing query...')).toBeNull()
+    expect(screen.queryByText('Loading...')).toBeNull()
+    expect(screen.queryByText('Never a centered Loading…')).toBeNull()
+
+    releaseQuery(mockQueryResponse)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('explore-query-loading')).toBeNull()
+    })
+    expect(screen.getByTestId('line-chart')).toBeTruthy()
+  })
+
+  it('shows an inline query error with a metric suggestion and empty result', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(datasourcesApi, 'queryDataSource').mockImplementation(async () => ({
+      status: 'error',
+      resultType: 'metrics',
+      error: 'unknown metric name',
+      data: { resultType: 'matrix', result: [] },
+    }))
+
+    renderExplore()
+
+    await waitFor(() => {
+      expect(datasourcesApi.fetchDataSourceMetricNames).toHaveBeenCalled()
+    })
+    await vi.mocked(datasourcesApi.fetchDataSourceMetricNames).mock.results[0]!.value
+
+    const queryInput = await screen.findByTestId('monaco-query-editor-mock')
+    fireEvent.change(queryInput, {
+      target: { value: 'rate(http_requests_totall[5m])' },
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-run-query-btn').hasAttribute('disabled')).toBe(false)
+    })
+
+    await user.click(screen.getByTestId('explore-run-query-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-query-error').textContent).toContain(
+        'Unknown metric http_requests_totall. Did you mean http_requests_total?',
+      )
+    })
+
+    expect(screen.getByTestId('explore-query-suggestion-btn').textContent).toBe('Use suggestion')
+    expect(screen.getByTestId('explore-query-empty').textContent).toContain(
+      'No series. Fix the query to see a chart.',
+    )
+
+    await user.click(screen.getByTestId('explore-query-suggestion-btn'))
+
+    expect((queryInput as HTMLTextAreaElement).value).toBe('rate(http_requests_total[5m])')
+    expect(screen.queryByTestId('explore-query-error')).toBeNull()
+  })
+
+  it('keeps the provider error when the failure is not an unknown metric', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(datasourcesApi, 'queryDataSource').mockImplementation(async () => ({
+      status: 'error',
+      resultType: 'metrics',
+      error: 'query timed out',
+      data: { resultType: 'matrix', result: [] },
+    }))
+
+    renderExplore()
+
+    await waitFor(() => {
+      expect(datasourcesApi.fetchDataSourceMetricNames).toHaveBeenCalled()
+    })
+    await vi.mocked(datasourcesApi.fetchDataSourceMetricNames).mock.results[0]!.value
+
+    const queryInput = await screen.findByTestId('monaco-query-editor-mock')
+    fireEvent.change(queryInput, {
+      target: { value: 'rate(http_requests_totall[5m])' },
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-run-query-btn').hasAttribute('disabled')).toBe(false)
+    })
+
+    await user.click(screen.getByTestId('explore-run-query-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-query-error').textContent).toContain('query timed out')
+    })
+
+    expect(screen.queryByTestId('explore-query-suggestion-btn')).toBeNull()
+    expect(screen.queryByText(/Did you mean/)).toBeNull()
+    expect(screen.getByTestId('explore-query-empty').textContent).toContain(
+      'No series. Fix the query to see a chart.',
+    )
+  })
+
+  it('ignores a stale in-flight query completion after a newer run', async () => {
+    const user = userEvent.setup()
+    let releaseStale!: (value: DataSourceQueryResult) => void
+    let releaseCurrent!: (value: DataSourceQueryResult) => void
+    const staleQuery = new Promise<DataSourceQueryResult>((resolve) => {
+      releaseStale = resolve
+    })
+    const currentQuery = new Promise<DataSourceQueryResult>((resolve) => {
+      releaseCurrent = resolve
+    })
+
+    vi.spyOn(datasourcesApi, 'queryDataSource').mockImplementation(async (_id, payload) => {
+      if (payload.query === 'up') {
+        return staleQuery
+      }
+      return currentQuery
+    })
+
+    renderExplore()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-datasource-btn').textContent).toContain('Prometheus Prod')
+    })
+
+    const queryInput = await screen.findByTestId('monaco-query-editor-mock')
+    fireEvent.change(queryInput, { target: { value: 'up' } })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-run-query-btn').hasAttribute('disabled')).toBe(false)
+    })
+
+    await user.click(screen.getByTestId('explore-run-query-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-query-loading')).toBeTruthy()
+    })
+
+    expect(screen.getByTestId('monaco-query-editor-mock').hasAttribute('disabled')).toBe(false)
+    expect(screen.getByTestId('explore-datasource-btn').hasAttribute('disabled')).toBe(false)
+
+    fireEvent.change(queryInput, { target: { value: 'http_requests_total' } })
+
+    await waitFor(() => {
+      expect((queryInput as HTMLTextAreaElement).value).toBe('http_requests_total')
+    })
+
+    fireEvent.keyDown(screen.getByTestId('explore-query-editor'), {
+      key: 'Enter',
+      ctrlKey: true,
+    })
+
+    await waitFor(() => {
+      expect(datasourcesApi.queryDataSource).toHaveBeenCalledWith(
+        'ds-1',
+        expect.objectContaining({ query: 'http_requests_total' }),
+      )
+    })
+
+    releaseCurrent(mockQueryResponse)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('line-chart')).toBeTruthy()
+    })
+
+    await act(async () => {
+      releaseStale({
+        status: 'error',
+        resultType: 'metrics',
+        error: 'stale query should not appear',
+        data: { resultType: 'matrix', result: [] },
+      })
+    })
+
+    expect(screen.getByTestId('line-chart')).toBeTruthy()
+    expect(screen.queryByText('stale query should not appear')).toBeNull()
+    expect(screen.queryByTestId('explore-query-error')).toBeNull()
+    expect(screen.getByTestId('line-chart').getAttribute('data-series-count')).toBe('1')
+  })
+
+  it('keeps empty-query validation after a stale in-flight query completes', async () => {
+    const user = userEvent.setup()
+    let releaseStale!: (value: DataSourceQueryResult) => void
+    const staleQuery = new Promise<DataSourceQueryResult>((resolve) => {
+      releaseStale = resolve
+    })
+
+    vi.spyOn(datasourcesApi, 'queryDataSource').mockImplementation(async () => staleQuery)
+
+    renderExplore()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-datasource-btn').textContent).toContain('Prometheus Prod')
+    })
+
+    const queryInput = await screen.findByTestId('monaco-query-editor-mock')
+    fireEvent.change(queryInput, { target: { value: 'up' } })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-run-query-btn').hasAttribute('disabled')).toBe(false)
+    })
+
+    await user.click(screen.getByTestId('explore-run-query-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-query-loading')).toBeTruthy()
+    })
+
+    fireEvent.change(queryInput, { target: { value: '' } })
+
+    await waitFor(() => {
+      expect((queryInput as HTMLTextAreaElement).value).toBe('')
+    })
+
+    fireEvent.keyDown(screen.getByTestId('explore-query-editor'), {
+      key: 'Enter',
+      ctrlKey: true,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-query-error').textContent).toContain('Query is required')
+    })
+
+    await act(async () => {
+      releaseStale({
+        status: 'error',
+        resultType: 'metrics',
+        error: 'stale query should not appear',
+        data: { resultType: 'matrix', result: [] },
+      })
+    })
+
+    expect(screen.getByTestId('explore-query-error').textContent).toContain('Query is required')
+    expect(screen.queryByText('stale query should not appear')).toBeNull()
+    expect(screen.queryByTestId('line-chart')).toBeNull()
+    expect(screen.queryByTestId('explore-query-loading')).toBeNull()
+  })
+
+  it('clears chart status when switching datasources without a health tooltip', async () => {
+    const user = userEvent.setup()
+    const stagingDatasource: DataSource = {
+      ...mockMetricsDatasource,
+      id: 'ds-2',
+      name: 'Prometheus Staging',
+      url: 'http://prometheus-staging:9090',
+      is_default: false,
+    }
+
+    vi.spyOn(datasourcesApi, 'listDataSources').mockResolvedValue([
+      mockMetricsDatasource,
+      stagingDatasource,
+    ])
+
+    renderExplore()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-datasource-btn').textContent).toContain('Prometheus Prod')
+    })
+    expect(screen.getByTestId('explore-datasource-btn').getAttribute('title')).toBe('Prometheus Prod')
+
+    const queryInput = await screen.findByTestId('monaco-query-editor-mock')
+    fireEvent.change(queryInput, { target: { value: 'up' } })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-run-query-btn').hasAttribute('disabled')).toBe(false)
+    })
+
+    await user.click(screen.getByTestId('explore-run-query-btn'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('line-chart')).toBeTruthy()
+    })
+    expect(screen.getByTestId('explore-query-status')).toBeTruthy()
+
+    await user.click(screen.getByTestId('explore-datasource-btn'))
+    await user.click(screen.getByRole('button', { name: /Prometheus Staging/ }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-query-datasource').textContent).toBe('Prometheus Staging')
+    })
+
+    expect(screen.queryByTestId('explore-query-status')).toBeNull()
+    expect(screen.queryByTestId('line-chart')).toBeNull()
+    expect(screen.queryByTestId('explore-query-error')).toBeNull()
+    expect(screen.getByTestId('explore-datasource-btn').getAttribute('title')).toBe(
+      'Prometheus Staging',
+    )
+    expect(
+      screen.getByText('Write a query and click "Run query" to visualize your metrics.'),
+    ).toBeTruthy()
   })
 })

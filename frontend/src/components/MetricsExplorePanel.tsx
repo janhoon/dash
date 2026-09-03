@@ -1,25 +1,12 @@
-import {
-  AlertCircle,
-  Check,
-  ChevronDown,
-  ChevronUp,
-  CircleAlert,
-  HeartPulse,
-  History,
-  LayoutDashboard,
-  Loader2,
-  Play,
-  Star,
-  X,
-} from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, History, Star, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { queryDataSource } from '@/api/datasources'
+import { fetchDataSourceMetricNames, queryDataSource } from '@/api/datasources'
 import { ExportToDashboardModal } from '@/components/ExportToDashboardModal'
 import { LineChart, type ChartSeries } from '@/components/LineChart'
 import { MonacoQueryEditor } from '@/components/MonacoQueryEditor'
-import { QueryBuilder } from '@/components/QueryBuilder'
 import { TimeRangePicker } from '@/components/TimeRangePicker'
+import { Button } from '@/components/ui/button'
 import { useMetricsDatasources } from '@/hooks/useMetricsDatasources'
 import { useTimeRange } from '@/hooks/useTimeRange'
 import {
@@ -29,17 +16,11 @@ import {
 } from '@/promql/client'
 import { useFavoritesStore } from '@/stores/favoritesStore'
 import { useOrgStore } from '@/stores/orgStore'
-import {
-  dataSourceTypeLabels,
-  type DataSource,
-  type DataSourceType,
-} from '@/types/datasource'
+import { dataSourceTypeLabels, type DataSource } from '@/types/datasource'
 
 import {
-  type DatasourceHealthStatus,
   type ExploreDatasourceChanged,
   getTypeLogo,
-  healthLabel,
   pushQueryHistory,
   readQueryHistory,
   TRACE_NAVIGATION_MAX_AGE_MS,
@@ -48,22 +29,83 @@ import {
   type TraceMetricsNavigationContext,
   buildServiceMetricsQuery,
   getDefaultMetricsQuery,
-  getMetricsSmokeQuery,
   isPrometheusLike,
   METRICS_HISTORY_KEY,
   TRACE_METRICS_NAVIGATION_CONTEXT_KEY,
 } from '@/components/explore/metricsExploreHelpers'
+import {
+  applyMetricSuggestion,
+  formatLastRanStatus,
+  formatUnknownMetricError,
+  getQueryLanguageLabel,
+  isUnknownMetricError,
+  type MetricSuggestion,
+  suggestMetricCorrection,
+} from '@/components/explore/queryEditorHelpers'
 
 type MetricsExplorePanelProps = {
   onDatasourceChanged?: (payload: ExploreDatasourceChanged) => void
 }
 
+const QUERY_LOADING_BAR_HEIGHTS = [
+  80, 110, 90, 140, 120, 160, 130, 180, 150, 200, 170, 140, 160, 190, 170, 150,
+] as const
+
+function LastRanStatus({ lastRanAt, seriesCount }: { lastRanAt: number; seriesCount: number }) {
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  return (
+    <span
+      className="text-[11px] text-[var(--color-on-surface-variant)]"
+      data-testid="explore-query-status"
+    >
+      {formatLastRanStatus(lastRanAt, seriesCount, now)}
+    </span>
+  )
+}
+
+function QueryLoadingSkeleton() {
+  return (
+    <div className="flex flex-1 flex-col gap-3 p-4" data-testid="explore-query-loading">
+      <div className="absolute inset-x-0 top-0 h-px overflow-hidden bg-[var(--color-surface-container-high)]">
+        <div className="animate-explore-query-progress h-full w-1/3 bg-[var(--color-on-surface)]" />
+      </div>
+      <div className="h-3 w-40 rounded-sm bg-[var(--color-surface-bright)] animate-shimmer" />
+      <div className="flex flex-1 items-end gap-2 overflow-hidden">
+        {QUERY_LOADING_BAR_HEIGHTS.map((height, index) => (
+          <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton bars
+            key={index}
+            className="w-14 shrink-0 rounded-sm bg-[var(--color-surface-bright)] animate-shimmer"
+            style={{ height: `${height}px` }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function QueryEmptyResult() {
+  return (
+    <div className="flex flex-1 flex-col p-6" data-testid="explore-query-empty">
+      <p className="m-0 text-[13px] text-[var(--color-on-surface-variant)]">
+        No series. Fix the query to see a chart.
+      </p>
+    </div>
+  )
+}
+
 export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanelProps) {
-  const currentOrgId = useOrgStore(state => state.currentOrgId)
+  const currentOrgId = useOrgStore((state) => state.currentOrgId)
   const { metricsDatasources } = useMetricsDatasources(currentOrgId)
   const { timeRange, onRefresh, setCustomRange } = useTimeRange()
-  const toggleFavorite = useFavoritesStore(state => state.toggleFavorite)
-  const isFavorite = useFavoritesStore(state => state.isFavorite)
+  const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite)
+  const isFavorite = useFavoritesStore((state) => state.isFavorite)
   const [searchParams] = useSearchParams()
 
   const [selectedDatasourceId, setSelectedDatasourceId] = useState('')
@@ -76,13 +118,12 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
   const [queryHistory, setQueryHistory] = useState<string[]>([])
   const [showHistory, setShowHistory] = useState(false)
   const [showDatasourceMenu, setShowDatasourceMenu] = useState(false)
-  const [datasourceHealth, setDatasourceHealth] = useState<Record<string, DatasourceHealthStatus>>(
-    {},
-  )
-  const [datasourceHealthErrors, setDatasourceHealthErrors] = useState<Record<string, string>>({})
   const [pendingServiceName, setPendingServiceName] = useState('')
   const [pendingStartMs, setPendingStartMs] = useState<number | null>(null)
   const [pendingEndMs, setPendingEndMs] = useState<number | null>(null)
+  const [metricNames, setMetricNames] = useState<string[]>([])
+  const [metricSuggestion, setMetricSuggestion] = useState<MetricSuggestion | null>(null)
+  const [lastRanAt, setLastRanAt] = useState<number | null>(null)
 
   const datasourceMenuRef = useRef<HTMLDivElement | null>(null)
   const pendingNavigationRef = useRef({
@@ -90,38 +131,70 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
     startMs: null as number | null,
     endMs: null as number | null,
   })
+  const queryGenerationRef = useRef(0)
+  const selectedDatasourceIdRef = useRef(selectedDatasourceId)
+  const previousDatasourceIdRef = useRef(selectedDatasourceId)
+  selectedDatasourceIdRef.current = selectedDatasourceId
 
   const activeDatasource = useMemo(
-    () => metricsDatasources.find(ds => ds.id === selectedDatasourceId) ?? null,
+    () => metricsDatasources.find((ds) => ds.id === selectedDatasourceId) ?? null,
     [metricsDatasources, selectedDatasourceId],
   )
 
   const hasMetricsDatasources = metricsDatasources.length > 0
   const hasResults = result?.status === 'success' && chartSeries.length > 0
   const seriesCount = chartSeries.length
-  const activeDatasourceHealth = activeDatasource
-    ? datasourceHealth[activeDatasource.id] || 'unknown'
-    : 'unknown'
-
-  const activeDatasourceHealthLabel = healthLabel(activeDatasourceHealth)
+  const queryLanguageLabel = getQueryLanguageLabel(activeDatasource?.type)
+  const compactQueryEditor = isPrometheusLike(activeDatasource?.type ?? 'prometheus')
 
   const addToHistory = useCallback((q: string) => {
-    setQueryHistory(prev => pushQueryHistory(METRICS_HISTORY_KEY, prev, q))
+    setQueryHistory((prev) => pushQueryHistory(METRICS_HISTORY_KEY, prev, q))
   }, [])
+
+  const applyQueryError = useCallback(
+    (message: string, executedQuery: string) => {
+      const suggestion =
+        isUnknownMetricError(message) && isPrometheusLike(activeDatasource?.type ?? 'prometheus')
+          ? suggestMetricCorrection(executedQuery, metricNames)
+          : null
+
+      if (suggestion) {
+        setMetricSuggestion(suggestion)
+        setError(formatUnknownMetricError(suggestion))
+        return
+      }
+
+      setMetricSuggestion(null)
+      setError(message)
+    },
+    [activeDatasource?.type, metricNames],
+  )
 
   const runQuery = useCallback(async () => {
     if (!selectedDatasourceId) {
+      queryGenerationRef.current += 1
+      setLoading(false)
       setError('Select a metrics datasource')
       return
     }
 
     if (!query.trim()) {
+      queryGenerationRef.current += 1
+      setLoading(false)
       setError('Query is required')
       return
     }
 
+    const generation = ++queryGenerationRef.current
+    const executedQuery = query
+    const requestedDatasourceId = selectedDatasourceId
+    const isCurrent = () =>
+      queryGenerationRef.current === generation &&
+      selectedDatasourceIdRef.current === requestedDatasourceId
+
     setLoading(true)
     setError(null)
+    setMetricSuggestion(null)
     setResult(null)
     setChartSeries([])
 
@@ -132,8 +205,8 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
       const step = Math.max(15, Math.floor(duration / 200))
       const dsType = activeDatasource?.type
 
-      const response = await queryDataSource(selectedDatasourceId, {
-        query,
+      const response = await queryDataSource(requestedDatasourceId, {
+        query: executedQuery,
         signal:
           dsType === 'clickhouse' || dsType === 'cloudwatch' || dsType === 'elasticsearch'
             ? 'metrics'
@@ -143,9 +216,12 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
         step,
       })
 
+      if (!isCurrent()) return
+
       if (response.status === 'error') {
-        setError(response.error || 'Query failed')
+        applyQueryError(response.error || 'Query failed', executedQuery)
       } else if (response.resultType !== 'metrics') {
+        setMetricSuggestion(null)
         setError('Selected datasource did not return metric results')
       } else {
         const metricsResponse: PrometheusQueryResult = {
@@ -157,19 +233,31 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
         setResult(metricsResponse)
         const chartData = transformToChartData(metricsResponse)
         setChartSeries(
-          chartData.series.map(series => ({
+          chartData.series.map((series) => ({
             name: series.name,
             data: series.data,
           })),
         )
-        addToHistory(query)
+        setLastRanAt(Date.now())
+        addToHistory(executedQuery)
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to execute query')
+      if (!isCurrent()) return
+      applyQueryError(e instanceof Error ? e.message : 'Failed to execute query', executedQuery)
     } finally {
-      setLoading(false)
+      if (isCurrent()) {
+        setLoading(false)
+      }
     }
-  }, [activeDatasource?.type, addToHistory, query, selectedDatasourceId, timeRange.end, timeRange.start])
+  }, [
+    activeDatasource?.type,
+    addToHistory,
+    applyQueryError,
+    query,
+    selectedDatasourceId,
+    timeRange.end,
+    timeRange.start,
+  ])
 
   const applyTraceMetricsNavigationContext = useCallback(() => {
     const pending = pendingNavigationRef.current
@@ -177,9 +265,7 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
       return
     }
 
-    setQuery(
-      buildServiceMetricsQuery(activeDatasource?.type || 'prometheus', pending.serviceName),
-    )
+    setQuery(buildServiceMetricsQuery(activeDatasource?.type || 'prometheus', pending.serviceName))
 
     if (pending.startMs !== null && pending.endMs !== null) {
       setCustomRange(pending.startMs, pending.endMs)
@@ -190,44 +276,6 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
     setPendingStartMs(null)
     setPendingEndMs(null)
   }, [activeDatasource?.type, setCustomRange])
-
-  const checkDatasourceHealth = useCallback(async (datasourceId: string, type_: DataSourceType) => {
-    setDatasourceHealth(prev => ({ ...prev, [datasourceId]: 'checking' }))
-    setDatasourceHealthErrors(prev => {
-      const next = { ...prev }
-      delete next[datasourceId]
-      return next
-    })
-
-    const end = Math.floor(Date.now() / 1000)
-    const start = end - 15 * 60
-
-    try {
-      const healthResult = await queryDataSource(datasourceId, {
-        query: getMetricsSmokeQuery(type_),
-        signal:
-          type_ === 'clickhouse' || type_ === 'cloudwatch' || type_ === 'elasticsearch'
-            ? 'metrics'
-            : undefined,
-        start,
-        end,
-        step: 15,
-        limit: 100,
-      })
-
-      if (healthResult.status === 'error') {
-        throw new Error(healthResult.error || 'Health check failed')
-      }
-
-      setDatasourceHealth(prev => ({ ...prev, [datasourceId]: 'healthy' }))
-    } catch (e) {
-      setDatasourceHealth(prev => ({ ...prev, [datasourceId]: 'unhealthy' }))
-      setDatasourceHealthErrors(prev => ({
-        ...prev,
-        [datasourceId]: e instanceof Error ? e.message : 'Health check failed',
-      }))
-    }
-  }, [])
 
   useEffect(() => {
     const urlQuery = searchParams.get('q')
@@ -272,17 +320,57 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
     setQueryHistory(readQueryHistory(METRICS_HISTORY_KEY))
   }, [searchParams])
 
+  useEffect(() => {
+    return () => {
+      queryGenerationRef.current += 1
+    }
+  }, [])
+
+  useEffect(() => {
+    const previousId = previousDatasourceIdRef.current
+    previousDatasourceIdRef.current = selectedDatasourceId
+    if (previousId && previousId !== selectedDatasourceId) {
+      queryGenerationRef.current += 1
+      setLoading(false)
+      setResult(null)
+      setChartSeries([])
+      setError(null)
+      setMetricSuggestion(null)
+      setLastRanAt(null)
+    }
+  }, [selectedDatasourceId])
+
+  useEffect(() => {
+    if (!activeDatasource || !isPrometheusLike(activeDatasource.type)) {
+      setMetricNames([])
+      return
+    }
+
+    let cancelled = false
+    void fetchDataSourceMetricNames(activeDatasource.id)
+      .then((names) => {
+        if (!cancelled) setMetricNames(names)
+      })
+      .catch(() => {
+        if (!cancelled) setMetricNames([])
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [activeDatasource])
+
   const previousOrgIdRef = useRef<string | null>(null)
   useEffect(() => {
     if (!currentOrgId) return
     if (previousOrgIdRef.current && previousOrgIdRef.current !== currentOrgId) {
       setSelectedDatasourceId('')
-      setDatasourceHealth({})
-      setDatasourceHealthErrors({})
       setQuery('')
       setResult(null)
       setChartSeries([])
       setError(null)
+      setLastRanAt(null)
+      setMetricSuggestion(null)
     }
     previousOrgIdRef.current = currentOrgId
   }, [currentOrgId])
@@ -293,9 +381,9 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
       return
     }
 
-    const hasSelected = metricsDatasources.some(ds => ds.id === selectedDatasourceId)
+    const hasSelected = metricsDatasources.some((ds) => ds.id === selectedDatasourceId)
     if (!hasSelected) {
-      const defaultDatasource = metricsDatasources.find(ds => ds.is_default)
+      const defaultDatasource = metricsDatasources.find((ds) => ds.is_default)
       const selected = defaultDatasource || metricsDatasources[0]
       if (!selected) return
       setSelectedDatasourceId(selected.id)
@@ -310,16 +398,6 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
   }, [metricsDatasources, query, selectedDatasourceId])
 
   useEffect(() => {
-    const sourceIds = new Set(metricsDatasources.map(ds => ds.id))
-    setDatasourceHealth(prev =>
-      Object.fromEntries(Object.entries(prev).filter(([id]) => sourceIds.has(id))),
-    )
-    setDatasourceHealthErrors(prev =>
-      Object.fromEntries(Object.entries(prev).filter(([id]) => sourceIds.has(id))),
-    )
-  }, [metricsDatasources])
-
-  useEffect(() => {
     if (!activeDatasource) return
 
     if (
@@ -331,15 +409,9 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
     ) {
       applyTraceMetricsNavigationContext()
     }
-
-    if ((datasourceHealth[activeDatasource.id] || 'unknown') === 'unknown') {
-      void checkDatasourceHealth(activeDatasource.id, activeDatasource.type)
-    }
   }, [
     activeDatasource,
     applyTraceMetricsNavigationContext,
-    checkDatasourceHealth,
-    datasourceHealth,
     pendingEndMs,
     pendingServiceName,
     pendingStartMs,
@@ -351,7 +423,7 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
   }, [selectedDatasourceId])
 
   useEffect(() => {
-    const ds = metricsDatasources.find(d => d.id === selectedDatasourceId)
+    const ds = metricsDatasources.find((d) => d.id === selectedDatasourceId)
     if (ds) {
       onDatasourceChanged?.({ id: ds.id, name: ds.name, type: ds.type })
     }
@@ -385,11 +457,11 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
   }
 
   function selectDatasource(datasourceId: string) {
-    const prevDs = metricsDatasources.find(d => d.id === selectedDatasourceId)
+    const prevDs = metricsDatasources.find((d) => d.id === selectedDatasourceId)
     setSelectedDatasourceId(datasourceId)
     setShowDatasourceMenu(false)
 
-    const newDs = metricsDatasources.find(d => d.id === datasourceId)
+    const newDs = metricsDatasources.find((d) => d.id === datasourceId)
     if (newDs) {
       const defaultQuery = getDefaultMetricsQuery(newDs.type)
       if (defaultQuery && (!query.trim() || (prevDs && prevDs.type !== newDs.type))) {
@@ -409,291 +481,178 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
   }
 
   function toggleDatasourceMenu() {
-    if (loading || !hasMetricsDatasources) return
-    setShowDatasourceMenu(prev => !prev)
+    if (!hasMetricsDatasources) return
+    setShowDatasourceMenu((prev) => !prev)
+  }
+
+  function handleUseSuggestion() {
+    if (!metricSuggestion) return
+    setQuery(applyMetricSuggestion(query, metricSuggestion))
+    setError(null)
+    setMetricSuggestion(null)
   }
 
   const favoriteId = `explore::metrics::${query}`
+  const queryPlaceholder =
+    activeDatasource?.type === 'clickhouse'
+      ? 'Enter SQL query...'
+      : activeDatasource?.type === 'cloudwatch'
+        ? 'Enter CloudWatch query JSON...'
+        : activeDatasource?.type === 'elasticsearch'
+          ? 'Enter Elasticsearch query JSON...'
+          : 'Enter PromQL query...'
 
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: panel-level Ctrl/Cmd+Enter to run query
-    <section className="flex flex-1 flex-col gap-6" onKeyDown={handleKeydown}>
+    <section className="flex flex-1 flex-col gap-3" onKeyDown={handleKeydown}>
+      <div className="flex justify-end">
+        <TimeRangePicker stacked />
+      </div>
+
       <div
-        className="flex flex-col gap-4 rounded-lg p-4"
-        style={{ backgroundColor: 'var(--color-surface-container-low)' }}
+        className="flex flex-col gap-2 rounded-md border border-[var(--color-surface-container-high)] bg-[var(--color-surface-container-low)] p-4"
+        data-testid="explore-query-editor"
       >
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4 max-md:grid-cols-1">
-          <div className="flex flex-col gap-2.5">
-            <label
-              htmlFor="explore-datasource-btn"
-              className="text-xs font-semibold tracking-wide uppercase"
-              style={{ color: 'var(--color-outline)' }}
+        <div className="flex items-start justify-between text-[11px] leading-normal text-[var(--color-on-surface-variant)]">
+          <span className="font-mono font-medium" data-testid="explore-query-language">
+            {queryLanguageLabel}
+          </span>
+          <div ref={datasourceMenuRef} className="relative">
+            <button
+              id="explore-datasource-btn"
+              type="button"
+              className="flex cursor-pointer items-center gap-1 border-none bg-transparent p-0 text-[11px] font-normal text-[var(--color-on-surface-variant)] transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] disabled:cursor-not-allowed"
+              data-testid="explore-datasource-btn"
+              disabled={!hasMetricsDatasources}
+              onClick={toggleDatasourceMenu}
+              title={
+                activeDatasource ? activeDatasource.name : 'No metrics datasource configured'
+              }
             >
-              Data Source
-            </label>
-            <div ref={datasourceMenuRef} className="relative">
-              <button
-                id="explore-datasource-btn"
-                type="button"
-                className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-4 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-60"
+              <span data-testid="explore-query-datasource">
+                {activeDatasource?.name ?? 'No metrics datasource'}
+              </span>
+              {showDatasourceMenu ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            </button>
+
+            {showDatasourceMenu && hasMetricsDatasources ? (
+              <div
+                className="absolute top-full right-0 z-[110] mt-1.5 max-h-[280px] min-w-[240px] overflow-y-auto rounded-md shadow-[var(--shadow-md)]"
                 style={{
-                  backgroundColor: 'var(--color-surface-container-high)',
-                  border: '1px solid var(--color-outline-variant)',
-                  color: 'var(--color-on-surface)',
+                  backgroundColor: 'var(--color-surface-bright)',
+                  border: '1px solid var(--color-stroke-subtle)',
                 }}
-                data-testid="explore-datasource-btn"
-                disabled={loading || !hasMetricsDatasources}
-                onClick={toggleDatasourceMenu}
               >
-                {activeDatasource ? (
-                  <>
-                    <img
-                      src={getTypeLogo(activeDatasource.type)}
-                      alt={`${dataSourceTypeLabels[activeDatasource.type]} logo`}
-                      className="h-7 w-7 shrink-0 object-contain"
-                    />
-                    <div className="flex min-w-0 flex-col gap-px">
-                      <span
-                        className="text-[0.68rem] tracking-wide uppercase"
-                        style={{ color: 'var(--color-outline)' }}
-                      >
-                        Active Source
-                      </span>
-                      <strong
-                        className="truncate text-sm font-semibold"
-                        style={{ color: 'var(--color-on-surface)' }}
-                      >
-                        {activeDatasource.name}
-                      </strong>
-                      <span
-                        className="font-mono text-xs tracking-[0.07em] uppercase"
-                        style={{ color: 'var(--color-outline)' }}
-                      >
-                        {dataSourceTypeLabels[activeDatasource.type]}
-                      </span>
-                    </div>
-                    <span
-                      className="ml-auto inline-flex items-center gap-1.5 rounded-sm px-2.5 py-0.5 text-xs"
-                      style={{
-                        border: '1px solid var(--color-outline-variant)',
-                        color:
-                          activeDatasourceHealth === 'healthy'
-                            ? 'var(--color-secondary)'
-                            : activeDatasourceHealth === 'unhealthy'
-                              ? 'var(--color-error)'
-                              : 'var(--color-outline)',
-                      }}
-                      title={datasourceHealthErrors[activeDatasource.id]}
-                    >
-                      {activeDatasourceHealth === 'checking' ? (
-                        <Loader2 size={12} className="animate-spin" />
-                      ) : activeDatasourceHealth === 'healthy' ? (
-                        <HeartPulse size={12} />
-                      ) : activeDatasourceHealth === 'unhealthy' ? (
-                        <CircleAlert size={12} />
-                      ) : null}
-                      <span>{activeDatasourceHealthLabel}</span>
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-sm" style={{ color: 'var(--color-outline)' }}>
-                    No metrics datasource configured
-                  </span>
-                )}
-                {showDatasourceMenu ? (
-                  <ChevronUp size={16} className="ml-1 shrink-0" style={{ color: 'var(--color-outline)' }} />
-                ) : (
-                  <ChevronDown size={16} className="ml-1 shrink-0" style={{ color: 'var(--color-outline)' }} />
-                )}
-              </button>
-
-              {showDatasourceMenu && hasMetricsDatasources ? (
-                <div
-                  className="absolute top-full right-0 left-0 z-[110] mt-1.5 max-h-[280px] overflow-y-auto rounded-lg shadow-lg"
-                  style={{
-                    backgroundColor: 'var(--color-surface-bright)',
-                    border: '1px solid var(--color-outline-variant)',
-                  }}
-                >
-                  {metricsDatasources.map((ds: DataSource) => (
-                    <button
-                      key={ds.id}
-                      type="button"
-                      className="flex w-full cursor-pointer items-center gap-2.5 border-none bg-transparent px-3 py-2.5 text-left transition"
-                      style={{
-                        color: 'var(--color-on-surface)',
-                        backgroundColor:
-                          ds.id === selectedDatasourceId
-                            ? 'color-mix(in srgb, var(--color-primary) 15%, transparent)'
-                            : 'transparent',
-                      }}
-                      onClick={() => selectDatasource(ds.id)}
-                      onMouseEnter={event => {
-                        event.currentTarget.style.backgroundColor =
-                          'var(--color-surface-container-high)'
-                      }}
-                      onMouseLeave={event => {
-                        event.currentTarget.style.backgroundColor =
-                          ds.id === selectedDatasourceId
-                            ? 'color-mix(in srgb, var(--color-primary) 15%, transparent)'
-                            : 'transparent'
-                      }}
-                    >
-                      <img
-                        src={getTypeLogo(ds.type)}
-                        alt={`${dataSourceTypeLabels[ds.type]} logo`}
-                        className="h-[18px] w-[18px] shrink-0 object-contain"
-                      />
-                      <div className="flex min-w-0 flex-col gap-px">
-                        <strong className="text-sm font-semibold" style={{ color: 'var(--color-on-surface)' }}>
-                          {ds.name}
-                        </strong>
-                        <span className="text-xs" style={{ color: 'var(--color-outline)' }}>
-                          {dataSourceTypeLabels[ds.type]}
-                        </span>
-                      </div>
-                      {ds.id === selectedDatasourceId ? (
-                        <Check size={14} className="ml-auto" style={{ color: 'var(--color-primary)' }} />
-                      ) : null}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2.5">
-            <span
-              className="text-xs font-semibold tracking-wide uppercase"
-              style={{ color: 'var(--color-outline)' }}
-            >
-              Query Range
-            </span>
-            <TimeRangePicker stacked />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          {activeDatasource && isPrometheusLike(activeDatasource.type) ? (
-            <QueryBuilder
-              value={query}
-              onChange={setQuery}
-              disabled={loading || !hasMetricsDatasources}
-              datasourceId={selectedDatasourceId}
-            />
-          ) : (
-            <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-[var(--color-on-surface)]">Query</span>
-              <MonacoQueryEditor
-                value={query}
-                onChange={setQuery}
-                onSubmit={() => void runQuery()}
-                disabled={loading || !hasMetricsDatasources}
-                height={160}
-                placeholder={
-                  activeDatasource?.type === 'clickhouse'
-                    ? 'Enter SQL query...'
-                    : activeDatasource?.type === 'cloudwatch'
-                      ? 'Enter CloudWatch query JSON...'
-                      : activeDatasource?.type === 'elasticsearch'
-                        ? 'Enter Elasticsearch query JSON...'
-                        : 'Enter query...'
-                }
-              />
-            </div>
-          )}
-
-          {queryHistory.length > 0 ? (
-            <div className="relative">
-              <button
-                type="button"
-                data-testid="explore-history-btn"
-                className="flex cursor-pointer items-center gap-1 border-none bg-transparent text-sm transition"
-                style={{ color: showHistory ? 'var(--color-on-surface)' : 'var(--color-outline)' }}
-                onClick={() => setShowHistory(prev => !prev)}
-                title="Query history"
-              >
-                <History size={16} />
-                <span>History</span>
-              </button>
-
-              {showHistory ? (
-                <div
-                  className="absolute top-full left-0 z-10 mt-1 max-h-[300px] w-80 overflow-y-auto rounded-lg shadow-lg max-md:w-full"
-                  style={{
-                    backgroundColor: 'var(--color-surface-bright)',
-                    border: '1px solid var(--color-outline-variant)',
-                  }}
-                >
-                  <div
-                    className="flex items-center justify-between px-4 py-3 text-xs font-semibold tracking-wide uppercase"
+                {metricsDatasources.map((ds: DataSource) => (
+                  <button
+                    key={ds.id}
+                    type="button"
+                    className="flex w-full cursor-pointer items-center gap-2.5 border-none bg-transparent px-3 py-2.5 text-left transition"
                     style={{
-                      color: 'var(--color-outline)',
-                      borderBottom: '1px solid var(--color-outline-variant)',
+                      color: 'var(--color-on-surface)',
+                      backgroundColor:
+                        ds.id === selectedDatasourceId ? 'var(--selected-fill)' : 'transparent',
+                    }}
+                    onClick={() => selectDatasource(ds.id)}
+                    onMouseEnter={(event) => {
+                      event.currentTarget.style.backgroundColor =
+                        'var(--color-surface-container-high)'
+                    }}
+                    onMouseLeave={(event) => {
+                      event.currentTarget.style.backgroundColor =
+                        ds.id === selectedDatasourceId ? 'var(--selected-fill)' : 'transparent'
                     }}
                   >
-                    <span>Recent Queries</span>
-                    <button
-                      type="button"
-                      className="flex h-6 w-6 cursor-pointer items-center justify-center rounded border-none bg-transparent transition"
-                      style={{ color: 'var(--color-outline)' }}
-                      onClick={clearHistory}
-                      title="Clear history"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                  {queryHistory.map((historyQuery, index) => (
-                    <button
-                      // biome-ignore lint/suspicious/noArrayIndexKey: duplicate queries in history are rare; index disambiguates
-                      key={`${historyQuery}-${index}`}
-                      type="button"
-                      className="block w-full cursor-pointer border-none bg-transparent px-4 py-2.5 text-left transition"
-                      style={{ borderBottom: '1px solid var(--color-outline-variant)' }}
-                      onClick={() => selectHistoryQuery(historyQuery)}
-                      onMouseEnter={event => {
-                        event.currentTarget.style.backgroundColor =
-                          'var(--color-surface-container-high)'
-                      }}
-                      onMouseLeave={event => {
-                        event.currentTarget.style.backgroundColor = 'transparent'
-                      }}
-                    >
-                      <code
-                        className="block truncate font-mono text-xs"
-                        style={{ color: 'var(--color-on-surface-variant)' }}
-                      >
-                        {historyQuery}
-                      </code>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+                    <img
+                      src={getTypeLogo(ds.type)}
+                      alt={`${dataSourceTypeLabels[ds.type]} logo`}
+                      className="h-[18px] w-[18px] shrink-0 object-contain"
+                    />
+                    <div className="flex min-w-0 flex-col gap-px">
+                      <strong className="text-sm font-semibold text-[var(--color-on-surface)]">
+                        {ds.name}
+                      </strong>
+                      <span className="text-xs text-[var(--color-outline)]">
+                        {dataSourceTypeLabels[ds.type]}
+                      </span>
+                    </div>
+                    {ds.id === selectedDatasourceId ? (
+                      <Check size={14} className="ml-auto text-[var(--color-primary)]" />
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4">
-          <button
-            type="button"
-            data-testid="explore-run-query-btn"
-            className="inline-flex cursor-pointer items-center gap-2 rounded-sm px-5 py-2.5 text-sm font-semibold whitespace-nowrap transition disabled:cursor-not-allowed disabled:opacity-50"
+        <MonacoQueryEditor
+          value={query}
+          onChange={setQuery}
+          onSubmit={() => void runQuery()}
+          disabled={!hasMetricsDatasources}
+          compact={compactQueryEditor}
+          height={compactQueryEditor ? 40 : 160}
+          placeholder={queryPlaceholder}
+        />
+
+        {error ? (
+          <div
+            className="flex items-start justify-between gap-2 rounded-md p-3"
             style={{
-              background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))',
-              color: '#fff',
-              border: 'none',
+              backgroundColor:
+                'color-mix(in srgb, var(--color-error) 22%, var(--color-surface-container-low))',
             }}
+            data-testid="explore-query-error"
+          >
+            <p className="m-0 text-[13px] text-[var(--color-on-surface)]">{error}</p>
+            {metricSuggestion ? (
+              <Button
+                size="sm"
+                className="h-auto shrink-0 rounded-md px-2 py-2 text-xs font-semibold"
+                data-testid="explore-query-suggestion-btn"
+                onClick={handleUseSuggestion}
+              >
+                Use suggestion
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            className={`h-auto rounded-md px-2 py-2 text-xs font-semibold ${
+              loading
+                ? 'border-none bg-[var(--color-surface-container-high)] text-[var(--color-on-surface-variant)] hover:bg-[var(--color-surface-container-high)] disabled:opacity-100'
+                : ''
+            }`}
+            data-testid="explore-run-query-btn"
             disabled={loading || !query.trim() || !selectedDatasourceId || !hasMetricsDatasources}
             onClick={() => void runQuery()}
           >
-            <Play size={16} />
-            <span>{loading ? 'Running...' : 'Run Query'}</span>
-          </button>
+            {loading ? 'Running' : 'Run query'}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className={`h-auto rounded-md px-2 py-2 text-xs font-medium ${
+              loading
+                ? 'border-transparent bg-[var(--color-surface-container-high)] text-[var(--color-on-surface-variant)]'
+                : 'bg-[var(--color-surface-container-high)] text-[var(--color-on-surface)]'
+            }`}
+            data-testid="explore-export-btn"
+            disabled={loading || !query.trim() || !selectedDatasourceId}
+            onClick={() => setShowExportModal(true)}
+          >
+            Add to dashboard
+          </Button>
 
           {query.trim() ? (
             <button
               type="button"
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-sm border px-3 py-2.5 text-sm transition"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-2 text-xs transition"
               style={{
                 backgroundColor: isFavorite(favoriteId)
                   ? 'var(--color-primary-muted)'
@@ -718,73 +677,94 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
             </button>
           ) : null}
 
-          <button
-            type="button"
-            data-testid="explore-export-btn"
-            className="inline-flex items-center gap-2 rounded-sm px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
-            style={{
-              backgroundColor: 'transparent',
-              color: query.trim() ? 'var(--color-on-surface-variant)' : 'var(--color-outline)',
-              border: '1px solid var(--color-outline-variant)',
-            }}
-            disabled={!query.trim() || !selectedDatasourceId}
-            onClick={() => setShowExportModal(true)}
-          >
-            <LayoutDashboard size={16} />
-            <span>Add to Dashboard</span>
-          </button>
+          {queryHistory.length > 0 ? (
+            <div className="relative">
+              <button
+                type="button"
+                data-testid="explore-history-btn"
+                className="flex cursor-pointer items-center gap-1 border-none bg-transparent text-[11px] transition"
+                style={{
+                  color: showHistory ? 'var(--color-on-surface)' : 'var(--color-outline)',
+                }}
+                onClick={() => setShowHistory((prev) => !prev)}
+                title="Query history"
+              >
+                <History size={14} />
+                <span>History</span>
+              </button>
 
-          <span className="text-xs" style={{ color: 'var(--color-outline)' }}>
-            Ctrl+Enter to run
-          </span>
+              {showHistory ? (
+                <div
+                  className="absolute top-full left-0 z-10 mt-1 max-h-[300px] w-80 overflow-y-auto rounded-md shadow-[var(--shadow-md)] max-md:w-full"
+                  style={{
+                    backgroundColor: 'var(--color-surface-bright)',
+                    border: '1px solid var(--color-stroke-subtle)',
+                  }}
+                >
+                  <div
+                    className="flex items-center justify-between px-4 py-3 text-xs font-semibold tracking-wide uppercase"
+                    style={{
+                      color: 'var(--color-outline)',
+                      borderBottom: '1px solid var(--color-stroke-subtle)',
+                    }}
+                  >
+                    <span>Recent Queries</span>
+                    <button
+                      type="button"
+                      className="flex h-6 w-6 cursor-pointer items-center justify-center rounded border-none bg-transparent transition"
+                      style={{ color: 'var(--color-outline)' }}
+                      onClick={clearHistory}
+                      title="Clear history"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                  {queryHistory.map((historyQuery, index) => (
+                    <button
+                      // biome-ignore lint/suspicious/noArrayIndexKey: duplicate queries in history are rare; index disambiguates
+                      key={`${historyQuery}-${index}`}
+                      type="button"
+                      className="block w-full cursor-pointer border-none bg-transparent px-4 py-2.5 text-left transition"
+                      style={{ borderBottom: '1px solid var(--color-stroke-subtle)' }}
+                      onClick={() => selectHistoryQuery(historyQuery)}
+                      onMouseEnter={(event) => {
+                        event.currentTarget.style.backgroundColor =
+                          'var(--color-surface-container-high)'
+                      }}
+                      onMouseLeave={(event) => {
+                        event.currentTarget.style.backgroundColor = 'transparent'
+                      }}
+                    >
+                      <code className="block truncate font-mono text-xs text-[var(--color-on-surface-variant)]">
+                        {historyQuery}
+                      </code>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {lastRanAt !== null && !loading && !error ? (
+            <LastRanStatus lastRanAt={lastRanAt} seriesCount={seriesCount} />
+          ) : null}
         </div>
-
-        {error ? (
-          <div
-            className="flex items-center gap-2 rounded-sm p-4 text-sm"
-            style={{
-              backgroundColor: 'color-mix(in srgb, var(--color-error) 10%, transparent)',
-              color: 'var(--color-error)',
-            }}
-          >
-            <AlertCircle size={16} />
-            <span>{error}</span>
-          </div>
-        ) : null}
       </div>
 
       <div
-        className="flex min-h-[400px] flex-1 flex-col overflow-hidden rounded-lg"
-        style={{ backgroundColor: 'var(--color-surface-container-low)' }}
+        className="relative flex min-h-[400px] flex-1 flex-col overflow-hidden rounded-md border border-[var(--color-surface-container-high)] bg-[var(--color-surface-container-low)]"
+        data-testid="explore-query-result"
       >
         {loading ? (
-          <div
-            className="flex flex-1 flex-col items-center justify-center gap-4 py-12"
-            style={{ color: 'var(--color-outline)' }}
-          >
-            <div
-              className="h-8 w-8 animate-spin rounded-full"
-              style={{
-                border: '3px solid var(--color-outline-variant)',
-                borderTopColor: 'var(--color-primary)',
-              }}
-            />
-            <span className="text-sm">Executing query...</span>
-          </div>
+          <QueryLoadingSkeleton />
         ) : hasResults ? (
-          <div className="flex flex-1 flex-col">
-            <div
-              className="flex items-center justify-between px-4 py-3"
-              style={{
-                borderBottom: '1px solid var(--color-outline-variant)',
-                backgroundColor: 'var(--color-surface-container-high)',
-              }}
-            >
-              <span className="font-mono text-sm" style={{ color: 'var(--color-outline)' }}>
-                {seriesCount} series
+          <div className="flex flex-1 flex-col gap-2 p-4">
+            <div className="flex items-start justify-between text-[13px]">
+              <span className="font-medium text-[var(--color-on-surface)]">
+                {seriesCount === 1 ? '1 series' : `${seriesCount} series`}
               </span>
               {seriesCount > 30 ? (
-                <span className="ml-2 text-xs" style={{ color: 'var(--color-tertiary)' }}>
+                <span className="ml-2 text-xs text-[var(--color-tertiary)]">
                   Tip: Add label filters or use an aggregation like{' '}
                   <code
                     className="rounded px-1"
@@ -803,34 +783,23 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
                 </span>
               ) : null}
             </div>
-            <div className="min-h-[400px] flex-1 p-4">
+            <div className="min-h-[280px] flex-1">
               <LineChart series={chartSeries} height={400} group="explore-metrics" />
             </div>
           </div>
-        ) : result?.status === 'success' && chartSeries.length === 0 ? (
-          <div
-            className="flex flex-1 flex-col items-center justify-center py-12 text-center text-sm"
-            style={{ color: 'var(--color-outline)' }}
-          >
-            <p className="m-0">No data returned for the selected time range.</p>
-          </div>
+        ) : error || (result?.status === 'success' && chartSeries.length === 0) ? (
+          <QueryEmptyResult />
         ) : !hasMetricsDatasources ? (
-          <div
-            className="flex flex-1 flex-col items-center justify-center py-12 text-center text-sm"
-            style={{ color: 'var(--color-outline)' }}
-          >
-            <p className="m-0">No metrics datasource configured.</p>
-            <p className="m-0 text-xs">
-              Add a Prometheus, VictoriaMetrics, CloudWatch, or Elasticsearch datasource in Data
-              Sources.
+          <div className="flex flex-1 flex-col p-6">
+            <p className="m-0 text-[13px] text-[var(--color-on-surface-variant)]">
+              No metrics datasource configured.
             </p>
           </div>
         ) : (
-          <div
-            className="flex flex-1 flex-col items-center justify-center py-12 text-center text-sm"
-            style={{ color: 'var(--color-outline)' }}
-          >
-            <p className="m-0">Write a query and click &quot;Run Query&quot; to visualize your metrics.</p>
+          <div className="flex flex-1 flex-col p-6">
+            <p className="m-0 text-[13px] text-[var(--color-on-surface-variant)]">
+              Write a query and click &quot;Run query&quot; to visualize your metrics.
+            </p>
           </div>
         )}
       </div>
