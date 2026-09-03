@@ -1,9 +1,10 @@
-import { AlertCircle, BarChart3, Pencil, Trash2 } from 'lucide-react'
+import { AlertCircle, BarChart3 } from 'lucide-react'
 import { useMemo } from 'react'
 import { BarChart } from '@/components/BarChart'
 import { GaugeChart, type Threshold } from '@/components/GaugeChart'
 import { LineChart } from '@/components/LineChart'
 import { LogViewer } from '@/components/LogViewer'
+import { PanelChrome, panelHeaderMeta, WIDE_PANEL_COLS } from '@/components/PanelChrome'
 import { PieChart, type PieDataItem } from '@/components/PieChart'
 import { ensurePanelTypesRegistered } from '@/components/panels/registerPanelTypes'
 import { StatPanel } from '@/components/StatPanel'
@@ -14,18 +15,9 @@ import { useCrosshairSync } from '@/contexts/CrosshairSyncContext'
 import { useDashboardVariables } from '@/contexts/VariablesContext'
 import { usePanelData } from '@/hooks/usePanelData'
 import { useTimeRange } from '@/hooks/useTimeRange'
-import type { Panel as PanelType } from '@/types/panel'
+import { type Panel as PanelType, readPanelQueryExpr } from '@/types/panel'
 
 ensurePanelTypesRegistered()
-
-const WIDE_PANEL_COLS = 8
-
-function panelQueryExpr(query: PanelType['query']): string {
-  if (!query) return ''
-  if (typeof query.expr === 'string' && query.expr.trim()) return query.expr
-  if (typeof query.promql === 'string' && query.promql.trim()) return query.promql
-  return ''
-}
 
 type PanelProps = {
   panel: PanelType
@@ -138,9 +130,6 @@ export function Panel({ panel, onEdit, onDelete, onOpenTrace }: PanelProps) {
   const registryEmptyState = registry?.emptyState ?? null
   const isUnsupportedRegistryPanel = registry?.supportStatus === 'unsupported'
   const isSetupRequiredRegistryPanel = registry?.supportStatus === 'setup_required'
-  const isWidePanel = panel.grid_pos.w >= WIDE_PANEL_COLS
-  const queryExpr = panelQueryExpr(panel.query)
-  const headerMeta = isWidePanel && queryExpr ? queryExpr : isCustomRange ? '' : selectedPreset
 
   function handleOpenTrace(traceId: string) {
     const datasourceId = panel.query?.datasource_id
@@ -345,69 +334,20 @@ export function Panel({ panel, onEdit, onDelete, onOpenTrace }: PanelProps) {
   }
 
   return (
-    <div
-      className="relative flex h-full flex-col gap-2 overflow-hidden rounded-lg p-[var(--panel-padding)]"
-      style={{
-        backgroundColor: 'var(--color-surface-container-low)',
-        borderWidth: '1px',
-        borderStyle: 'solid',
-        borderColor: 'var(--color-stroke-subtle)',
-      }}
-      data-testid={`dashboard-panel-${panel.id}`}
+    <PanelChrome
+      panelId={panel.id}
+      title={panel.title}
+      wide={panel.grid_pos.w >= WIDE_PANEL_COLS}
+      headerMeta={panelHeaderMeta({
+        gridWidth: panel.grid_pos.w,
+        queryExpr: readPanelQueryExpr(panel.query),
+        selectedPreset,
+        isCustomRange,
+      })}
+      onEdit={onEdit ? () => onEdit(panel) : undefined}
+      onDelete={onDelete ? () => onDelete(panel) : undefined}
     >
-      <div className="panel-header flex items-center justify-between gap-2">
-        <h3
-          className={`min-w-0 truncate font-medium ${isWidePanel ? 'text-[13px]' : 'text-xs'}`}
-          style={{
-            color: isWidePanel ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)',
-          }}
-          data-testid="panel-title"
-        >
-          {panel.title}
-        </h3>
-        <div className="flex min-w-0 shrink-0 items-center gap-1">
-          {headerMeta ? (
-            <span
-              className={`max-w-[220px] truncate ${isWidePanel ? 'font-mono text-[11px]' : 'text-[11px]'}`}
-              style={{ color: 'var(--color-on-surface-variant)' }}
-              data-testid="panel-header-meta"
-              title={headerMeta}
-            >
-              {headerMeta}
-            </span>
-          ) : null}
-          {(onEdit || onDelete) && (
-            <div className="panel-actions flex gap-1">
-              {onEdit ? (
-                <button
-                  type="button"
-                  className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent transition hover:opacity-80"
-                  style={{ color: 'var(--color-outline)' }}
-                  data-testid="panel-edit-btn"
-                  title="Edit panel"
-                  onClick={() => onEdit(panel)}
-                >
-                  <Pencil size={16} />
-                </button>
-              ) : null}
-              {onDelete ? (
-                <button
-                  type="button"
-                  className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent transition hover:opacity-80"
-                  style={{ color: 'var(--color-outline)' }}
-                  data-testid="panel-delete-btn"
-                  title="Delete panel"
-                  onClick={() => onDelete(panel)}
-                >
-                  <Trash2 size={16} />
-                </button>
-              ) : null}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{renderBody()}</div>
-    </div>
+      {renderBody()}
+    </PanelChrome>
   )
 }

@@ -180,11 +180,11 @@ function DashboardDetailContent({ dashboardId }: { dashboardId: string }) {
   return (
     <div className="p-[var(--section-gap)]">
       <header
-        className="relative z-20 mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        className="relative z-20 mb-4 flex flex-col gap-3 sm:flex-row sm:items-center"
         data-testid="dashboard-loaded-header"
       >
         {dashboard ? (
-          <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
             <h1
               className="font-display text-2xl font-semibold tracking-[-0.02em]"
               style={{ color: 'var(--color-on-surface)' }}
@@ -200,11 +200,12 @@ function DashboardDetailContent({ dashboardId }: { dashboardId: string }) {
               {headerMeta}
             </p>
           </div>
-        ) : (
-          <div />
-        )}
+        ) : null}
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div
+          className="flex flex-wrap items-center gap-2 sm:ml-auto"
+          data-testid="dashboard-header-actions"
+        >
           <TimeRangePicker showStatus={false} />
           {dashboard ? (
             <Link

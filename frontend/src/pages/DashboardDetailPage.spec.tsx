@@ -230,6 +230,8 @@ describe('DashboardDetailPage', () => {
       expect(screen.getByTestId('dashboard-error')).toBeTruthy()
     })
     expect(screen.getByText('Dashboard not found')).toBeTruthy()
+    expect(screen.queryByTestId('dashboard-title')).toBeNull()
+    expect(screen.getByTestId('dashboard-header-actions').className).toContain('sm:ml-auto')
   })
 
   it('renders loaded header with time range, datasource, and solid gold add panel', async () => {

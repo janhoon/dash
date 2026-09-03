@@ -38,3 +38,11 @@ export interface RawQueryResult {
   logs?: unknown[]
   traces?: unknown[]
 }
+
+/** Canonical query text at the panel type edge. Prefer `promql`, then `expr`. */
+export function readPanelQueryExpr(query: Panel['query']): string {
+  if (!query) return ''
+  if (typeof query.promql === 'string' && query.promql.trim()) return query.promql.trim()
+  if (typeof query.expr === 'string' && query.expr.trim()) return query.expr.trim()
+  return ''
+}
