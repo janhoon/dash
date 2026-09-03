@@ -29,11 +29,17 @@ function dashboardLoadErrorMessage(cause: unknown): string {
 }
 
 function dashboardDatasourceName(panels: Panel[], datasources: DataSource[]): string {
+  const names = new Set<string>()
   for (const panel of panels) {
     const datasourceId = panel.query?.datasource_id
     if (typeof datasourceId !== 'string' || !datasourceId) continue
     const match = datasources.find((datasource) => datasource.id === datasourceId)
-    if (match) return match.name
+    if (match) names.add(match.name)
+  }
+  if (names.size > 1) return ''
+  if (names.size === 1) {
+    const [name] = names
+    return name ?? ''
   }
   return datasources.find((datasource) => datasource.is_default)?.name ?? datasources[0]?.name ?? ''
 }

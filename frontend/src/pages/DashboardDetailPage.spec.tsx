@@ -56,6 +56,18 @@ vi.mock('@/hooks/useDatasources', () => ({
         created_at: '2026-01-01T00:00:00Z',
         updated_at: '2026-01-01T00:00:00Z',
       },
+      {
+        id: 'ds-2',
+        organization_id: 'org-1',
+        name: 'Loki',
+        type: 'loki',
+        url: 'http://localhost:3100',
+        is_default: false,
+        auth_type: 'none',
+        trace_id_field: 'trace_id',
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
     ],
   }),
 }))
@@ -235,6 +247,27 @@ describe('DashboardDetailPage', () => {
     expect(addPanel.textContent).toBe('Add panel')
     expect(addPanel.style.backgroundColor).toBe('var(--color-primary)')
     expect(addPanel.style.color).toBe('#0B0D0F')
+  })
+
+  it('omits datasource from the header when panels use different datasources', async () => {
+    vi.mocked(panelApi.listPanels).mockResolvedValue([
+      {
+        ...mockPanels[1]!,
+        id: 'panel-a',
+        query: { datasource_id: 'ds-1', expr: 'up', signal: 'metrics' },
+      },
+      {
+        ...mockPanels[1]!,
+        id: 'panel-b',
+        query: { datasource_id: 'ds-2', expr: 'up', signal: 'logs' },
+      },
+    ])
+
+    renderDashboardDetail()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dashboard-header-meta').textContent).toBe('Last 1 hour')
+    })
   })
 
   it('opens create panel modal from Add Panel button', async () => {
