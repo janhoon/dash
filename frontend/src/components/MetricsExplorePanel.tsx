@@ -16,13 +16,11 @@ import {
 } from '@/promql/client'
 import { useFavoritesStore } from '@/stores/favoritesStore'
 import { useOrgStore } from '@/stores/orgStore'
-import { dataSourceTypeLabels, type DataSource, type DataSourceType } from '@/types/datasource'
+import { dataSourceTypeLabels, type DataSource } from '@/types/datasource'
 
 import {
-  type DatasourceHealthStatus,
   type ExploreDatasourceChanged,
   getTypeLogo,
-  healthLabel,
   pushQueryHistory,
   readQueryHistory,
   TRACE_NAVIGATION_MAX_AGE_MS,
@@ -31,7 +29,6 @@ import {
   type TraceMetricsNavigationContext,
   buildServiceMetricsQuery,
   getDefaultMetricsQuery,
-  getMetricsSmokeQuery,
   isPrometheusLike,
   METRICS_HISTORY_KEY,
   TRACE_METRICS_NAVIGATION_CONTEXT_KEY,
@@ -121,10 +118,6 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
   const [queryHistory, setQueryHistory] = useState<string[]>([])
   const [showHistory, setShowHistory] = useState(false)
   const [showDatasourceMenu, setShowDatasourceMenu] = useState(false)
-  const [datasourceHealth, setDatasourceHealth] = useState<Record<string, DatasourceHealthStatus>>(
-    {},
-  )
-  const [datasourceHealthErrors, setDatasourceHealthErrors] = useState<Record<string, string>>({})
   const [pendingServiceName, setPendingServiceName] = useState('')
   const [pendingStartMs, setPendingStartMs] = useState<number | null>(null)
   const [pendingEndMs, setPendingEndMs] = useState<number | null>(null)
@@ -152,11 +145,6 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
   const hasResults = result?.status === 'success' && chartSeries.length > 0
   const seriesCount = chartSeries.length
   const queryLanguageLabel = getQueryLanguageLabel(activeDatasource?.type)
-  const activeDatasourceHealth = activeDatasource
-    ? datasourceHealth[activeDatasource.id] || 'unknown'
-    : 'unknown'
-
-  const activeDatasourceHealthLabel = healthLabel(activeDatasourceHealth)
 
   const addToHistory = useCallback((q: string) => {
     setQueryHistory((prev) => pushQueryHistory(METRICS_HISTORY_KEY, prev, q))
@@ -284,44 +272,6 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
     setPendingEndMs(null)
   }, [activeDatasource?.type, setCustomRange])
 
-  const checkDatasourceHealth = useCallback(async (datasourceId: string, type_: DataSourceType) => {
-    setDatasourceHealth((prev) => ({ ...prev, [datasourceId]: 'checking' }))
-    setDatasourceHealthErrors((prev) => {
-      const next = { ...prev }
-      delete next[datasourceId]
-      return next
-    })
-
-    const end = Math.floor(Date.now() / 1000)
-    const start = end - 15 * 60
-
-    try {
-      const healthResult = await queryDataSource(datasourceId, {
-        query: getMetricsSmokeQuery(type_),
-        signal:
-          type_ === 'clickhouse' || type_ === 'cloudwatch' || type_ === 'elasticsearch'
-            ? 'metrics'
-            : undefined,
-        start,
-        end,
-        step: 15,
-        limit: 100,
-      })
-
-      if (healthResult.status === 'error') {
-        throw new Error(healthResult.error || 'Health check failed')
-      }
-
-      setDatasourceHealth((prev) => ({ ...prev, [datasourceId]: 'healthy' }))
-    } catch (e) {
-      setDatasourceHealth((prev) => ({ ...prev, [datasourceId]: 'unhealthy' }))
-      setDatasourceHealthErrors((prev) => ({
-        ...prev,
-        [datasourceId]: e instanceof Error ? e.message : 'Health check failed',
-      }))
-    }
-  }, [])
-
   useEffect(() => {
     const urlQuery = searchParams.get('q')
     if (urlQuery) {
@@ -377,6 +327,11 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
     if (previousId && previousId !== selectedDatasourceId) {
       queryGenerationRef.current += 1
       setLoading(false)
+      setResult(null)
+      setChartSeries([])
+      setError(null)
+      setMetricSuggestion(null)
+      setLastRanAt(null)
     }
   }, [selectedDatasourceId])
 
@@ -405,13 +360,12 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
     if (!currentOrgId) return
     if (previousOrgIdRef.current && previousOrgIdRef.current !== currentOrgId) {
       setSelectedDatasourceId('')
-      setDatasourceHealth({})
-      setDatasourceHealthErrors({})
       setQuery('')
       setResult(null)
       setChartSeries([])
       setError(null)
       setLastRanAt(null)
+      setMetricSuggestion(null)
     }
     previousOrgIdRef.current = currentOrgId
   }, [currentOrgId])
@@ -439,16 +393,6 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
   }, [metricsDatasources, query, selectedDatasourceId])
 
   useEffect(() => {
-    const sourceIds = new Set(metricsDatasources.map((ds) => ds.id))
-    setDatasourceHealth((prev) =>
-      Object.fromEntries(Object.entries(prev).filter(([id]) => sourceIds.has(id))),
-    )
-    setDatasourceHealthErrors((prev) =>
-      Object.fromEntries(Object.entries(prev).filter(([id]) => sourceIds.has(id))),
-    )
-  }, [metricsDatasources])
-
-  useEffect(() => {
     if (!activeDatasource) return
 
     if (
@@ -460,15 +404,9 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
     ) {
       applyTraceMetricsNavigationContext()
     }
-
-    if ((datasourceHealth[activeDatasource.id] || 'unknown') === 'unknown') {
-      void checkDatasourceHealth(activeDatasource.id, activeDatasource.type)
-    }
   }, [
     activeDatasource,
     applyTraceMetricsNavigationContext,
-    checkDatasourceHealth,
-    datasourceHealth,
     pendingEndMs,
     pendingServiceName,
     pendingStartMs,
@@ -583,9 +521,7 @@ export function MetricsExplorePanel({ onDatasourceChanged }: MetricsExplorePanel
               disabled={!hasMetricsDatasources}
               onClick={toggleDatasourceMenu}
               title={
-                activeDatasource
-                  ? `${activeDatasource.name} · ${activeDatasourceHealthLabel}`
-                  : 'No metrics datasource configured'
+                activeDatasource ? activeDatasource.name : 'No metrics datasource configured'
               }
             >
               <span data-testid="explore-query-datasource">

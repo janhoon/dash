@@ -92,25 +92,6 @@ export function buildServiceMetricsQuery(type_: DataSourceType, serviceName: str
   return `sum(rate(http_requests_total{service="${escapedService}"}[5m])) or sum(rate(http_requests_total{service_name="${escapedService}"}[5m]))`
 }
 
-export function getMetricsSmokeQuery(type_: DataSourceType): string {
-  if (type_ === 'prometheus' || type_ === 'victoriametrics') {
-    return 'up'
-  }
-  if (type_ === 'clickhouse') {
-    return "SELECT now() AS timestamp, toFloat64(1) AS value, 'up' AS metric LIMIT 1"
-  }
-  if (type_ === 'cloudwatch') {
-    return '{"namespace":"AWS/EC2","metric_name":"CPUUtilization","stat":"Average","period":60}'
-  }
-  if (type_ === 'elasticsearch') {
-    return '{"index":"ace-logs","aggs":{"timeseries":{"date_histogram":{"field":"@timestamp","fixed_interval":"1m","min_doc_count":0}}}}'
-  }
-  if (type_ === 'loki') {
-    return '{job=~".+"}'
-  }
-  return '*'
-}
-
 export function isPrometheusLike(type_: DataSourceType): boolean {
   return type_ === 'prometheus' || type_ === 'victoriametrics'
 }
