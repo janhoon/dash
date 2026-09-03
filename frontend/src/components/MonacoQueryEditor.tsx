@@ -41,6 +41,7 @@ type MonacoQueryEditorProps = {
   height?: number
   placeholder?: string
   language?: QueryLanguage
+  compact?: boolean
 }
 
 export function MonacoQueryEditor({
@@ -51,12 +52,13 @@ export function MonacoQueryEditor({
   height = 100,
   placeholder = 'Enter PromQL query...',
   language = 'promql',
+  compact = false,
 }: MonacoQueryEditorProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
   const onChangeRef = useRef(onChange)
   const onSubmitRef = useRef(onSubmit)
-  const isDark = useThemeStore(state => state.isDark)
+  const isDark = useThemeStore((state) => state.isDark)
 
   useEffect(() => {
     onChangeRef.current = onChange
@@ -80,19 +82,19 @@ export function MonacoQueryEditor({
       language: getMonacoLanguageId(language),
       theme: isDark ? 'promql-dark' : 'promql-light',
       minimap: { enabled: false },
-      lineNumbers: 'on',
+      lineNumbers: compact ? 'off' : 'on',
       wordWrap: 'on',
       scrollBeyondLastLine: false,
       automaticLayout: true,
       fontSize: 13,
-      fontFamily: "'Monaco', 'Menlo', 'Ubuntu Mono', monospace",
-      padding: { top: 8, bottom: 8 },
-      renderLineHighlight: 'line',
+      fontFamily: "'JetBrains Mono', 'Menlo', 'Ubuntu Mono', monospace",
+      padding: { top: compact ? 0 : 8, bottom: compact ? 0 : 8 },
+      renderLineHighlight: compact ? 'none' : 'line',
       lineHeight: 20,
       folding: false,
       glyphMargin: false,
-      lineDecorationsWidth: 8,
-      lineNumbersMinChars: 3,
+      lineDecorationsWidth: compact ? 0 : 8,
+      lineNumbersMinChars: compact ? 0 : 3,
       overviewRulerBorder: false,
       hideCursorInOverviewRuler: true,
       fixedOverflowWidgets: true,
@@ -174,14 +176,18 @@ export function MonacoQueryEditor({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-sm bg-[var(--color-surface-container-low)] transition-colors duration-200 focus-within:ring-2 focus-within:ring-[var(--color-primary)]/20 ${disabled ? 'pointer-events-none opacity-60' : ''}`}
+      className={`relative overflow-hidden rounded-md bg-[var(--color-surface-container-high)] transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] focus-within:shadow-[var(--shadow-focus)] ${compact ? 'px-3 py-3' : ''} ${disabled ? 'pointer-events-none opacity-60' : ''}`}
       data-testid="monaco-query-editor"
     >
-      <div ref={containerRef} className="min-h-[60px] w-full" style={{ height: `${height}px` }} />
+      <div
+        ref={containerRef}
+        className={`w-full ${compact ? 'min-h-[20px]' : 'min-h-[60px]'}`}
+        style={{ height: `${height}px` }}
+      />
       {showPlaceholder ? (
         <div
           id={placeholderId}
-          className="pointer-events-none absolute top-2 left-12 font-mono text-[13px] text-[var(--color-outline)]"
+          className={`pointer-events-none absolute font-mono text-[13px] text-[var(--color-outline)] ${compact ? 'top-3 left-3' : 'top-2 left-12'}`}
         >
           {placeholder}
         </div>
