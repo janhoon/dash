@@ -102,6 +102,42 @@ describe('usePanelData', () => {
     expect(result.current.chartSeries).toHaveLength(1)
   })
 
+  it('uses panelQueryExpr so fetch matches chrome when both expr and promql are set', async () => {
+    const mixed: Panel = {
+      ...panel,
+      query: { promql: 'up', expr: 'node_cpu_seconds_total' },
+    }
+
+    vi.spyOn(promqlClient, 'queryPrometheus').mockResolvedValue({
+      status: 'success',
+      data: {
+        resultType: 'matrix',
+        result: [
+          {
+            metric: { __name__: 'node_cpu_seconds_total' },
+            values: [
+              [1_700_000_000, '1'],
+              [1_700_000_015, '1'],
+            ],
+          },
+        ],
+      },
+    })
+
+    const { result } = renderHook(() => usePanelData(mixed, (query) => query))
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false)
+    })
+
+    expect(promqlClient.queryPrometheus).toHaveBeenCalledWith(
+      'node_cpu_seconds_total',
+      expect.any(Number),
+      expect.any(Number),
+      15,
+    )
+  })
+
   it('fetches logs for logs panels', async () => {
     const logsPanel: Panel = {
       ...panel,
