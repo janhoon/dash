@@ -145,6 +145,14 @@ describe('Panel', () => {
     expect(screen.getByTestId('panel-title').className).toContain('text-[13px]')
   })
 
+  it('keeps edit and delete actions visible', () => {
+    render(<Panel panel={basePanel} onEdit={() => undefined} onDelete={() => undefined} />)
+    const actions = screen.getByTestId('panel-edit-btn').parentElement
+    expect(actions?.className).toContain('panel-actions')
+    expect(actions?.className).not.toContain('opacity-0')
+    expect(screen.getByTestId('panel-delete-btn')).toBeTruthy()
+  })
+
   it('renders logs and trace list panels', () => {
     mockUsePanelData.mockReturnValue({
       loading: false,

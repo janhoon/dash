@@ -346,7 +346,7 @@ export function Panel({ panel, onEdit, onDelete, onOpenTrace }: PanelProps) {
 
   return (
     <div
-      className="group relative flex h-full flex-col gap-2 overflow-hidden rounded-lg p-[var(--panel-padding)]"
+      className="relative flex h-full flex-col gap-2 overflow-hidden rounded-lg p-[var(--panel-padding)]"
       style={{
         backgroundColor: 'var(--color-surface-container-low)',
         borderWidth: '1px',
@@ -377,7 +377,7 @@ export function Panel({ panel, onEdit, onDelete, onOpenTrace }: PanelProps) {
             </span>
           ) : null}
           {(onEdit || onDelete) && (
-            <div className="panel-actions flex gap-1 opacity-0 transition-opacity duration-[var(--motion-fast)] group-focus-within:opacity-100 group-hover:opacity-100">
+            <div className="panel-actions flex gap-1">
               {onEdit ? (
                 <button
                   type="button"
