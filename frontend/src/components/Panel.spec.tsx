@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Panel } from '@/components/Panel'
+import { useTimeRangeStore } from '@/stores/timeRangeStore'
 import type { Panel as PanelType } from '@/types/panel'
 import { clearRegistry, registerPanel } from '@/utils/panelRegistry'
 
@@ -70,6 +71,7 @@ const basePanel: PanelType = {
 
 describe('Panel', () => {
   beforeEach(() => {
+    useTimeRangeStore.getState()._reset()
     clearRegistry()
     mockUsePanelData.mockReset()
     mockUsePanelData.mockReturnValue({
@@ -143,6 +145,40 @@ describe('Panel', () => {
       'rate(http_requests_total[5m])',
     )
     expect(screen.getByTestId('panel-title').className).toContain('text-[13px]')
+  })
+
+  it('shows promql on wide chrome when expr is absent', () => {
+    render(
+      <Panel
+        panel={{
+          ...basePanel,
+          grid_pos: { x: 0, y: 2, w: 8, h: 4 },
+          query: { promql: 'node_memory_MemAvailable_bytes', datasource_id: 'ds-1' },
+        }}
+      />,
+    )
+    expect(screen.getByTestId('panel-header-meta').textContent).toBe(
+      'node_memory_MemAvailable_bytes',
+    )
+  })
+
+  it('prefers expr over promql on wide chrome', () => {
+    render(
+      <Panel
+        panel={{
+          ...basePanel,
+          grid_pos: { x: 0, y: 2, w: 8, h: 4 },
+          query: { expr: 'cpu', promql: 'up', datasource_id: 'ds-1' },
+        }}
+      />,
+    )
+    expect(screen.getByTestId('panel-header-meta').textContent).toBe('cpu')
+  })
+
+  it('omits compact chrome meta during a custom range', () => {
+    useTimeRangeStore.getState().setCustomRange(1, 2)
+    render(<Panel panel={basePanel} />)
+    expect(screen.queryByTestId('panel-header-meta')).toBeNull()
   })
 
   it('keeps edit and delete actions visible', () => {

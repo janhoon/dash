@@ -3,7 +3,7 @@ import { queryDataSource, searchDataSourceTraces } from '@/api/datasources'
 import { useTimeRange } from '@/hooks/useTimeRange'
 import { type ChartSeries, queryPrometheus, transformToChartData } from '@/promql/client'
 import type { LogEntry, TraceSpan, TraceSummary } from '@/types/datasource'
-import { type Panel, readPanelQueryExpr } from '@/types/panel'
+import type { Panel } from '@/types/panel'
 import { lookupPanel } from '@/utils/panelRegistry'
 import { convertClickHouseSpansToTraceSummaries } from '@/utils/traceClickHouse'
 
@@ -48,7 +48,7 @@ export function usePanelData(
   const [traceSpans, setTraceSpans] = useState<TraceSpan[]>([])
 
   const datasourceId = panel.query?.datasource_id as string | undefined
-  const queryExpr = readPanelQueryExpr(panel.query)
+  const queryExpr = (panel.query?.promql || panel.query?.expr || '') as string
   const explicitQuerySignal = isQuerySignal(panel.query?.signal) ? panel.query.signal : null
   const registry = lookupPanel(panel.type)
   const isBuiltinTracePanel = panel.type === 'trace_list' || panel.type === 'trace_heatmap'

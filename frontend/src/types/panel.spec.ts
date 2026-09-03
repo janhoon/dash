@@ -1,20 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { readPanelQueryExpr } from '@/types/panel'
+import { panelQueryExpr } from '@/types/panel'
 
-describe('readPanelQueryExpr', () => {
-  it('prefers promql over expr', () => {
-    expect(readPanelQueryExpr({ promql: 'up', expr: 'cpu' })).toBe('up')
+describe('panelQueryExpr', () => {
+  it('prefers non-empty expr over promql', () => {
+    expect(panelQueryExpr({ expr: 'cpu', promql: 'up' })).toBe('cpu')
   })
 
-  it('falls back to expr', () => {
-    expect(readPanelQueryExpr({ expr: 'rate(http_requests_total[5m])' })).toBe(
-      'rate(http_requests_total[5m])',
+  it('falls back to non-empty promql', () => {
+    expect(panelQueryExpr({ promql: 'up' })).toBe('up')
+    expect(panelQueryExpr({ expr: '  ', promql: 'node_cpu_seconds_total' })).toBe(
+      'node_cpu_seconds_total',
     )
   })
 
   it('trims and ignores empty strings', () => {
-    expect(readPanelQueryExpr({ promql: '  ', expr: '  mem  ' })).toBe('mem')
-    expect(readPanelQueryExpr({})).toBe('')
-    expect(readPanelQueryExpr(undefined)).toBe('')
+    expect(panelQueryExpr({ expr: '  mem  ' })).toBe('mem')
+    expect(panelQueryExpr({ promql: '  up  ' })).toBe('up')
+    expect(panelQueryExpr({})).toBe('')
+    expect(panelQueryExpr(undefined)).toBe('')
   })
 })

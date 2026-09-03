@@ -1,43 +1,43 @@
 import { Pencil, Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { useTimeRange } from '@/hooks/useTimeRange'
+import { panelQueryExpr, type Panel as PanelType } from '@/types/panel'
 
-export const WIDE_PANEL_COLS = 8
+const WIDE_PANEL_COLS = 8
 
 export function panelHeaderMeta({
-  gridWidth,
+  isWidePanel,
   queryExpr,
-  selectedPreset,
   isCustomRange,
+  selectedPreset,
 }: {
-  gridWidth: number
+  isWidePanel: boolean
   queryExpr: string
-  selectedPreset: string
   isCustomRange: boolean
+  selectedPreset: string
 }): string {
-  if (gridWidth >= WIDE_PANEL_COLS && queryExpr) return queryExpr
+  if (isWidePanel && queryExpr) return queryExpr
   if (isCustomRange) return ''
   return selectedPreset
 }
 
 type PanelChromeProps = {
-  panelId: string
-  title: string
-  wide: boolean
-  headerMeta: string
-  onEdit?: () => void
-  onDelete?: () => void
+  panel: PanelType
+  onEdit?: (panel: PanelType) => void
+  onDelete?: (panel: PanelType) => void
   children: ReactNode
 }
 
-export function PanelChrome({
-  panelId,
-  title,
-  wide,
-  headerMeta,
-  onEdit,
-  onDelete,
-  children,
-}: PanelChromeProps) {
+export function PanelChrome({ panel, onEdit, onDelete, children }: PanelChromeProps) {
+  const { selectedPreset, isCustomRange } = useTimeRange()
+  const isWidePanel = panel.grid_pos.w >= WIDE_PANEL_COLS
+  const headerMeta = panelHeaderMeta({
+    isWidePanel,
+    queryExpr: panelQueryExpr(panel.query),
+    isCustomRange,
+    selectedPreset,
+  })
+
   return (
     <div
       className="relative flex h-full flex-col gap-2 overflow-hidden rounded-lg p-[var(--panel-padding)]"
@@ -47,22 +47,22 @@ export function PanelChrome({
         borderStyle: 'solid',
         borderColor: 'var(--color-stroke-subtle)',
       }}
-      data-testid={`dashboard-panel-${panelId}`}
+      data-testid={`dashboard-panel-${panel.id}`}
     >
       <div className="panel-header flex items-center justify-between gap-2">
         <h3
-          className={`min-w-0 truncate font-medium ${wide ? 'text-[13px]' : 'text-xs'}`}
+          className={`min-w-0 truncate font-medium ${isWidePanel ? 'text-[13px]' : 'text-xs'}`}
           style={{
-            color: wide ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)',
+            color: isWidePanel ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)',
           }}
           data-testid="panel-title"
         >
-          {title}
+          {panel.title}
         </h3>
         <div className="flex min-w-0 shrink-0 items-center gap-1">
           {headerMeta ? (
             <span
-              className={`max-w-[220px] truncate ${wide ? 'font-mono text-[11px]' : 'text-[11px]'}`}
+              className={`max-w-[220px] truncate ${isWidePanel ? 'font-mono text-[11px]' : 'text-[11px]'}`}
               style={{ color: 'var(--color-on-surface-variant)' }}
               data-testid="panel-header-meta"
               title={headerMeta}
@@ -79,7 +79,7 @@ export function PanelChrome({
                   style={{ color: 'var(--color-outline)' }}
                   data-testid="panel-edit-btn"
                   title="Edit panel"
-                  onClick={onEdit}
+                  onClick={() => onEdit(panel)}
                 >
                   <Pencil size={16} />
                 </button>
@@ -91,7 +91,7 @@ export function PanelChrome({
                   style={{ color: 'var(--color-outline)' }}
                   data-testid="panel-delete-btn"
                   title="Delete panel"
-                  onClick={onDelete}
+                  onClick={() => onDelete(panel)}
                 >
                   <Trash2 size={16} />
                 </button>

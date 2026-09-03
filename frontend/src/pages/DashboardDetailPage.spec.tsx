@@ -244,6 +244,7 @@ describe('DashboardDetailPage', () => {
     const header = screen.getByTestId('dashboard-loaded-header')
     expect(header.getAttribute('style')).toBeNull()
     expect(screen.getByTestId('dashboard-header-meta').textContent).toBe('Last 1 hour · Prometheus')
+    expect(screen.getByTestId('dashboard-header-actions').className).toContain('sm:ml-auto')
 
     const addPanel = screen.getByTestId('dashboard-add-panel-btn')
     expect(addPanel.textContent).toBe('Add panel')

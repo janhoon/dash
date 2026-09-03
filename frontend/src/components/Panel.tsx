@@ -4,7 +4,7 @@ import { BarChart } from '@/components/BarChart'
 import { GaugeChart, type Threshold } from '@/components/GaugeChart'
 import { LineChart } from '@/components/LineChart'
 import { LogViewer } from '@/components/LogViewer'
-import { PanelChrome, panelHeaderMeta, WIDE_PANEL_COLS } from '@/components/PanelChrome'
+import { PanelChrome } from '@/components/PanelChrome'
 import { PieChart, type PieDataItem } from '@/components/PieChart'
 import { ensurePanelTypesRegistered } from '@/components/panels/registerPanelTypes'
 import { StatPanel } from '@/components/StatPanel'
@@ -14,8 +14,7 @@ import { TraceListPanel } from '@/components/TraceListPanel'
 import { useCrosshairSync } from '@/contexts/CrosshairSyncContext'
 import { useDashboardVariables } from '@/contexts/VariablesContext'
 import { usePanelData } from '@/hooks/usePanelData'
-import { useTimeRange } from '@/hooks/useTimeRange'
-import { type Panel as PanelType, readPanelQueryExpr } from '@/types/panel'
+import type { Panel as PanelType } from '@/types/panel'
 
 ensurePanelTypesRegistered()
 
@@ -29,7 +28,6 @@ type PanelProps = {
 export function Panel({ panel, onEdit, onDelete, onOpenTrace }: PanelProps) {
   const { interpolate, variables } = useDashboardVariables()
   const { groupId } = useCrosshairSync()
-  const { selectedPreset, isCustomRange } = useTimeRange()
   const variableSignature = useMemo(
     () =>
       variables
@@ -334,19 +332,7 @@ export function Panel({ panel, onEdit, onDelete, onOpenTrace }: PanelProps) {
   }
 
   return (
-    <PanelChrome
-      panelId={panel.id}
-      title={panel.title}
-      wide={panel.grid_pos.w >= WIDE_PANEL_COLS}
-      headerMeta={panelHeaderMeta({
-        gridWidth: panel.grid_pos.w,
-        queryExpr: readPanelQueryExpr(panel.query),
-        selectedPreset,
-        isCustomRange,
-      })}
-      onEdit={onEdit ? () => onEdit(panel) : undefined}
-      onDelete={onDelete ? () => onDelete(panel) : undefined}
-    >
+    <PanelChrome panel={panel} onEdit={onEdit} onDelete={onDelete}>
       {renderBody()}
     </PanelChrome>
   )
