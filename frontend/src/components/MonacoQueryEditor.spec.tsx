@@ -4,7 +4,7 @@ import { MonacoQueryEditor } from '@/components/MonacoQueryEditor'
 
 const { create, updateOptions } = vi.hoisted(() => {
   const updateOptions = vi.fn()
-  const create = vi.fn(() => ({
+  const create = vi.fn((_container: unknown, _options?: Record<string, unknown>) => ({
     updateOptions,
     getValue: vi.fn(() => ''),
     setValue: vi.fn(),
@@ -51,7 +51,8 @@ describe('MonacoQueryEditor', () => {
     )
 
     expect(create).toHaveBeenCalledTimes(1)
-    expect(create.mock.calls[0]?.[1]).toEqual(
+    expect(create).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({
         lineNumbers: 'off',
         renderLineHighlight: 'none',
