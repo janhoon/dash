@@ -1,15 +1,16 @@
-import { AlertCircle, BarChart3, Pencil, Trash2 } from 'lucide-react'
+import { AlertCircle, BarChart3 } from 'lucide-react'
 import { useMemo } from 'react'
 import { BarChart } from '@/components/BarChart'
 import { GaugeChart, type Threshold } from '@/components/GaugeChart'
 import { LineChart } from '@/components/LineChart'
 import { LogViewer } from '@/components/LogViewer'
+import { PanelChrome } from '@/components/PanelChrome'
 import { PieChart, type PieDataItem } from '@/components/PieChart'
+import { ensurePanelTypesRegistered } from '@/components/panels/registerPanelTypes'
 import { StatPanel } from '@/components/StatPanel'
 import { TablePanel } from '@/components/TablePanel'
 import { TraceHeatmapPanel } from '@/components/TraceHeatmapPanel'
 import { TraceListPanel } from '@/components/TraceListPanel'
-import { ensurePanelTypesRegistered } from '@/components/panels/registerPanelTypes'
 import { useCrosshairSync } from '@/contexts/CrosshairSyncContext'
 import { useDashboardVariables } from '@/contexts/VariablesContext'
 import { usePanelData } from '@/hooks/usePanelData'
@@ -30,7 +31,7 @@ export function Panel({ panel, onEdit, onDelete, onOpenTrace }: PanelProps) {
   const variableSignature = useMemo(
     () =>
       variables
-        .map(variable => {
+        .map((variable) => {
           const current = Array.isArray(variable.current)
             ? variable.current.join(',')
             : (variable.current ?? '')
@@ -39,15 +40,11 @@ export function Panel({ panel, onEdit, onDelete, onOpenTrace }: PanelProps) {
         .join('|'),
     [variables],
   )
-  const {
-    loading,
-    error,
-    chartSeries,
-    logs,
-    traceSummaries,
-    hasQuery,
-    registry,
-  } = usePanelData(panel, interpolate, variableSignature)
+  const { loading, error, chartSeries, logs, traceSummaries, hasQuery, registry } = usePanelData(
+    panel,
+    interpolate,
+    variableSignature,
+  )
 
   const gaugeValue = useMemo(() => {
     if (chartSeries.length === 0) return 0
@@ -69,7 +66,7 @@ export function Panel({ panel, onEdit, onDelete, onOpenTrace }: PanelProps) {
 
   const pieData = useMemo<PieDataItem[]>(
     () =>
-      chartSeries.map(series => ({
+      chartSeries.map((series) => ({
         name: series.name,
         value: series.data.length > 0 ? series.data[series.data.length - 1]!.value : 0,
       })),
@@ -87,7 +84,7 @@ export function Panel({ panel, onEdit, onDelete, onOpenTrace }: PanelProps) {
 
   const statData = useMemo(
     () =>
-      chartSeries[0]?.data.map(point => ({
+      chartSeries[0]?.data.map((point) => ({
         timestamp: point.timestamp,
         value: point.value,
       })) ?? [],
@@ -115,8 +112,7 @@ export function Panel({ panel, onEdit, onDelete, onOpenTrace }: PanelProps) {
     }
   }, [panel.query])
 
-  const textContent =
-    typeof panel.query?.content === 'string' ? panel.query.content : ''
+  const textContent = typeof panel.query?.content === 'string' ? panel.query.content : ''
 
   const isLineChart = panel.type === 'line_chart'
   const isBarChart = panel.type === 'bar_chart'
@@ -336,49 +332,8 @@ export function Panel({ panel, onEdit, onDelete, onOpenTrace }: PanelProps) {
   }
 
   return (
-    <div
-      className="relative flex h-full flex-col overflow-hidden rounded-lg"
-      style={{ backgroundColor: 'var(--color-surface-container-low)' }}
-      data-testid={`dashboard-panel-${panel.id}`}
-    >
-      <div
-        className="panel-header flex items-center justify-between px-4 py-2"
-        style={{ borderBottom: '1px solid var(--color-outline-variant)' }}
-      >
-        <h3 className="truncate text-sm font-semibold" style={{ color: 'var(--color-on-surface)' }}>
-          {panel.title}
-        </h3>
-        {(onEdit || onDelete) && (
-          <div className="panel-actions flex gap-1">
-            {onEdit ? (
-              <button
-                type="button"
-                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent transition hover:opacity-80"
-                style={{ color: 'var(--color-outline)' }}
-                data-testid="panel-edit-btn"
-                title="Edit panel"
-                onClick={() => onEdit(panel)}
-              >
-                <Pencil size={16} />
-              </button>
-            ) : null}
-            {onDelete ? (
-              <button
-                type="button"
-                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent transition hover:opacity-80"
-                style={{ color: 'var(--color-outline)' }}
-                data-testid="panel-delete-btn"
-                title="Delete panel"
-                onClick={() => onDelete(panel)}
-              >
-                <Trash2 size={16} />
-              </button>
-            ) : null}
-          </div>
-        )}
-      </div>
-
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-2">{renderBody()}</div>
-    </div>
+    <PanelChrome panel={panel} onEdit={onEdit} onDelete={onDelete}>
+      {renderBody()}
+    </PanelChrome>
   )
 }
