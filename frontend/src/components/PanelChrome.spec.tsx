@@ -68,11 +68,7 @@ describe('PanelChrome', () => {
 
   it('uses surface-card tokens and keeps actions visible', () => {
     render(
-      <PanelChrome
-        panel={chromePanel}
-        onEdit={() => undefined}
-        onDelete={() => undefined}
-      >
+      <PanelChrome panel={chromePanel} onEdit={() => undefined} onDelete={() => undefined}>
         <div data-testid="live-body" />
       </PanelChrome>,
     )
