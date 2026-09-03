@@ -547,6 +547,9 @@ describe('ExplorePage', () => {
     await waitFor(() => {
       expect(screen.getByTestId('explore-datasource-btn').textContent).toContain('Prometheus Prod')
     })
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-subtitle').textContent).toBe('Metrics · Prometheus Prod')
+    })
 
     expect(screen.getByTestId('explore-query-editor')).toBeTruthy()
     expect(screen.getByTestId('explore-query-language').textContent).toBe('PromQL')
