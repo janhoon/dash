@@ -21,6 +21,16 @@ function getMonacoLanguageId(language: QueryLanguage): string {
   return PROMQL_LANGUAGE_ID
 }
 
+function getCompactEditorOptions(compact: boolean) {
+  return {
+    lineNumbers: compact ? ('off' as const) : ('on' as const),
+    padding: { top: compact ? 0 : 8, bottom: compact ? 0 : 8 },
+    renderLineHighlight: compact ? ('none' as const) : ('line' as const),
+    lineDecorationsWidth: compact ? 0 : 8,
+    lineNumbersMinChars: compact ? 0 : 3,
+  }
+}
+
 let initialized = false
 function initializeMonaco() {
   if (initialized) return
@@ -82,19 +92,15 @@ export function MonacoQueryEditor({
       language: getMonacoLanguageId(language),
       theme: isDark ? 'promql-dark' : 'promql-light',
       minimap: { enabled: false },
-      lineNumbers: compact ? 'off' : 'on',
+      ...getCompactEditorOptions(compact),
       wordWrap: 'on',
       scrollBeyondLastLine: false,
       automaticLayout: true,
       fontSize: 13,
       fontFamily: "'JetBrains Mono', 'Menlo', 'Ubuntu Mono', monospace",
-      padding: { top: compact ? 0 : 8, bottom: compact ? 0 : 8 },
-      renderLineHighlight: compact ? 'none' : 'line',
       lineHeight: 20,
       folding: false,
       glyphMargin: false,
-      lineDecorationsWidth: compact ? 0 : 8,
-      lineNumbersMinChars: compact ? 0 : 3,
       overviewRulerBorder: false,
       hideCursorInOverviewRuler: true,
       fixedOverflowWidgets: true,
@@ -151,6 +157,10 @@ export function MonacoQueryEditor({
   useEffect(() => {
     editorRef.current?.updateOptions({ readOnly: disabled })
   }, [disabled])
+
+  useEffect(() => {
+    editorRef.current?.updateOptions(getCompactEditorOptions(compact))
+  }, [compact])
 
   useEffect(() => {
     if (editorRef.current && editorRef.current.getValue() !== value) {
