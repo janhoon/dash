@@ -1,7 +1,6 @@
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { Outlet, useMatches, useNavigate } from 'react-router'
-import { AiFab } from '@/components/AiFab'
-import { AiSidebar } from '@/components/AiSidebar'
+import { AGENT_DOCK_WIDTH_PX, AgentDock } from '@/components/AgentDock'
 import { AppSidebar } from '@/components/AppSidebar'
 import { CmdKModal } from '@/components/CmdKModal'
 import { CookieConsentBanner } from '@/components/CookieConsentBanner'
@@ -45,11 +44,11 @@ export function AppLayout() {
   const matches = useMatches()
   const navigate = useNavigate()
   const meta = matches.at(-1)?.handle as RouteMeta | undefined
-  const expandedSection = useSidebarStore(state => state.expandedSection)
-  const isPinned = useSidebarStore(state => state.isPinned)
-  const aiSidebarOpen = useAiSidebarStore(state => state.isOpen)
-  const currentOrgId = useOrgStore(state => state.currentOrgId)
-  const registerShortcut = useKeyboardShortcutsStore(state => state.register)
+  const expandedSection = useSidebarStore((state) => state.expandedSection)
+  const isPinned = useSidebarStore((state) => state.isPinned)
+  const aiSidebarOpen = useAiSidebarStore((state) => state.isOpen)
+  const currentOrgId = useOrgStore((state) => state.currentOrgId)
+  const registerShortcut = useKeyboardShortcutsStore((state) => state.register)
 
   const [viewportTooNarrow, setViewportTooNarrow] = useState(
     () => typeof window !== 'undefined' && window.innerWidth < 1280,
@@ -84,18 +83,26 @@ export function AppLayout() {
       'New dashboard',
       'Actions',
     )
+    const unregisterAgentDock = registerShortcut(
+      'Cmd+J',
+      () => {
+        useAiSidebarStore.getState().toggle()
+      },
+      'Toggle agent dock',
+      'General',
+    )
     return () => {
       unregisterCmdK()
       unregisterNew()
+      unregisterAgentDock()
     }
   }, [navigate, registerShortcut])
 
   const mainMargin = useMemo(() => {
-    const isExpanded =
-      isPinned || (expandedSection !== null && expandedSection !== 'home')
+    const isExpanded = isPinned || (expandedSection !== null && expandedSection !== 'home')
     return {
       marginLeft: isExpanded ? 'var(--sidebar-flyout-width)' : 'var(--sidebar-rail-width)',
-      marginRight: aiSidebarOpen ? '340px' : '0',
+      marginRight: aiSidebarOpen ? `${AGENT_DOCK_WIDTH_PX}px` : '0',
       transition: 'margin-left 200ms ease, margin-right 200ms ease',
     }
   }, [expandedSection, isPinned, aiSidebarOpen])
@@ -119,8 +126,7 @@ export function AppLayout() {
         </Suspense>
       </main>
 
-      <AiSidebar />
-      <AiFab />
+      <AgentDock overlayOpen={cmdKOpen} />
       <CmdKModal isOpen={cmdKOpen} onClose={() => setCmdKOpen(false)} />
       <ShortcutsOverlay />
       <ToastNotification />
