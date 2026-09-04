@@ -12,7 +12,7 @@ export const CHART_BUILDER_TYPES = [
   { type: 'heatmap', label: 'Heatmap' },
 ] as const
 
-export type ChartBuilderType = (typeof CHART_BUILDER_TYPES)[number]['type']
+type ChartBuilderType = (typeof CHART_BUILDER_TYPES)[number]['type']
 
 const CHART_BUILDER_TYPE_SET = new Set<string>(CHART_BUILDER_TYPES.map((entry) => entry.type))
 
@@ -45,7 +45,7 @@ export const CHART_BUILDER_PREVIEW_BARS = [
   { id: 'b15', height: 321 },
 ] as const
 
-export type ChartBuilderDatasourceRef = {
+type ChartBuilderDatasourceRef = {
   name: string
   type: string
 }

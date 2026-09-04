@@ -27,16 +27,6 @@ vi.mock('react-grid-layout/legacy', () => ({
   ),
 }))
 
-vi.mock('@/components/QueryBuilder', () => ({
-  QueryBuilder: ({ value, onChange }: { value: string; onChange: (value: string) => void }) => (
-    <textarea
-      data-testid="promql-query-input"
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-    />
-  ),
-}))
-
 vi.mock('@/components/MonacoQueryEditor', () => ({
   MonacoQueryEditor: () => <div data-testid="mock-monaco" />,
 }))
