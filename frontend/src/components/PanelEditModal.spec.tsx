@@ -364,6 +364,56 @@ describe('PanelEditModal', () => {
     expect(panelApi.createPanel).not.toHaveBeenCalled()
   })
 
+  it('saves an existing unsupported panel when the type is unchanged', async () => {
+    const existing: Panel = {
+      id: 'heatmap-1',
+      dashboard_id: dashboardId,
+      title: 'Existing Heatmap',
+      type: 'heatmap',
+      grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+      query: { promql: 'up' },
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    }
+    const updated = { ...existing, title: 'Renamed Heatmap' }
+    vi.spyOn(panelApi, 'updatePanel').mockResolvedValue(updated)
+
+    const { onSaved } = renderModal({ dashboardId, panel: existing })
+    const titleInput = screen.getByTestId('panel-title-input')
+    await userEvent.clear(titleInput)
+    await userEvent.type(titleInput, 'Renamed Heatmap')
+    await userEvent.click(screen.getByTestId('panel-edit-save-btn'))
+
+    await waitFor(() => {
+      expect(panelApi.updatePanel).toHaveBeenCalledWith('heatmap-1', {
+        title: 'Renamed Heatmap',
+        type: 'heatmap',
+        query: { promql: 'up' },
+      })
+    })
+    expect(screen.queryByText('Heatmap is not supported')).toBeNull()
+    expect(onSaved).toHaveBeenCalledWith(updated)
+  })
+
+  it('fails closed when an edit changes the type onto Heatmap', async () => {
+    const existing: Panel = {
+      id: '1',
+      dashboard_id: dashboardId,
+      title: 'Existing Panel',
+      type: 'line_chart',
+      grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    }
+    vi.spyOn(panelApi, 'updatePanel')
+
+    renderModal({ dashboardId, panel: existing })
+    fireEvent.change(screen.getByTestId('panel-type-select'), { target: { value: 'heatmap' } })
+    await userEvent.click(screen.getByTestId('panel-edit-save-btn'))
+    expect(screen.getByText('Heatmap is not supported')).toBeTruthy()
+    expect(panelApi.updatePanel).not.toHaveBeenCalled()
+  })
+
   it('includes registry panel types with categories/status labels', () => {
     renderModal({ dashboardId })
     const typeSelect = screen.getByTestId('panel-type-select') as HTMLSelectElement

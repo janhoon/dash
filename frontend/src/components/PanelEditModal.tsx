@@ -285,7 +285,7 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
       return
     }
 
-    if (panelTypeUnsupported) {
+    if (panelTypeUnsupported && !(isEditing && panelType === panel?.type)) {
       const unsupportedLabel = chartBuilderTypeLabel(panelType)
       setError(`${unsupportedLabel} is not supported`)
       return
