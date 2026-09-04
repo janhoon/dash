@@ -126,7 +126,7 @@ export function AppLayout() {
         </Suspense>
       </main>
 
-      <AgentDock />
+      <AgentDock overlayOpen={cmdKOpen} />
       <CmdKModal isOpen={cmdKOpen} onClose={() => setCmdKOpen(false)} />
       <ShortcutsOverlay />
       <ToastNotification />

@@ -148,4 +148,32 @@ describe('AppLayout', () => {
     })
     expect(screen.getByRole('main').style.marginRight).toBe('0px')
   })
+
+  it('closes Cmd+K on Escape without collapsing the agent dock', async () => {
+    useAiSidebarStore.setState({ isOpen: true })
+    renderAppLayout()
+    expect(await screen.findByTestId('agent-dock')).toBeTruthy()
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))
+    })
+    expect(await screen.findByRole('dialog', { name: 'AI Command' })).toBeTruthy()
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    })
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'AI Command' })).toBeNull()
+    })
+    expect(screen.getByTestId('agent-dock')).toBeTruthy()
+    expect(useAiSidebarStore.getState().isOpen).toBe(true)
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    })
+    await waitFor(() => {
+      expect(screen.queryByTestId('agent-dock')).toBeNull()
+    })
+    expect(useAiSidebarStore.getState().isOpen).toBe(false)
+  })
 })

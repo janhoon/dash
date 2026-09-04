@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { AgentDock, PLACEHOLDER_THREAD } from '@/components/AgentDock'
+import { ShortcutsOverlay } from '@/components/ShortcutsOverlay'
 import { useKeyboardShortcutsStore } from '@/lib/keyboardShortcuts'
 import { useAiSidebarStore } from '@/stores/aiSidebarStore'
 
@@ -135,5 +136,39 @@ describe('AgentDock', () => {
       expect(screen.queryByTestId('agent-dock')).toBeNull()
     })
     expect(useAiSidebarStore.getState().isOpen).toBe(false)
+  })
+
+  it('does not close on Escape when a higher overlay is open', async () => {
+    useAiSidebarStore.setState({ isOpen: true })
+    render(<AgentDock overlayOpen />)
+    expect(screen.getByTestId('agent-dock')).toBeTruthy()
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    })
+    expect(screen.getByTestId('agent-dock')).toBeTruthy()
+    expect(useAiSidebarStore.getState().isOpen).toBe(true)
+  })
+
+  it('does not close on Escape when shortcuts help is open', async () => {
+    useAiSidebarStore.setState({ isOpen: true })
+    useKeyboardShortcutsStore.getState().setShowHelp(true)
+    render(
+      <>
+        <AgentDock />
+        <ShortcutsOverlay />
+      </>,
+    )
+    expect(screen.getByTestId('agent-dock')).toBeTruthy()
+    expect(screen.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeTruthy()
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    })
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Keyboard shortcuts' })).toBeNull()
+    })
+    expect(screen.getByTestId('agent-dock')).toBeTruthy()
+    expect(useAiSidebarStore.getState().isOpen).toBe(true)
   })
 })

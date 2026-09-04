@@ -11,6 +11,7 @@ export type AgentDockTurn =
 
 type AgentDockProps = {
   thread?: AgentDockTurn[]
+  overlayOpen?: boolean
 }
 
 export const PLACEHOLDER_THREAD: AgentDockTurn[] = [
@@ -74,11 +75,12 @@ function AgentDockTurnView({ turn }: { turn: AgentDockTurn }) {
   }
 }
 
-export function AgentDock({ thread = [] }: AgentDockProps) {
+export function AgentDock({ thread = [], overlayOpen = false }: AgentDockProps) {
   const isOpen = useAiSidebarStore((state) => state.isOpen)
   const pendingContext = useAiSidebarStore((state) => state.pendingContext)
   const consumePendingContext = useAiSidebarStore((state) => state.consumePendingContext)
   const registerShortcut = useKeyboardShortcutsStore((state) => state.register)
+  const showHelp = useKeyboardShortcutsStore((state) => state.showHelp)
   const [pendingPreview, setPendingPreview] = useState<string | null>(null)
 
   useEffect(() => {
@@ -92,7 +94,7 @@ export function AgentDock({ thread = [] }: AgentDockProps) {
   }, [isOpen, pendingContext, consumePendingContext])
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen || overlayOpen || showHelp) return
     return registerShortcut(
       'Escape',
       () => {
@@ -101,7 +103,7 @@ export function AgentDock({ thread = [] }: AgentDockProps) {
       'Close agent dock',
       'General',
     )
-  }, [isOpen, registerShortcut])
+  }, [isOpen, overlayOpen, showHelp, registerShortcut])
 
   if (!isOpen) return null
 
