@@ -11,6 +11,18 @@ import type { Panel } from '@/types/panel'
 
 const mockDatasources: DataSource[] = [
   {
+    id: 'ds-victoria-prod-1',
+    organization_id: 'org-1',
+    name: 'Victoria / prod',
+    type: 'victoriametrics',
+    url: 'http://localhost:8428',
+    is_default: false,
+    auth_type: 'none',
+    trace_id_field: 'trace_id',
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  },
+  {
     id: 'ds-metrics-1',
     organization_id: 'org-1',
     name: 'Prometheus Main',
@@ -184,6 +196,7 @@ describe('PanelEditModal', () => {
 
     const config = screen.getByTestId('chart-builder-config')
     expect(config.className).toContain('w-[360px]')
+    expect(screen.getByTestId('chart-builder').className).toContain('min-[425px]:flex-row')
     expect(screen.getByTestId('chart-builder-preview').className).toContain('flex-1')
 
     const timeSeries = screen.getByTestId('chart-builder-type-line_chart')
@@ -194,15 +207,23 @@ describe('PanelEditModal', () => {
     expect(screen.getByTestId('chart-builder-type-stat').textContent).toBe('Stat')
     expect(screen.getByTestId('chart-builder-type-table').textContent).toBe('Table')
     expect(screen.getByTestId('chart-builder-type-heatmap').textContent).toBe('Heatmap')
+    expect((screen.getByTestId('chart-builder-type-heatmap') as HTMLButtonElement).disabled).toBe(
+      true,
+    )
     expect(screen.getByTestId('chart-builder-type-stat').getAttribute('aria-pressed')).toBe('false')
     expect(screen.getByTestId('chart-builder-type-stat').style.borderColor).toBe(
       'var(--color-surface-container-high)',
     )
 
     const pin = screen.getByTestId('panel-edit-save-btn')
-    expect(pin.textContent).toBe('Pin to Victoria / prod')
+    expect(pin.textContent).toBe('Pin panel')
     expect(pin.style.backgroundColor).toBe('var(--color-primary)')
-    expect(pin.style.color).toBe('#0B0D0F')
+    expect(pin.style.color).toBe('var(--primary-foreground)')
+
+    const datasource = screen.getByTestId('panel-datasource-select')
+    expect(datasource.closest('.sr-only')).toBeNull()
+    expect(screen.getByTestId('panel-edit-close-btn').className).not.toContain('sr-only')
+    expect(screen.getByTestId('panel-edit-cancel-btn').className).not.toContain('sr-only')
 
     expect(screen.getByTestId('chart-builder-preview-meta').textContent).toBe(
       'Time series · last 2 hours',
@@ -227,6 +248,72 @@ describe('PanelEditModal', () => {
     }
     renderModal({ dashboardId, panel })
     expect(screen.getByRole('heading', { name: 'Edit panel' })).toBeTruthy()
+  })
+
+  it('requires a title when editing and does not update the panel', async () => {
+    const existing: Panel = {
+      id: '1',
+      dashboard_id: dashboardId,
+      title: 'Existing Panel',
+      type: 'line_chart',
+      grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+      query: { promql: 'up' },
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    }
+    const updateSpy = vi.spyOn(panelApi, 'updatePanel')
+
+    renderModal({ dashboardId, panel: existing })
+    await userEvent.clear(screen.getByTestId('panel-title-input'))
+    await userEvent.click(screen.getByTestId('panel-edit-save-btn'))
+
+    expect(screen.getByText('Title is required')).toBeTruthy()
+    expect(updateSpy).not.toHaveBeenCalled()
+  })
+
+  it('keeps a visible type select when editing non-chart-builder panels', () => {
+    const panel: Panel = {
+      id: 'gauge-1',
+      dashboard_id: dashboardId,
+      title: 'CPU Gauge',
+      type: 'gauge',
+      grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    }
+    renderModal({ dashboardId, panel })
+
+    expect(screen.queryByTestId('chart-builder-types')).toBeNull()
+    const typeSelect = screen.getByTestId('panel-type-select')
+    expect(typeSelect.closest('.sr-only')).toBeNull()
+    expect((typeSelect as HTMLSelectElement).value).toBe('gauge')
+    expect(screen.getByTestId('chart-builder-preview-meta').textContent).toBe(
+      'Gauge · last 2 hours',
+    )
+  })
+
+  it('derives pin copy from the selected datasource', () => {
+    renderModal({ dashboardId })
+    expect(screen.getByTestId('panel-edit-save-btn').textContent).toBe('Pin panel')
+
+    fireEvent.change(screen.getByTestId('panel-datasource-select'), {
+      target: { value: 'ds-metrics-1' },
+    })
+    expect(screen.getByTestId('panel-edit-save-btn').textContent).toBe('Pin to Prometheus Main')
+
+    fireEvent.change(screen.getByTestId('panel-datasource-select'), {
+      target: { value: 'ds-victoria-prod-1' },
+    })
+    expect(screen.getByTestId('panel-edit-save-btn').textContent).toBe('Pin to Victoria / prod')
+  })
+
+  it('fails closed when Heatmap is selected', async () => {
+    vi.spyOn(panelApi, 'createPanel')
+    renderModal({ dashboardId })
+    fireEvent.change(screen.getByTestId('panel-type-select'), { target: { value: 'heatmap' } })
+    await userEvent.click(screen.getByTestId('panel-edit-save-btn'))
+    expect(screen.getByText('Heatmap is not supported')).toBeTruthy()
+    expect(panelApi.createPanel).not.toHaveBeenCalled()
   })
 
   it('includes registry panel types with categories/status labels', () => {

@@ -4,7 +4,7 @@ import { ChartBuilderPreview } from '@/components/ChartBuilderPreview'
 import { CHART_BUILDER_CAPTION, CHART_BUILDER_PREVIEW_BARS } from '@/components/chartBuilder'
 
 describe('ChartBuilderPreview', () => {
-  it('renders the Figma 12:73 preview chrome and 16 accent bars', () => {
+  it('renders the Figma 12:73 preview chrome and 16 visualization bars', () => {
     render(<ChartBuilderPreview typeLabel="Time series" />)
 
     expect(screen.getByTestId('chart-builder-preview')).toBeTruthy()
@@ -20,7 +20,7 @@ describe('ChartBuilderPreview', () => {
     expect(bars.children).toHaveLength(CHART_BUILDER_PREVIEW_BARS.length)
     expect(bars.querySelector('svg, canvas, table')).toBeNull()
     const first = bars.children[0] as HTMLElement
-    expect(first.style.backgroundColor).toBe('var(--color-primary)')
+    expect(first.style.backgroundColor).toBe('var(--color-viz-0)')
     expect(first.style.height).toBe('165px')
     expect(first.textContent).toBe('')
   })

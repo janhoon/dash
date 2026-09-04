@@ -7,9 +7,9 @@ import { ClickHouseSQLEditor } from '@/components/ClickHouseSQLEditor'
 import { CloudWatchQueryEditor } from '@/components/CloudWatchQueryEditor'
 import {
   CHART_BUILDER_DEFAULT_QUERY,
-  CHART_BUILDER_PIN_LABEL,
   CHART_BUILDER_SUBTITLE,
   CHART_BUILDER_TYPES,
+  chartBuilderPinLabel,
   chartBuilderTypeLabel,
   isChartBuilderType,
   resolveChartBuilderTitle,
@@ -61,6 +61,12 @@ const fieldStyle = {
   color: 'var(--color-on-surface)',
   border: '1px solid var(--color-outline-variant)',
 } as const
+
+function isUnsupportedPanelType(panelType: string): boolean {
+  const status = lookupPanel(panelType)?.supportStatus
+  if (panelType === 'heatmap') return status !== 'ready'
+  return status === 'unsupported'
+}
 
 export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEditModalProps) {
   const isEditing = Boolean(panel)
@@ -126,7 +132,9 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
   const isGaugeType = panelType === 'gauge'
   const isPieType = panelType === 'pie'
   const isStatType = panelType === 'stat'
-  const hideDatasourcePicker = isChartBuilderType(panelType)
+  const panelTypeUnsupported = isUnsupportedPanelType(panelType)
+  const showChartBuilderTypeChips =
+    isChartBuilderType(panelType) && (isEditing ? !panelTypeUnsupported : true)
 
   const selectedDatasource: DataSource | null = useMemo(
     () => datasources.find((ds) => ds.id === selectedDatasourceId) ?? null,
@@ -258,7 +266,7 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
         ? { w: panel.grid_pos.w, h: panel.grid_pos.h }
         : { w: DEFAULT_GRID_POS.w, h: DEFAULT_GRID_POS.h }
 
-    const resolvedTitle = resolveChartBuilderTitle(title, queryText)
+    const resolvedTitle = isEditing ? title.trim() : resolveChartBuilderTitle(title, queryText)
 
     const validationError = validatePanelSave({
       title: resolvedTitle,
@@ -272,6 +280,12 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
     })
     if (validationError) {
       setError(validationError)
+      return
+    }
+
+    if (panelTypeUnsupported) {
+      const unsupportedLabel = chartBuilderTypeLabel(panelType)
+      setError(`${unsupportedLabel} is not supported`)
       return
     }
 
@@ -366,6 +380,9 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
   }
 
   const showQueryBlock = needsDatasource && (!isTracePanelType || isSignalDatasource)
+  const previewTypeLabel = isChartBuilderType(panelType)
+    ? chartBuilderTypeLabel(panelType)
+    : (lookupPanel(panelType)?.label ?? chartBuilderTypeLabel(panelType))
 
   return createPortal(
     <div
@@ -377,45 +394,41 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
         role="dialog"
         aria-modal="true"
         aria-labelledby="panel-edit-title"
-        className="relative flex h-full w-full gap-4 p-6"
+        className="relative flex h-full w-full flex-col gap-4 overflow-auto p-6 min-[425px]:flex-row"
         data-testid="chart-builder"
         onSubmit={(event) => void handleSubmit(event)}
       >
-        <button
-          type="button"
-          className="sr-only"
-          data-testid="panel-edit-close-btn"
-          onClick={onClose}
-        >
-          Close
-        </button>
-        <button
-          type="button"
-          className="sr-only"
-          data-testid="panel-edit-cancel-btn"
-          onClick={onClose}
-        >
-          Cancel
-        </button>
-
         <div
-          className="flex h-full w-[360px] shrink-0 flex-col gap-3 overflow-auto"
+          className="flex min-h-0 w-full min-w-0 max-w-[360px] shrink-0 flex-col gap-3 overflow-auto min-[425px]:h-full min-[425px]:w-[360px]"
           data-testid="chart-builder-config"
         >
-          <h2
-            id="panel-edit-title"
-            className="m-0 text-[22px] font-semibold leading-normal"
-            style={{ color: 'var(--color-on-surface)' }}
-          >
-            {isEditing ? 'Edit panel' : 'Add panel'}
-          </h2>
-          <p
-            className="m-0 text-[13px] leading-normal"
-            style={{ color: 'var(--color-on-surface-variant)' }}
-            data-testid="chart-builder-subtitle"
-          >
-            {CHART_BUILDER_SUBTITLE}
-          </p>
+          <div className="flex items-start justify-between gap-2">
+            <h2
+              id="panel-edit-title"
+              className="m-0 text-[22px] font-semibold leading-normal"
+              style={{ color: 'var(--color-on-surface)' }}
+            >
+              {isEditing ? 'Edit panel' : 'Add panel'}
+            </h2>
+            <button
+              type="button"
+              className="cursor-pointer rounded-lg px-2 py-1 text-[13px] leading-normal"
+              style={{ color: 'var(--color-on-surface-variant)' }}
+              data-testid="panel-edit-close-btn"
+              onClick={onClose}
+            >
+              Close
+            </button>
+          </div>
+          {!isEditing ? (
+            <p
+              className="m-0 text-[13px] leading-normal"
+              style={{ color: 'var(--color-on-surface-variant)' }}
+              data-testid="chart-builder-subtitle"
+            >
+              {CHART_BUILDER_SUBTITLE}
+            </p>
+          ) : null}
 
           <div className={isEditing ? 'flex flex-col gap-2' : 'sr-only'}>
             <label
@@ -439,39 +452,51 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
             />
           </div>
 
-          <div className="flex w-full flex-col gap-2" data-testid="chart-builder-types">
-            {CHART_BUILDER_TYPES.map((entry) => {
-              const selected = panelType === entry.type
-              return (
-                <button
-                  key={entry.type}
-                  type="button"
-                  data-testid={`chart-builder-type-${entry.type}`}
-                  aria-pressed={selected}
-                  disabled={loading}
-                  className="w-full cursor-pointer rounded-lg p-2.5 text-left text-[13px] leading-normal disabled:cursor-not-allowed disabled:opacity-50"
-                  style={{
-                    backgroundColor: selected
-                      ? 'var(--color-surface-container-high)'
-                      : 'var(--color-surface-container-low)',
-                    borderWidth: '1px',
-                    borderStyle: 'solid',
-                    borderColor: selected
-                      ? 'var(--color-primary)'
-                      : 'var(--color-surface-container-high)',
-                    color: 'var(--color-on-surface)',
-                    fontWeight: selected ? 500 : 400,
-                  }}
-                  onClick={() => setPanelType(entry.type)}
-                >
-                  {entry.label}
-                </button>
-              )
-            })}
-          </div>
+          {showChartBuilderTypeChips ? (
+            <div className="flex w-full flex-col gap-2" data-testid="chart-builder-types">
+              {CHART_BUILDER_TYPES.map((entry) => {
+                const selected = panelType === entry.type
+                const chipUnsupported = isUnsupportedPanelType(entry.type)
+                return (
+                  <button
+                    key={entry.type}
+                    type="button"
+                    data-testid={`chart-builder-type-${entry.type}`}
+                    aria-pressed={selected}
+                    disabled={loading || chipUnsupported}
+                    className="w-full cursor-pointer rounded-lg p-2.5 text-left text-[13px] leading-normal disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{
+                      backgroundColor: selected
+                        ? 'var(--color-surface-container-high)'
+                        : 'var(--color-surface-container-low)',
+                      borderWidth: '1px',
+                      borderStyle: 'solid',
+                      borderColor: selected
+                        ? 'var(--color-primary)'
+                        : 'var(--color-surface-container-high)',
+                      color: 'var(--color-on-surface)',
+                      fontWeight: selected ? 500 : 400,
+                    }}
+                    onClick={() => {
+                      if (chipUnsupported) return
+                      setPanelType(entry.type)
+                    }}
+                  >
+                    {entry.label}
+                  </button>
+                )
+              })}
+            </div>
+          ) : null}
 
-          <div className="sr-only">
-            <label htmlFor="panel-type">Panel Type</label>
+          <div className={showChartBuilderTypeChips ? 'sr-only' : 'flex flex-col gap-2'}>
+            <label
+              htmlFor="panel-type"
+              className="text-sm font-medium"
+              style={{ color: 'var(--color-on-surface)' }}
+            >
+              Panel Type
+            </label>
             <select
               id="panel-type"
               value={panelType}
@@ -494,7 +519,7 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
           </div>
 
           {needsDatasource && datasources.length > 0 ? (
-            <div className={hideDatasourcePicker ? 'sr-only' : undefined}>
+            <div>
               <label
                 htmlFor="panel-datasource"
                 className="mb-2 block text-sm font-medium"
@@ -646,21 +671,32 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
             </div>
           ) : null}
 
-          <button
-            type="submit"
-            data-testid="panel-edit-save-btn"
-            className="w-fit cursor-pointer rounded-lg p-2.5 text-[12px] font-semibold leading-normal disabled:cursor-not-allowed disabled:opacity-50"
-            style={{
-              backgroundColor: 'var(--color-primary)',
-              color: '#0B0D0F',
-            }}
-            disabled={loading}
-          >
-            {loading ? 'Saving...' : CHART_BUILDER_PIN_LABEL}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="w-fit cursor-pointer rounded-lg p-2.5 text-[12px] font-medium leading-normal"
+              style={{ color: 'var(--color-on-surface-variant)' }}
+              data-testid="panel-edit-cancel-btn"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              data-testid="panel-edit-save-btn"
+              className="w-fit cursor-pointer rounded-lg p-2.5 text-[12px] font-semibold leading-normal disabled:cursor-not-allowed disabled:opacity-50"
+              style={{
+                backgroundColor: 'var(--color-primary)',
+                color: 'var(--primary-foreground)',
+              }}
+              disabled={loading}
+            >
+              {loading ? 'Saving...' : chartBuilderPinLabel(selectedDatasource)}
+            </button>
+          </div>
         </div>
 
-        <ChartBuilderPreview typeLabel={chartBuilderTypeLabel(panelType)} />
+        <ChartBuilderPreview typeLabel={previewTypeLabel} />
       </form>
     </div>,
     document.body,

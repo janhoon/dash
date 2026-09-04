@@ -11,7 +11,7 @@ type ChartBuilderPreviewProps = {
 export function ChartBuilderPreview({ typeLabel }: ChartBuilderPreviewProps) {
   return (
     <section
-      className="flex h-full min-w-px flex-1 flex-col gap-3 overflow-hidden rounded-lg p-4"
+      className="flex h-full min-w-0 flex-1 flex-col gap-3 overflow-hidden rounded-lg p-4"
       style={{
         backgroundColor: 'var(--color-surface-container-low)',
         borderWidth: '1px',
@@ -42,7 +42,7 @@ export function ChartBuilderPreview({ typeLabel }: ChartBuilderPreviewProps) {
             className="min-w-0 flex-1 rounded-[2px]"
             style={{
               height: `${bar.height}px`,
-              backgroundColor: 'var(--color-primary)',
+              backgroundColor: 'var(--color-viz-0)',
             }}
           />
         ))}
