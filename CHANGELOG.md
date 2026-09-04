@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.23.0](https://github.com/aceobservability/ace/compare/v0.22.0...v0.23.0) (2026-09-04)
+
+
+### Features
+
+* **agent-dock:** refresh right dock to Figma 12:140 ([#440](https://github.com/aceobservability/ace/issues/440)) ([c7ce24e](https://github.com/aceobservability/ace/commit/c7ce24e9ea113f52991e7bd7eeee1c9cde790b6f))
+* **chart-builder:** match PanelEditModal to Figma 12:73 ([#441](https://github.com/aceobservability/ace/issues/441)) ([e677a46](https://github.com/aceobservability/ace/commit/e677a46bc7751e8ef8c9481d71003d7f104a3a54))
+
 ## [0.22.0](https://github.com/aceobservability/ace/compare/v0.21.0...v0.22.0) (2026-09-03)
 
 
