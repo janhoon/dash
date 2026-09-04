@@ -398,7 +398,10 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
           Cancel
         </button>
 
-        <div className="flex h-full w-[360px] shrink-0 flex-col gap-3 overflow-auto">
+        <div
+          className="flex h-full w-[360px] shrink-0 flex-col gap-3 overflow-auto"
+          data-testid="chart-builder-config"
+        >
           <h2
             id="panel-edit-title"
             className="m-0 text-[22px] font-semibold leading-normal"

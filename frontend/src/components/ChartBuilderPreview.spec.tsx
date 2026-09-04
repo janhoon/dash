@@ -18,8 +18,10 @@ describe('ChartBuilderPreview', () => {
 
     const bars = screen.getByTestId('chart-builder-preview-bars')
     expect(bars.children).toHaveLength(CHART_BUILDER_PREVIEW_BARS.length)
+    expect(bars.querySelector('svg, canvas, table')).toBeNull()
     const first = bars.children[0] as HTMLElement
     expect(first.style.backgroundColor).toBe('var(--color-primary)')
     expect(first.style.height).toBe('165px')
+    expect(first.textContent).toBe('')
   })
 })

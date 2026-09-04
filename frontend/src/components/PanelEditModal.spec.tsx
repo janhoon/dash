@@ -182,6 +182,10 @@ describe('PanelEditModal', () => {
       'rate(http_requests_total[5m])',
     )
 
+    const config = screen.getByTestId('chart-builder-config')
+    expect(config.className).toContain('w-[360px]')
+    expect(screen.getByTestId('chart-builder-preview').className).toContain('flex-1')
+
     const timeSeries = screen.getByTestId('chart-builder-type-line_chart')
     expect(timeSeries.textContent).toBe('Time series')
     expect(timeSeries.getAttribute('aria-pressed')).toBe('true')
@@ -191,6 +195,9 @@ describe('PanelEditModal', () => {
     expect(screen.getByTestId('chart-builder-type-table').textContent).toBe('Table')
     expect(screen.getByTestId('chart-builder-type-heatmap').textContent).toBe('Heatmap')
     expect(screen.getByTestId('chart-builder-type-stat').getAttribute('aria-pressed')).toBe('false')
+    expect(screen.getByTestId('chart-builder-type-stat').style.borderColor).toBe(
+      'var(--color-surface-container-high)',
+    )
 
     const pin = screen.getByTestId('panel-edit-save-btn')
     expect(pin.textContent).toBe('Pin to Victoria / prod')
@@ -203,7 +210,9 @@ describe('PanelEditModal', () => {
     expect(screen.getByTestId('chart-builder-preview-caption').textContent).toBe(
       'No decoration. The chart is the panel.',
     )
-    expect(screen.getByTestId('chart-builder-preview-bars').children).toHaveLength(16)
+    const bars = screen.getByTestId('chart-builder-preview-bars')
+    expect(bars.children).toHaveLength(16)
+    expect(bars.querySelector('svg, canvas, table')).toBeNull()
   })
 
   it('shows Edit panel title when editing', () => {
