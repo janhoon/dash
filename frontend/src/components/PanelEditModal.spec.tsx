@@ -126,6 +126,28 @@ vi.mock('@/hooks/useDatasources', () => ({
   useDatasources: () => ({ data: mockDatasources }),
 }))
 
+vi.mock('@/components/QueryBuilder', () => ({
+  QueryBuilder: ({
+    value,
+    onChange,
+    disabled,
+  }: {
+    value: string
+    onChange: (value: string) => void
+    disabled?: boolean
+  }) => (
+    <div data-testid="mock-query-builder">
+      <textarea
+        id="promql-query"
+        data-testid="promql-query-input"
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
+  ),
+}))
+
 vi.mock('@/components/LogQLQueryBuilder', () => ({
   LogQLQueryBuilder: ({
     value,
@@ -193,6 +215,7 @@ describe('PanelEditModal', () => {
     expect((screen.getByTestId('promql-query-input') as HTMLInputElement).value).toBe(
       'rate(http_requests_total[5m])',
     )
+    expect(screen.queryByTestId('mock-query-builder')).toBeNull()
 
     const config = screen.getByTestId('chart-builder-config')
     expect(config.className).toContain('w-[360px]')
@@ -248,6 +271,8 @@ describe('PanelEditModal', () => {
     }
     renderModal({ dashboardId, panel })
     expect(screen.getByRole('heading', { name: 'Edit panel' })).toBeTruthy()
+    expect(screen.getByTestId('panel-edit-save-btn').textContent).toBe('Save Changes')
+    expect(screen.getByTestId('mock-query-builder')).toBeTruthy()
   })
 
   it('requires a title when editing and does not update the panel', async () => {
@@ -287,6 +312,29 @@ describe('PanelEditModal', () => {
     const typeSelect = screen.getByTestId('panel-type-select')
     expect(typeSelect.closest('.sr-only')).toBeNull()
     expect((typeSelect as HTMLSelectElement).value).toBe('gauge')
+    expect(screen.getByTestId('chart-builder-preview-meta').textContent).toBe(
+      'Gauge · last 2 hours',
+    )
+  })
+
+  it('keeps a visible type select when editing a chart-builder panel', () => {
+    const panel: Panel = {
+      id: '1',
+      dashboard_id: dashboardId,
+      title: 'CPU Usage',
+      type: 'line_chart',
+      grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    }
+    renderModal({ dashboardId, panel })
+
+    expect(screen.getByTestId('chart-builder-types')).toBeTruthy()
+    const typeSelect = screen.getByTestId('panel-type-select')
+    expect(typeSelect.closest('.sr-only')).toBeNull()
+    fireEvent.change(typeSelect, { target: { value: 'gauge' } })
+    expect((typeSelect as HTMLSelectElement).value).toBe('gauge')
+    expect(screen.queryByTestId('chart-builder-types')).toBeNull()
     expect(screen.getByTestId('chart-builder-preview-meta').textContent).toBe(
       'Gauge · last 2 hours',
     )

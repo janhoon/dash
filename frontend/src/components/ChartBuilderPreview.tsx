@@ -33,7 +33,7 @@ export function ChartBuilderPreview({ typeLabel }: ChartBuilderPreviewProps) {
         </p>
       </div>
       <div
-        className="flex h-[420px] w-full items-end gap-[3px] overflow-hidden"
+        className="flex min-h-0 w-full flex-1 items-end gap-[3px] overflow-hidden"
         data-testid="chart-builder-preview-bars"
       >
         {CHART_BUILDER_PREVIEW_BARS.map((bar) => (

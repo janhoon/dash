@@ -36,6 +36,7 @@ import {
   toThreshold,
 } from '@/components/panelEdit/thresholdFields'
 import { ensurePanelTypesRegistered } from '@/components/panels/registerPanelTypes'
+import { QueryBuilder } from '@/components/QueryBuilder'
 import { useDatasources } from '@/hooks/useDatasources'
 import { useOrganization } from '@/hooks/useOrganization'
 import type { DataSource } from '@/types/datasource'
@@ -135,6 +136,7 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
   const panelTypeUnsupported = isUnsupportedPanelType(panelType)
   const showChartBuilderTypeChips =
     isChartBuilderType(panelType) && (isEditing ? !panelTypeUnsupported : true)
+  const hideFullTypeSelect = showChartBuilderTypeChips && !isEditing
 
   const selectedDatasource: DataSource | null = useMemo(
     () => datasources.find((ds) => ds.id === selectedDatasourceId) ?? null,
@@ -489,7 +491,7 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
             </div>
           ) : null}
 
-          <div className={showChartBuilderTypeChips ? 'sr-only' : 'flex flex-col gap-2'}>
+          <div className={hideFullTypeSelect ? 'sr-only' : 'flex flex-col gap-2'}>
             <label
               htmlFor="panel-type"
               className="text-sm font-medium"
@@ -602,6 +604,13 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
                   disabled={loading}
                   onSignalChange={handleNonTraceSignalChange}
                 />
+              ) : isEditing ? (
+                <QueryBuilder
+                  value={queryText}
+                  onChange={setQueryText}
+                  disabled={loading}
+                  datasourceId={selectedDatasourceId}
+                />
               ) : (
                 <input
                   id="promql-query"
@@ -691,7 +700,11 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
               }}
               disabled={loading}
             >
-              {loading ? 'Saving...' : chartBuilderPinLabel(selectedDatasource)}
+              {loading
+                ? 'Saving...'
+                : isEditing
+                  ? 'Save Changes'
+                  : chartBuilderPinLabel(selectedDatasource)}
             </button>
           </div>
         </div>
