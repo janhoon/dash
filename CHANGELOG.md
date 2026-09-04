@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.0](https://github.com/aceobservability/ace/compare/v0.21.0...v0.22.0) (2026-09-03)
+
+
+### Features
+
+* **explore:** refresh query editor, loading, and error ([#436](https://github.com/aceobservability/ace/issues/436)) ([d0639ff](https://github.com/aceobservability/ace/commit/d0639ffc0f0f89f743d1205e2928da4c5ec65713))
+
 ## [0.21.0](https://github.com/aceobservability/ace/compare/v0.20.0...v0.21.0) (2026-08-28)
 
 
