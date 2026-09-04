@@ -1,15 +1,27 @@
+import { QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as datasourceApi from '@/api/datasources'
 import * as panelApi from '@/api/panels'
 import { PanelEditModal } from '@/components/PanelEditModal'
+import { createTestQueryClient } from '@/test/renderWithProviders'
 import type { DataSource } from '@/types/datasource'
 import type { Panel } from '@/types/panel'
-import { createTestQueryClient } from '@/test/renderWithProviders'
 
 const mockDatasources: DataSource[] = [
+  {
+    id: 'ds-victoria-prod-1',
+    organization_id: 'org-1',
+    name: 'Victoria / prod',
+    type: 'victoriametrics',
+    url: 'http://localhost:8428',
+    is_default: false,
+    auth_type: 'none',
+    trace_id_field: 'trace_id',
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  },
   {
     id: 'ds-metrics-1',
     organization_id: 'org-1',
@@ -130,7 +142,7 @@ vi.mock('@/components/QueryBuilder', () => ({
         data-testid="promql-query-input"
         value={value}
         disabled={disabled}
-        onChange={event => onChange(event.target.value)}
+        onChange={(event) => onChange(event.target.value)}
       />
     </div>
   ),
@@ -154,7 +166,7 @@ vi.mock('@/components/LogQLQueryBuilder', () => ({
         data-testid="logql-query-input"
         value={value}
         disabled={disabled}
-        onChange={event => onChange(event.target.value)}
+        onChange={(event) => onChange(event.target.value)}
       />
     </div>
   ),
@@ -191,16 +203,63 @@ describe('PanelEditModal', () => {
     vi.spyOn(datasourceApi, 'fetchDataSourceLabels').mockResolvedValue(['job', 'service_name'])
   })
 
-  it('renders form fields for create flow', () => {
+  it('renders the Figma 12:73 create chart builder', () => {
     renderModal({ dashboardId })
     expect(screen.getByTestId('panel-edit-modal')).toBeTruthy()
-    expect(screen.getByTestId('panel-title-input')).toBeTruthy()
-    expect(screen.getByTestId('panel-type-select')).toBeTruthy()
-    expect(screen.getByTestId('mock-query-builder')).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'Add Panel' })).toBeTruthy()
+    expect(screen.getByTestId('chart-builder')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Add panel' })).toBeTruthy()
+    expect(screen.getByTestId('chart-builder-subtitle').textContent).toBe(
+      'One query. One chart. Then pin.',
+    )
+    expect(screen.getByTestId('promql-query-input')).toBeTruthy()
+    expect((screen.getByTestId('promql-query-input') as HTMLInputElement).value).toBe(
+      'rate(http_requests_total[5m])',
+    )
+    expect(screen.queryByTestId('mock-query-builder')).toBeNull()
+
+    const config = screen.getByTestId('chart-builder-config')
+    expect(config.className).toContain('w-[360px]')
+    expect(screen.getByTestId('chart-builder').className).toContain('min-[425px]:flex-row')
+    expect(screen.getByTestId('chart-builder-preview').className).toContain('flex-1')
+
+    const timeSeries = screen.getByTestId('chart-builder-type-line_chart')
+    expect(timeSeries.textContent).toBe('Time series')
+    expect(timeSeries.getAttribute('aria-pressed')).toBe('true')
+    expect(timeSeries.style.borderColor).toBe('var(--color-primary)')
+    expect(timeSeries.style.backgroundColor).toBe('var(--color-surface-container-high)')
+    expect(screen.getByTestId('chart-builder-type-stat').textContent).toBe('Stat')
+    expect(screen.getByTestId('chart-builder-type-table').textContent).toBe('Table')
+    expect(screen.getByTestId('chart-builder-type-heatmap').textContent).toBe('Heatmap')
+    expect((screen.getByTestId('chart-builder-type-heatmap') as HTMLButtonElement).disabled).toBe(
+      true,
+    )
+    expect(screen.getByTestId('chart-builder-type-stat').getAttribute('aria-pressed')).toBe('false')
+    expect(screen.getByTestId('chart-builder-type-stat').style.borderColor).toBe(
+      'var(--color-surface-container-high)',
+    )
+
+    const pin = screen.getByTestId('panel-edit-save-btn')
+    expect(pin.textContent).toBe('Pin panel')
+    expect(pin.style.backgroundColor).toBe('var(--color-primary)')
+    expect(pin.style.color).toBe('var(--primary-foreground)')
+
+    const datasource = screen.getByTestId('panel-datasource-select')
+    expect(datasource.closest('.sr-only')).toBeNull()
+    expect(screen.getByTestId('panel-edit-close-btn').className).not.toContain('sr-only')
+    expect(screen.getByTestId('panel-edit-cancel-btn').className).not.toContain('sr-only')
+
+    expect(screen.getByTestId('chart-builder-preview-meta').textContent).toBe(
+      'Time series · last 2 hours',
+    )
+    expect(screen.getByTestId('chart-builder-preview-caption').textContent).toBe(
+      'No decoration. The chart is the panel.',
+    )
+    const bars = screen.getByTestId('chart-builder-preview-bars')
+    expect(bars.children).toHaveLength(16)
+    expect(bars.querySelector('svg, canvas, table')).toBeNull()
   })
 
-  it('shows Edit Panel title when editing', () => {
+  it('shows Edit panel title when editing', () => {
     const panel: Panel = {
       id: '1',
       dashboard_id: dashboardId,
@@ -211,17 +270,158 @@ describe('PanelEditModal', () => {
       updated_at: '2024-01-01T00:00:00Z',
     }
     renderModal({ dashboardId, panel })
-    expect(screen.getByRole('heading', { name: 'Edit Panel' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Edit panel' })).toBeTruthy()
+    expect(screen.getByTestId('panel-edit-save-btn').textContent).toBe('Save Changes')
+    expect(screen.getByTestId('mock-query-builder')).toBeTruthy()
+  })
+
+  it('requires a title when editing and does not update the panel', async () => {
+    const existing: Panel = {
+      id: '1',
+      dashboard_id: dashboardId,
+      title: 'Existing Panel',
+      type: 'line_chart',
+      grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+      query: { promql: 'up' },
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    }
+    const updateSpy = vi.spyOn(panelApi, 'updatePanel')
+
+    renderModal({ dashboardId, panel: existing })
+    await userEvent.clear(screen.getByTestId('panel-title-input'))
+    await userEvent.click(screen.getByTestId('panel-edit-save-btn'))
+
+    expect(screen.getByText('Title is required')).toBeTruthy()
+    expect(updateSpy).not.toHaveBeenCalled()
+  })
+
+  it('keeps a visible type select when editing non-chart-builder panels', () => {
+    const panel: Panel = {
+      id: 'gauge-1',
+      dashboard_id: dashboardId,
+      title: 'CPU Gauge',
+      type: 'gauge',
+      grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    }
+    renderModal({ dashboardId, panel })
+
+    expect(screen.queryByTestId('chart-builder-types')).toBeNull()
+    const typeSelect = screen.getByTestId('panel-type-select')
+    expect(typeSelect.closest('.sr-only')).toBeNull()
+    expect((typeSelect as HTMLSelectElement).value).toBe('gauge')
+    expect(screen.getByTestId('chart-builder-preview-meta').textContent).toBe(
+      'Gauge · last 2 hours',
+    )
+  })
+
+  it('keeps a visible type select when editing a chart-builder panel', () => {
+    const panel: Panel = {
+      id: '1',
+      dashboard_id: dashboardId,
+      title: 'CPU Usage',
+      type: 'line_chart',
+      grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    }
+    renderModal({ dashboardId, panel })
+
+    expect(screen.getByTestId('chart-builder-types')).toBeTruthy()
+    const typeSelect = screen.getByTestId('panel-type-select')
+    expect(typeSelect.closest('.sr-only')).toBeNull()
+    fireEvent.change(typeSelect, { target: { value: 'gauge' } })
+    expect((typeSelect as HTMLSelectElement).value).toBe('gauge')
+    expect(screen.queryByTestId('chart-builder-types')).toBeNull()
+    expect(screen.getByTestId('chart-builder-preview-meta').textContent).toBe(
+      'Gauge · last 2 hours',
+    )
+  })
+
+  it('derives pin copy from the selected datasource', () => {
+    renderModal({ dashboardId })
+    expect(screen.getByTestId('panel-edit-save-btn').textContent).toBe('Pin panel')
+
+    fireEvent.change(screen.getByTestId('panel-datasource-select'), {
+      target: { value: 'ds-metrics-1' },
+    })
+    expect(screen.getByTestId('panel-edit-save-btn').textContent).toBe('Pin to Prometheus Main')
+
+    fireEvent.change(screen.getByTestId('panel-datasource-select'), {
+      target: { value: 'ds-victoria-prod-1' },
+    })
+    expect(screen.getByTestId('panel-edit-save-btn').textContent).toBe('Pin to Victoria / prod')
+  })
+
+  it('fails closed when Heatmap is selected', async () => {
+    vi.spyOn(panelApi, 'createPanel')
+    renderModal({ dashboardId })
+    fireEvent.change(screen.getByTestId('panel-type-select'), { target: { value: 'heatmap' } })
+    await userEvent.click(screen.getByTestId('panel-edit-save-btn'))
+    expect(screen.getByText('Heatmap is not supported')).toBeTruthy()
+    expect(panelApi.createPanel).not.toHaveBeenCalled()
+  })
+
+  it('saves an existing unsupported panel when the type is unchanged', async () => {
+    const existing: Panel = {
+      id: 'heatmap-1',
+      dashboard_id: dashboardId,
+      title: 'Existing Heatmap',
+      type: 'heatmap',
+      grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+      query: { promql: 'up' },
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    }
+    const updated = { ...existing, title: 'Renamed Heatmap' }
+    vi.spyOn(panelApi, 'updatePanel').mockResolvedValue(updated)
+
+    const { onSaved } = renderModal({ dashboardId, panel: existing })
+    const titleInput = screen.getByTestId('panel-title-input')
+    await userEvent.clear(titleInput)
+    await userEvent.type(titleInput, 'Renamed Heatmap')
+    await userEvent.click(screen.getByTestId('panel-edit-save-btn'))
+
+    await waitFor(() => {
+      expect(panelApi.updatePanel).toHaveBeenCalledWith('heatmap-1', {
+        title: 'Renamed Heatmap',
+        type: 'heatmap',
+        query: { promql: 'up' },
+      })
+    })
+    expect(screen.queryByText('Heatmap is not supported')).toBeNull()
+    expect(onSaved).toHaveBeenCalledWith(updated)
+  })
+
+  it('fails closed when an edit changes the type onto Heatmap', async () => {
+    const existing: Panel = {
+      id: '1',
+      dashboard_id: dashboardId,
+      title: 'Existing Panel',
+      type: 'line_chart',
+      grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    }
+    vi.spyOn(panelApi, 'updatePanel')
+
+    renderModal({ dashboardId, panel: existing })
+    fireEvent.change(screen.getByTestId('panel-type-select'), { target: { value: 'heatmap' } })
+    await userEvent.click(screen.getByTestId('panel-edit-save-btn'))
+    expect(screen.getByText('Heatmap is not supported')).toBeTruthy()
+    expect(panelApi.updatePanel).not.toHaveBeenCalled()
   })
 
   it('includes registry panel types with categories/status labels', () => {
     renderModal({ dashboardId })
     const typeSelect = screen.getByTestId('panel-type-select') as HTMLSelectElement
-    const optionTexts = Array.from(typeSelect.options).map(option => option.text)
+    const optionTexts = Array.from(typeSelect.options).map((option) => option.text)
     expect(optionTexts).toContain('Heatmap (not supported)')
     expect(optionTexts).toContain('Text')
-    expect(optionTexts.some(text => text.includes('not supported'))).toBe(true)
-    expect(optionTexts.some(text => text.includes('setup required'))).toBe(true)
+    expect(optionTexts.some((text) => text.includes('not supported'))).toBe(true)
+    expect(optionTexts.some((text) => text.includes('setup required'))).toBe(true)
   })
 
   it('emits close when cancel is clicked', async () => {
@@ -230,10 +430,41 @@ describe('PanelEditModal', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  it('shows error when title is empty', async () => {
-    renderModal({ dashboardId })
+  it('pins create with the default query as the title', async () => {
+    const created: Panel = {
+      id: '123',
+      dashboard_id: dashboardId,
+      title: 'rate(http_requests_total[5m])',
+      type: 'line_chart',
+      grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+      query: { promql: 'rate(http_requests_total[5m])' },
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    }
+    vi.spyOn(panelApi, 'createPanel').mockResolvedValue(created)
+
+    const { onSaved } = renderModal({ dashboardId })
     await userEvent.click(screen.getByTestId('panel-edit-save-btn'))
-    expect(screen.getByText('Title is required')).toBeTruthy()
+
+    await waitFor(() => {
+      expect(panelApi.createPanel).toHaveBeenCalledWith(dashboardId, {
+        title: 'rate(http_requests_total[5m])',
+        type: 'line_chart',
+        grid_pos: { x: 0, y: 0, w: 6, h: 4 },
+        query: { promql: 'rate(http_requests_total[5m])' },
+      })
+    })
+    expect(onSaved).toHaveBeenCalledWith(created)
+  })
+
+  it('selects a type chip and updates preview meta', async () => {
+    renderModal({ dashboardId })
+    await userEvent.click(screen.getByTestId('chart-builder-type-stat'))
+    expect(screen.getByTestId('chart-builder-type-stat').getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByTestId('chart-builder-type-line_chart').getAttribute('aria-pressed')).toBe(
+      'false',
+    )
+    expect(screen.getByTestId('chart-builder-preview-meta').textContent).toBe('Stat · last 2 hours')
   })
 
   it('creates panel with PromQL query and default grid size', async () => {
@@ -339,7 +570,7 @@ describe('PanelEditModal', () => {
     fireEvent.change(screen.getByTestId('panel-datasource-select'), {
       target: { value: 'ds-trace-1' },
     })
-    expect(screen.queryByTestId('mock-query-builder')).toBeNull()
+    expect(screen.queryByTestId('promql-query-input')).toBeNull()
     fireEvent.change(screen.getByTestId('panel-trace-service-input'), {
       target: { value: 'api' },
     })
@@ -386,7 +617,7 @@ describe('PanelEditModal', () => {
     })
 
     expect(screen.getByTestId('clickhouse-query-input')).toBeTruthy()
-    expect(screen.queryByTestId('mock-query-builder')).toBeNull()
+    expect(screen.queryByTestId('promql-query-input')).toBeNull()
 
     fireEvent.change(screen.getByTestId('clickhouse-signal-select'), {
       target: { value: 'logs' },
@@ -522,7 +753,7 @@ describe('PanelEditModal', () => {
     })
 
     expect(screen.getByTestId('mock-logql-builder')).toBeTruthy()
-    expect(screen.queryByTestId('mock-query-builder')).toBeNull()
+    expect(screen.queryByTestId('promql-query-input')).toBeNull()
     fireEvent.change(screen.getByTestId('logql-query-input'), {
       target: { value: '{job="api"} |= "error"' },
     })

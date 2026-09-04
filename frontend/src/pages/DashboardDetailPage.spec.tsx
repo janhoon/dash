@@ -27,16 +27,6 @@ vi.mock('react-grid-layout/legacy', () => ({
   ),
 }))
 
-vi.mock('@/components/QueryBuilder', () => ({
-  QueryBuilder: ({ value, onChange }: { value: string; onChange: (value: string) => void }) => (
-    <textarea
-      data-testid="promql-query-input"
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-    />
-  ),
-}))
-
 vi.mock('@/components/MonacoQueryEditor', () => ({
   MonacoQueryEditor: () => <div data-testid="mock-monaco" />,
 }))
@@ -283,7 +273,7 @@ describe('DashboardDetailPage', () => {
 
     await user.click(screen.getByTestId('dashboard-add-panel-btn'))
     expect(screen.getByTestId('panel-edit-modal')).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'Add Panel' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Add panel' })).toBeTruthy()
   })
 
   it('opens edit panel modal from panel edit button', async () => {
@@ -297,7 +287,7 @@ describe('DashboardDetailPage', () => {
     const editButtons = screen.getAllByTestId('panel-edit-btn')
     await user.click(editButtons[0]!)
     expect(screen.getByTestId('panel-edit-modal')).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'Edit Panel' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Edit panel' })).toBeTruthy()
     expect((screen.getByTestId('panel-title-input') as HTMLInputElement).value).toBe('CPU Usage')
   })
 

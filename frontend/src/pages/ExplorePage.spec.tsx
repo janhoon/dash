@@ -43,25 +43,6 @@ vi.mock('@/components/MonacoQueryEditor', () => ({
   ),
 }))
 
-vi.mock('@/components/QueryBuilder', () => ({
-  QueryBuilder: ({
-    value,
-    onChange,
-    disabled,
-  }: {
-    value: string
-    onChange: (value: string) => void
-    disabled?: boolean
-  }) => (
-    <input
-      data-testid="query-builder-mock"
-      value={value}
-      disabled={disabled}
-      onChange={(event) => onChange(event.target.value)}
-    />
-  ),
-}))
-
 vi.mock('@/components/LogQLQueryBuilder', () => ({
   LogQLQueryBuilder: ({
     value,
