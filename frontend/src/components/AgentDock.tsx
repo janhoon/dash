@@ -1,9 +1,11 @@
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { useKeyboardShortcutsStore } from '@/lib/keyboardShortcuts'
 import { useAiSidebarStore } from '@/stores/aiSidebarStore'
 
 export const AGENT_DOCK_WIDTH_PX = 380
 
-type AgentDockTurn =
+export type AgentDockTurn =
   | { role: 'user'; id: string; body: string }
   | { role: 'ace'; id: string; body: string; pinLabel?: string }
 
@@ -11,7 +13,7 @@ type AgentDockProps = {
   thread?: AgentDockTurn[]
 }
 
-const PLACEHOLDER_THREAD: AgentDockTurn[] = [
+export const PLACEHOLDER_THREAD: AgentDockTurn[] = [
   { role: 'user', id: 'you-p99', body: 'Why did p99 move after 16:00?' },
   {
     role: 'ace',
@@ -72,10 +74,38 @@ function AgentDockTurnView({ turn }: { turn: AgentDockTurn }) {
   }
 }
 
-export function AgentDock({ thread = PLACEHOLDER_THREAD }: AgentDockProps) {
-  const isOpen = useAiSidebarStore(state => state.isOpen)
+export function AgentDock({ thread = [] }: AgentDockProps) {
+  const isOpen = useAiSidebarStore((state) => state.isOpen)
+  const pendingContext = useAiSidebarStore((state) => state.pendingContext)
+  const consumePendingContext = useAiSidebarStore((state) => state.consumePendingContext)
+  const registerShortcut = useKeyboardShortcutsStore((state) => state.register)
+  const [pendingPreview, setPendingPreview] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isOpen) {
+      setPendingPreview(null)
+      return
+    }
+    if (!pendingContext) return
+    const pending = consumePendingContext()
+    if (pending?.message) setPendingPreview(pending.message)
+  }, [isOpen, pendingContext, consumePendingContext])
+
+  useEffect(() => {
+    if (!isOpen) return
+    return registerShortcut(
+      'Escape',
+      () => {
+        useAiSidebarStore.getState().close()
+      },
+      'Close agent dock',
+      'General',
+    )
+  }, [isOpen, registerShortcut])
 
   if (!isOpen) return null
+
+  const previewMessage = pendingPreview ?? pendingContext?.message ?? null
 
   return (
     <aside
@@ -106,14 +136,21 @@ export function AgentDock({ thread = PLACEHOLDER_THREAD }: AgentDockProps) {
         </p>
       </div>
 
-      {thread.map(turn => (
-        <AgentDockTurnView key={turn.id} turn={turn} />
-      ))}
-
-      <div className="min-h-px w-full flex-1" />
+      <div
+        data-testid="agent-dock-thread"
+        className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto"
+      >
+        {previewMessage ? (
+          <AgentDockTurnView turn={{ role: 'user', id: 'pending-context', body: previewMessage }} />
+        ) : null}
+        {thread.map((turn) => (
+          <AgentDockTurnView key={turn.id} turn={turn} />
+        ))}
+      </div>
 
       <input
         type="text"
+        readOnly
         aria-label="Ask about this board"
         placeholder="Ask about this board…"
         className="w-full shrink-0 rounded-lg border-0 outline-none placeholder:text-on-surface-variant"

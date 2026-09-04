@@ -124,6 +124,9 @@ describe('AppLayout', () => {
     expect(dock.style.width).toBe(`${AGENT_DOCK_WIDTH_PX}px`)
     expect(screen.queryByTestId('ai-fab')).toBeNull()
     expect(screen.getByRole('main').style.marginRight).toBe(`${AGENT_DOCK_WIDTH_PX}px`)
+    expect(screen.getByPlaceholderText('Ask about this board…')).toHaveProperty('readOnly', true)
+    expect(screen.queryByText('Why did p99 move after 16:00?')).toBeNull()
+    expect(screen.queryByText('Ace')).toBeNull()
   })
 
   it('toggles the agent dock with Cmd+J', async () => {
