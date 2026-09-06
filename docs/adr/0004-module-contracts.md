@@ -5,10 +5,10 @@ status: accepted
 # Module contracts for LLM and datasource adapters
 
 > **Implementation status:** Accepted. Contracts live in `backend/pkg/llm` and
-> `backend/pkg/datasource`. Anthropic is extracted to `ace-llm-anthropic`
-> ([#448](https://github.com/aceobservability/ace/issues/448)). Prometheus is
-> extracted to `ace-datasource-prometheus`
-> ([#449](https://github.com/aceobservability/ace/issues/449)). Remaining
+> `backend/pkg/datasource`. Anthropic is the first out-of-tree LLM
+> (`ace-llm-anthropic`, [#448](https://github.com/aceobservability/ace/issues/448)).
+> Prometheus is the first out-of-tree datasource (`ace-datasource-prometheus`,
+> [#449](https://github.com/aceobservability/ace/issues/449)). Remaining
 > `ace-llm-*` / `ace-datasource-*` extracts follow
 > [#446](https://github.com/aceobservability/ace/issues/446).
 
@@ -32,14 +32,14 @@ Do not import `internal/handlers` from an LLM module. Do not import
 ## In-tree wiring
 
 Remaining LLM factories live in `internal/handlers` and call `llm.RegisterLLM`
-from `init`. Anthropic lives in
-`github.com/aceobservability/ace-llm-anthropic` and registers from its own
-`init`. Ace blank-imports that module from `internal/handlers`. Remaining
-datasource factories live in `internal/datasource` and call
-`RegisterDatasource` from `init`. Prometheus lives in
-`ace-datasource-prometheus`. Ace's `init` registers type `prometheus` and
-injects `ssrf.DatasourceClient` (auth-wrapped) into `New(url, httpClient)`.
-HTTP handlers call `internal/datasource.NewClient` and `llm.New` /
+from `init`. Anthropic is the first out-of-tree LLM. Ace blank-imports
+`github.com/aceobservability/ace-llm-anthropic`, and that module's `init` calls
+`RegisterLLM("anthropic", New)`. Remaining datasource factories live in
+`internal/datasource` and call `RegisterDatasource` from `init`. Prometheus is
+the first out-of-tree datasource. `ace-datasource-prometheus` implements the
+contract. Ace's `init` registers type `prometheus` and injects
+`ssrf.DatasourceClient` (auth-wrapped) into `New(url, httpClient)`. HTTP
+handlers call `internal/datasource.NewClient` and `llm.New` /
 `llm.RequireKnown`. `datasource.NewClient` looks up `cfg.Type`. There is no
 parallel type argument.
 
