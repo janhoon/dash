@@ -4,6 +4,31 @@ title: "Changelog"
 
 # Changelog
 
+## [0.24.0](https://github.com/aceobservability/ace/compare/v0.23.0...v0.24.0) (2026-09-06)
+
+
+### Features
+
+* **backend:** add pkg/llm and RegisterDatasource contracts ([#453](https://github.com/aceobservability/ace/issues/453)) ([29e8965](https://github.com/aceobservability/ace/commit/29e896552f8a00560385baecc2e80eeddaa6e791))
+* **backend:** extract ClickHouse into ace-datasource-clickhouse ([#461](https://github.com/aceobservability/ace/issues/461)) ([6dc16a0](https://github.com/aceobservability/ace/commit/6dc16a042e5cfc946280fda2999c8ea69d2292aa))
+* **backend:** extract CloudWatch into ace-datasource-cloudwatch ([#464](https://github.com/aceobservability/ace/issues/464)) ([2cc5210](https://github.com/aceobservability/ace/commit/2cc52109a8c121f4af866c1b79529562af2eefd0))
+* **backend:** extract Elasticsearch into ace-datasource-elasticsearch ([#463](https://github.com/aceobservability/ace/issues/463)) ([6425031](https://github.com/aceobservability/ace/commit/6425031a8846db9e5a54e9e388570888ddd483f4))
+* **backend:** extract Prometheus into ace-datasource-prometheus ([#454](https://github.com/aceobservability/ace/issues/454)) ([5557c23](https://github.com/aceobservability/ace/commit/5557c230b60243fb63eb7f4611c8e40395ed1a88))
+* **backend:** extract Tempo and VictoriaTraces into modules ([#465](https://github.com/aceobservability/ace/issues/465)) ([49fac58](https://github.com/aceobservability/ace/commit/49fac58400a44918ef984ab2e216050bdb0f4a48))
+* **datasource:** extract Loki into ace-datasource-loki ([#460](https://github.com/aceobservability/ace/issues/460)) ([f1e66cb](https://github.com/aceobservability/ace/commit/f1e66cbbef6278efcc33f5a6366399aa99ec5ed1))
+* **datasource:** extract VictoriaLogs into ace-datasource-victorialogs ([#458](https://github.com/aceobservability/ace/issues/458)) ([b02d1bd](https://github.com/aceobservability/ace/commit/b02d1bd7bff23428161efcb86477dc96f9d0473b))
+* **datasource:** extract VMAlert and Alertmanager modules ([#457](https://github.com/aceobservability/ace/issues/457)) ([74286a4](https://github.com/aceobservability/ace/commit/74286a4eac021f293c77eeeba2b14754c83cfbd6))
+* **llm:** extract Anthropic into ace-llm-anthropic ([#455](https://github.com/aceobservability/ace/issues/455)) ([136e433](https://github.com/aceobservability/ace/commit/136e4330b57d8e92de0b2113ecbce6d20f22b3c2))
+* **llm:** extract Copilot into ace-llm-copilot ([#462](https://github.com/aceobservability/ace/issues/462)) ([f7863c4](https://github.com/aceobservability/ace/commit/f7863c40254c8e584e4b714f7ae314e9abf4617c))
+* **llm:** extract OpenAI-compat into ace-llm-openai-compat ([#459](https://github.com/aceobservability/ace/issues/459)) ([f338da7](https://github.com/aceobservability/ace/commit/f338da76e8908563af7d50821dbfb024aa8000b0))
+* **mcp-plugins:** match settings list to Figma 12:188 ([#444](https://github.com/aceobservability/ace/issues/444)) ([5595ef0](https://github.com/aceobservability/ace/commit/5595ef00036179eb2dd19d602f154e646f1ecbbb))
+
+
+### Refactoring
+
+* **backend:** delete leftover in-tree LLM/datasource copies ([#466](https://github.com/aceobservability/ace/issues/466)) ([7a0857b](https://github.com/aceobservability/ace/commit/7a0857b4e0d292edcafbe70021246daf40aad271))
+* **datasource:** extract VictoriaMetrics into ace-datasource-victoriametrics ([#456](https://github.com/aceobservability/ace/issues/456)) ([634dca2](https://github.com/aceobservability/ace/commit/634dca20614e683aa471207a94a38df225748180))
+
 ## [0.23.0](https://github.com/aceobservability/ace/compare/v0.22.0...v0.23.0) (2026-09-04)
 
 
