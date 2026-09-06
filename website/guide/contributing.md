@@ -53,5 +53,8 @@ client (+ AuthConfig for database). VictoriaMetrics is also
 out-of-tree (`github.com/aceobservability/ace-datasource-victoriametrics`).
 Type `victoriametrics` is registered from
 `backend/internal/datasource/register_victoriametrics.go` via the typed
+`register()` helper. Loki is also out-of-tree
+(`github.com/aceobservability/ace-datasource-loki`). Type `loki` is
+registered from `backend/internal/datasource/register_loki.go` via the typed
 `register()` helper. Ace owns `TestConnection` through
-`runHTTPConnectionCheck`. It does not call module `connect.go`.
+`runHTTPConnectionCheck` and `HTTPClient()`. It does not call module `connect.go`.
