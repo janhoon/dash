@@ -9,6 +9,7 @@ import (
 	"time"
 
 	acech "github.com/aceobservability/ace-datasource-clickhouse"
+	acecw "github.com/aceobservability/ace-datasource-cloudwatch"
 	acees "github.com/aceobservability/ace-datasource-elasticsearch"
 	aceloki "github.com/aceobservability/ace-datasource-loki"
 	aceprom "github.com/aceobservability/ace-datasource-prometheus"
@@ -137,8 +138,8 @@ func TestNewClient_CloudWatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if _, ok := client.(*CloudWatchClient); !ok {
-		t.Errorf("expected CloudWatchClient, got %T", client)
+	if _, ok := client.(*acecw.Client); !ok {
+		t.Errorf("expected *cloudwatch.Client from ace-datasource-cloudwatch, got %T", client)
 	}
 }
 
@@ -266,9 +267,9 @@ var (
 	_ SignalQueryClient = (*acech.Client)(nil)
 	_ connectionTester  = (*acech.Client)(nil)
 
-	_ Client            = (*CloudWatchClient)(nil)
-	_ SignalQueryClient = (*CloudWatchClient)(nil)
-	_ connectionTester  = (*CloudWatchClient)(nil)
+	_ Client            = (*acecw.Client)(nil)
+	_ SignalQueryClient = (*acecw.Client)(nil)
+	_ connectionTester  = (*acecw.Client)(nil)
 
 	_ Client            = (*acees.Client)(nil)
 	_ SignalQueryClient = (*acees.Client)(nil)
@@ -284,29 +285,3 @@ var (
 	_ connectionTester   = (*acevt.Client)(nil)
 	_ httpClientProvider = (*acevt.Client)(nil)
 )
-
-func TestDetectLogLevel(t *testing.T) {
-	tests := []struct {
-		labels map[string]string
-		line   string
-		want   string
-	}{
-		{map[string]string{"level": "ERROR"}, "some message", "error"},
-		{map[string]string{"severity": "Warning"}, "some message", "warning"},
-		{map[string]string{"severity": "Unspecified"}, "level=info msg=\"query\"", "info"},
-		{map[string]string{"severity": "Unspecified"}, "> level=info ts=2026-02-08T14:30:26Z msg=\"query\"", "info"},
-		{map[string]string{"severity_text": "ERROR2"}, "some message", "error"},
-		{map[string]string{}, "Error: something failed", "error"},
-		{map[string]string{}, "WARN: low disk space", "warning"},
-		{map[string]string{}, "INFO starting service", "info"},
-		{map[string]string{}, "DEBUG verbose output", "debug"},
-		{map[string]string{}, "just a regular log line", ""},
-	}
-
-	for _, tt := range tests {
-		got := detectLogLevel(tt.labels, tt.line)
-		if got != tt.want {
-			t.Errorf("detectLogLevel(%v, %q) = %q, want %q", tt.labels, tt.line, got, tt.want)
-		}
-	}
-}

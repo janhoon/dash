@@ -2,9 +2,9 @@
 //
 // External ace-datasource-* modules import
 // github.com/aceobservability/ace/backend/pkg/datasource and call
-// RegisterDatasource from init. In-tree adapters in internal/datasource
-// register the same way. Do not import internal/datasource or
-// internal/handlers from a module.
+// RegisterDatasource from init. Ace wires those factories from
+// internal/datasource (SSRF injection). Do not import internal/datasource
+// or internal/handlers from a module.
 package datasource
 
 import (

@@ -98,21 +98,6 @@ func TestApplyDataSourceAuth_InvalidType(t *testing.T) {
 	}
 }
 
-func TestDataSourceAuthHeader_Bearer(t *testing.T) {
-	ds := models.DataSource{
-		AuthType:   "bearer",
-		AuthConfig: []byte(`{"token":"ws-token"}`),
-	}
-
-	header, err := dataSourceAuthHeader(ds)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if header.Get("Authorization") != "Bearer ws-token" {
-		t.Fatalf("unexpected authorization header: %s", header.Get("Authorization"))
-	}
-}
-
 func TestDataSourceAuthRoundTripper_StampsBearer(t *testing.T) {
 	ds := models.DataSource{
 		URL:        "http://example.invalid/query",

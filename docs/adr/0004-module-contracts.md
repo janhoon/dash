@@ -5,33 +5,23 @@ status: accepted
 # Module contracts for LLM and datasource adapters
 
 > **Implementation status:** Accepted. Contracts live in `backend/pkg/llm` and
-> `backend/pkg/datasource`. Anthropic is the first out-of-tree LLM
-> (`ace-llm-anthropic`, [#448](https://github.com/aceobservability/ace/issues/448)).
-> OpenAI-compat (`openai`, `openrouter`, `ollama`, `custom`) is the second
-> (`ace-llm-openai-compat`, [#450](https://github.com/aceobservability/ace/issues/450)).
-> Copilot is the third (`ace-llm-copilot`, [#450](https://github.com/aceobservability/ace/issues/450)).
-> Prometheus is the first out-of-tree datasource (`ace-datasource-prometheus`,
-> [#449](https://github.com/aceobservability/ace/issues/449)). ClickHouse is
-> also out-of-tree (`ace-datasource-clickhouse`,
-> [#451](https://github.com/aceobservability/ace/issues/451),
-> [#461](https://github.com/aceobservability/ace/pull/461)). VictoriaMetrics
-> and VictoriaLogs are also out-of-tree (`ace-datasource-victoriametrics`,
-> `ace-datasource-victorialogs`,
-> [#451](https://github.com/aceobservability/ace/issues/451)). Loki is also
-> out-of-tree (`ace-datasource-loki`,
-> [#451](https://github.com/aceobservability/ace/issues/451)). Tempo and
-> VictoriaTraces are out-of-tree (`ace-datasource-tempo`,
-> `ace-datasource-victoriatraces`, [#451](https://github.com/aceobservability/ace/issues/451)),
-> sharing tracing helpers in `ace-datasource-tempo/tracing`. Elasticsearch
-> is also out-of-tree (`ace-datasource-elasticsearch`,
-> [#451](https://github.com/aceobservability/ace/issues/451)). CloudWatch is
-> also out-of-tree (`ace-datasource-cloudwatch`,
-> [#451](https://github.com/aceobservability/ace/issues/451)). VMAlert
-> (`ace-datasource-vmalert`) and Alertmanager (`ace-datasource-alertmanager`)
-> are out-of-tree connection-test clients
-> ([#451](https://github.com/aceobservability/ace/issues/451)). Remaining
-> `ace-llm-*` / `ace-datasource-*` extracts follow
-> [#446](https://github.com/aceobservability/ace/issues/446).
+> `backend/pkg/datasource`. Implementations live only in out-of-tree modules.
+> Ace has no in-tree LLM provider or datasource query-client implementations.
+>
+> LLM modules: `ace-llm-anthropic` ([#448](https://github.com/aceobservability/ace/issues/448)),
+> `ace-llm-openai-compat` (`openai`, `openrouter`, `ollama`, `custom`),
+> `ace-llm-copilot` ([#450](https://github.com/aceobservability/ace/issues/450)).
+>
+> Datasource modules: `ace-datasource-prometheus` ([#449](https://github.com/aceobservability/ace/issues/449)),
+> `ace-datasource-clickhouse`, `ace-datasource-victoriametrics`,
+> `ace-datasource-victorialogs`, `ace-datasource-loki`,
+> `ace-datasource-tempo`, `ace-datasource-victoriatraces` (shared tracing
+> helpers in `ace-datasource-tempo/tracing`),
+> `ace-datasource-elasticsearch`, `ace-datasource-cloudwatch`,
+> `ace-datasource-vmalert`, `ace-datasource-alertmanager`
+> ([#451](https://github.com/aceobservability/ace/issues/451)).
+>
+> Parent epic: [#446](https://github.com/aceobservability/ace/issues/446).
 
 Ace keeps LLM and datasource **contracts plus registries** in this repo.
 Adapters register from `init`. Construction is a registry lookup and fails
@@ -52,51 +42,39 @@ Do not import `internal/handlers` from an LLM module. Do not import
 
 ## Host wiring
 
-LLM adapters register from module `init`. Ace blank-imports
-`github.com/aceobservability/ace-llm-anthropic`, and that module's `init` calls
-`RegisterLLM("anthropic", New)`. OpenAI-compat is the second. Ace blank-imports
-`github.com/aceobservability/ace-llm-openai-compat`, and that module's `init`
-calls `RegisterLLM` for `openai`, `openrouter`, `ollama`, and `custom`. Copilot
-is the third. Ace blank-imports `github.com/aceobservability/ace-llm-copilot`,
-and that module's `init` calls `RegisterLLM("copilot", New)`.
-Remaining datasource factories live in
-`internal/datasource` and call `RegisterDatasource` from `init`. Prometheus,
-VictoriaMetrics, Loki, and VictoriaLogs are out-of-tree datasources.
-`ace-datasource-prometheus`, `ace-datasource-victoriametrics`,
-`ace-datasource-loki`, and
-`ace-datasource-victorialogs` implement the contract. Ace registers type
-`prometheus` from `internal/datasource/register.go`, type `victoriametrics`
-from `internal/datasource/register_victoriametrics.go`, type `loki` from
-`internal/datasource/register_loki.go`, and type
-`victorialogs` from `internal/datasource/register_victorialogs.go` via the
-typed `register()` helper, and injects `ssrf.DatasourceClient` (auth-wrapped)
-into `New(url, httpClient)`. ClickHouse is also out-of-tree
-(`ace-datasource-clickhouse`). Ace registers type `clickhouse` from
-`internal/datasource/register_clickhouse.go` and injects
-`ssrf.DatasourceClient` (auth-wrapped) plus `AuthConfig` (database) into
-`New(url, httpClient, authConfig)`. Tempo and VictoriaTraces are out-of-tree
-(`ace-datasource-tempo`, `ace-datasource-victoriatraces`). Ace registers type
-`tempo` from `backend/internal/datasource/register_tempo.go` and type
-`victoriatraces` from `backend/internal/datasource/register_victoriatraces.go`
-via the typed `register()` helper with a real import of `New(url, httpClient)`.
-Shared tracing helpers live in `ace-datasource-tempo/tracing`. Elasticsearch is
-also out-of-tree (`ace-datasource-elasticsearch`). Ace registers type
-`elasticsearch` from `internal/datasource/register_elasticsearch.go` via the
-typed `register()` helper and injects `ssrf.DatasourceClient` (auth-wrapped)
-plus `AuthConfig` (index/field settings) into `New(url, authConfig, httpClient)`.
-Ace injects SSRF via `newDatasourceHTTPClient` into `New(url, httpClient)`.
-CloudWatch is also out-of-tree (`ace-datasource-cloudwatch`). Ace registers type
-`cloudwatch` from `internal/datasource/register_cloudwatch.go` and injects a
-bare `ssrf.DatasourceClient` (no auth wrap: SDK SigV4 on dual-host metrics/logs)
-into `New(cfg, httpClient)`. Ace owns `TestConnection` for Prometheus,
-VictoriaMetrics, Loki, VictoriaLogs, ClickHouse, Tempo, VictoriaTraces, and
-Elasticsearch via
+Ace blank-imports LLM modules so each module `init` calls `RegisterLLM`:
+
+- `ace-llm-anthropic` registers `anthropic`
+- `ace-llm-openai-compat` registers `openai`, `openrouter`, `ollama`, `custom`
+- `ace-llm-copilot` registers `copilot`
+
+Ace does not construct those providers itself. HTTP handlers call `llm.New`
+and `llm.RequireKnown`.
+
+Ace registers query datasource types from `internal/datasource` via the typed
+`register()` helper and injects `ssrf.DatasourceClient` through
+`newDatasourceHTTPClient`:
+
+| Type | Register file | Module `New` |
+| --- | --- | --- |
+| `prometheus` | `register.go` | `New(url, httpClient)` |
+| `victoriametrics` | `register_victoriametrics.go` | `New(url, httpClient)` |
+| `loki` | `register_loki.go` | `New(url, httpClient)` |
+| `victorialogs` | `register_victorialogs.go` | `New(url, httpClient)` |
+| `tempo` | `register_tempo.go` | `New(url, httpClient)` |
+| `victoriatraces` | `register_victoriatraces.go` | `New(url, httpClient)` |
+| `clickhouse` | `register_clickhouse.go` | `New(url, httpClient, authConfig)` |
+| `elasticsearch` | `register_elasticsearch.go` | `New(url, authConfig, httpClient)` |
+| `cloudwatch` | `register_cloudwatch.go` | `New(cfg, httpClient)` with a bare `ssrf.DatasourceClient` (no auth wrap: SDK SigV4 on dual-host metrics/logs) |
+
+HTTP handlers call `internal/datasource.NewClient`. That looks up `cfg.Type`.
+There is no parallel type argument.
+
+Ace owns `TestConnection` for prometheus, victoriametrics, loki, victorialogs,
+clickhouse, tempo, victoriatraces, and elasticsearch via
 `runHTTPConnectionCheck` and `HTTPClient()` (`testRegisteredHTTPConnection`).
 It does not call those modules' `connect.go`. CloudWatch uses the module
-`TestConnection`. HTTP
-handlers call `internal/datasource.NewClient` and `llm.New` /
-`llm.RequireKnown`. `datasource.NewClient` looks up `cfg.Type`. There is no
-parallel type argument.
+`TestConnection`.
 
 `vmalert` and `alertmanager` are not query `Client` types. Ace does not
 `RegisterDatasource` for them. `ace-datasource-vmalert` and
