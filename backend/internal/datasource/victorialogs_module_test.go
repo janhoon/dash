@@ -19,20 +19,20 @@ func TestVictoriaLogsModule_QueryAndTestConnectionAgainstFixtureHTTP(t *testing.
 
 	var sawQuery, sawHealth, sawFieldNames, sawFieldValues bool
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/select/logsql/query":
+		switch r.URL.Path {
+		case "/select/logsql/query":
 			sawQuery = true
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `{"_msg":"boom","_time":"2026-02-08T12:00:00Z","service":"api","level":"error"}`+"\n")
-		case r.URL.Path == "/health":
+		case "/health":
 			sawHealth = true
 			w.WriteHeader(http.StatusOK)
 			_, _ = io.WriteString(w, "OK")
-		case r.URL.Path == "/select/logsql/field_names":
+		case "/select/logsql/field_names":
 			sawFieldNames = true
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `{"values":[{"value":"level"},{"value":"service"}]}`)
-		case r.URL.Path == "/select/logsql/field_values":
+		case "/select/logsql/field_values":
 			sawFieldValues = true
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = io.WriteString(w, `{"values":[{"value":"api"},{"value":"web"}]}`)
