@@ -10,9 +10,8 @@ import (
 )
 
 func init() {
-	dscontract.RegisterDatasource(string(models.DataSourcePrometheus), func(cfg dscontract.Config) (dscontract.Client, error) {
-		ds := dataSourceFromConfig(cfg)
-		return aceprom.New(cfg.URL, newDatasourceHTTPClient(ds, 30*time.Second))
+	register(models.DataSourcePrometheus, func(ds models.DataSource) (*aceprom.Client, error) {
+		return aceprom.New(ds.URL, newDatasourceHTTPClient(ds, 30*time.Second))
 	})
 	register(models.DataSourceVictoriaMetrics, NewVictoriaMetricsClient)
 	register(models.DataSourceLoki, NewLokiClient)
