@@ -7,6 +7,8 @@ status: accepted
 > **Implementation status:** Accepted. Contracts live in `backend/pkg/llm` and
 > `backend/pkg/datasource`. Anthropic is the first out-of-tree LLM
 > (`ace-llm-anthropic`, [#448](https://github.com/aceobservability/ace/issues/448)).
+> OpenAI-compat (`openai`, `openrouter`, `ollama`, `custom`) is the second
+> (`ace-llm-openai-compat`, [#450](https://github.com/aceobservability/ace/issues/450)).
 > Prometheus is the first out-of-tree datasource (`ace-datasource-prometheus`,
 > [#449](https://github.com/aceobservability/ace/issues/449)). VictoriaMetrics
 > is also out-of-tree (`ace-datasource-victoriametrics`,
@@ -36,7 +38,10 @@ Do not import `internal/handlers` from an LLM module. Do not import
 Remaining LLM factories live in `internal/handlers` and call `llm.RegisterLLM`
 from `init`. Anthropic is the first out-of-tree LLM. Ace blank-imports
 `github.com/aceobservability/ace-llm-anthropic`, and that module's `init` calls
-`RegisterLLM("anthropic", New)`. Remaining datasource factories live in
+`RegisterLLM("anthropic", New)`. OpenAI-compat is the second. Ace blank-imports
+`github.com/aceobservability/ace-llm-openai-compat`, and that module's `init`
+calls `RegisterLLM` for `openai`, `openrouter`, `ollama`, and `custom`.
+Remaining datasource factories live in
 `internal/datasource` and call `RegisterDatasource` from `init`. Prometheus and
 VictoriaMetrics are out-of-tree datasources. `ace-datasource-prometheus` and
 `ace-datasource-victoriametrics` implement the contract. Ace registers type

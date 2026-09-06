@@ -34,10 +34,14 @@ LLM modules import `github.com/aceobservability/ace/backend/pkg/llm`
 
 Anthropic is the first out-of-tree LLM. Ace blank-imports
 `github.com/aceobservability/ace-llm-anthropic` so the module `init` calls
-`RegisterLLM`. Prometheus and VictoriaMetrics are out-of-tree datasources
-(`github.com/aceobservability/ace-datasource-prometheus`,
-`github.com/aceobservability/ace-datasource-victoriametrics`). Ace registers
-each at `init` and injects the SSRF HTTP client. Type `victoriametrics` is
-registered from `backend/internal/datasource/register_victoriametrics.go`
-via the typed `register()` helper. Ace owns `TestConnection` through
+`RegisterLLM`. OpenAI-compat (`openai`, `openrouter`, `ollama`, `custom`) is
+the second. Ace blank-imports
+`github.com/aceobservability/ace-llm-openai-compat` so the module `init`
+registers those four types. Prometheus is the first out-of-tree datasource
+(`github.com/aceobservability/ace-datasource-prometheus`). Ace registers it
+at `init` and injects the SSRF HTTP client. VictoriaMetrics is also
+out-of-tree (`github.com/aceobservability/ace-datasource-victoriametrics`).
+Type `victoriametrics` is registered from
+`backend/internal/datasource/register_victoriametrics.go` via the typed
+`register()` helper. Ace owns `TestConnection` through
 `runHTTPConnectionCheck`. It does not call module `connect.go`.
