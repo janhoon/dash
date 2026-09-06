@@ -14,7 +14,6 @@ func init() {
 		return aceprom.New(ds.URL, newDatasourceHTTPClient(ds, 30*time.Second))
 	})
 	register(models.DataSourceCloudWatch, NewCloudWatchClient)
-	register(models.DataSourceElasticsearch, NewElasticsearchClient)
 }
 
 func register[T Client](typ models.DataSourceType, ctor func(models.DataSource) (T, error)) {

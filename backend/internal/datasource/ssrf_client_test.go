@@ -11,6 +11,7 @@ import (
 	"time"
 
 	acech "github.com/aceobservability/ace-datasource-clickhouse"
+	acees "github.com/aceobservability/ace-datasource-elasticsearch"
 	aceloki "github.com/aceobservability/ace-datasource-loki"
 	aceprom "github.com/aceobservability/ace-datasource-prometheus"
 	acetempo "github.com/aceobservability/ace-datasource-tempo"
@@ -242,9 +243,13 @@ func constructedDatasourceHTTPClients(t *testing.T) map[string]*http.Client {
 	if !ok {
 		t.Fatalf("expected *clickhouse.Client, got %T", ch)
 	}
-	es, err := NewElasticsearchClient(models.DataSource{URL: "http://127.0.0.1:9200", Type: models.DataSourceElasticsearch})
+	es, err := NewClient(testDS(models.DataSourceElasticsearch, "http://127.0.0.1:9200"))
 	if err != nil {
-		t.Fatalf("NewElasticsearchClient: %v", err)
+		t.Fatalf("NewClient elasticsearch: %v", err)
+	}
+	esClient, ok := es.(*acees.Client)
+	if !ok {
+		t.Fatalf("expected *elasticsearch.Client, got %T", es)
 	}
 	am, err := NewAlertManagerClient(models.DataSource{URL: "http://127.0.0.1:9093", Type: models.DataSourceAlertManager})
 	if err != nil {
@@ -264,7 +269,7 @@ func constructedDatasourceHTTPClients(t *testing.T) map[string]*http.Client {
 		"tempo":               tempo.HTTPClient(),
 		"victoriatraces":      vtraces.HTTPClient(),
 		"clickhouse":          chClient.HTTPClient(),
-		"elasticsearch":       es.httpClient,
+		"elasticsearch":       esClient.HTTPClient(),
 		"alertmanager":        am.HTTPClient(),
 		"vmalert":             vmalert.HTTPClient(),
 	}
@@ -343,7 +348,7 @@ func datasourceQueryFns() map[string]func(context.Context, string) error {
 			return err
 		},
 		"elasticsearch": func(ctx context.Context, baseURL string) error {
-			client, err := NewElasticsearchClient(models.DataSource{URL: baseURL, Type: models.DataSourceElasticsearch})
+			client, err := NewClient(testDS(models.DataSourceElasticsearch, baseURL))
 			if err != nil {
 				return err
 			}

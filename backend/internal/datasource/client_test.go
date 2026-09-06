@@ -9,6 +9,7 @@ import (
 	"time"
 
 	acech "github.com/aceobservability/ace-datasource-clickhouse"
+	acees "github.com/aceobservability/ace-datasource-elasticsearch"
 	aceloki "github.com/aceobservability/ace-datasource-loki"
 	aceprom "github.com/aceobservability/ace-datasource-prometheus"
 	acetempo "github.com/aceobservability/ace-datasource-tempo"
@@ -150,8 +151,8 @@ func TestNewClient_Elasticsearch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if _, ok := client.(*ElasticsearchClient); !ok {
-		t.Errorf("expected ElasticsearchClient, got %T", client)
+	if _, ok := client.(*acees.Client); !ok {
+		t.Errorf("expected *elasticsearch.Client from ace-datasource-elasticsearch, got %T", client)
 	}
 }
 
@@ -269,9 +270,9 @@ var (
 	_ SignalQueryClient = (*CloudWatchClient)(nil)
 	_ connectionTester  = (*CloudWatchClient)(nil)
 
-	_ Client            = (*ElasticsearchClient)(nil)
-	_ SignalQueryClient = (*ElasticsearchClient)(nil)
-	_ connectionTester  = (*ElasticsearchClient)(nil)
+	_ Client            = (*acees.Client)(nil)
+	_ SignalQueryClient = (*acees.Client)(nil)
+	_ connectionTester  = (*acees.Client)(nil)
 
 	_ Client             = (*acetempo.Client)(nil)
 	_ TracingClient      = (*acetempo.Client)(nil)
