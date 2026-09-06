@@ -22,29 +22,6 @@ func hashToken(token string) string {
 	return hex.EncodeToString(h[:])
 }
 
-// AIProvider defines the interface for AI model providers (OpenAI-compatible, Copilot, etc.)
-type AIProvider interface {
-	ListModels(ctx context.Context) ([]AIModel, error)
-	Chat(ctx context.Context, req ChatRequest, w http.ResponseWriter) error
-}
-
-// AIModel represents a model available from a provider.
-type AIModel struct {
-	ID       string                 `json:"id"`
-	Name     string                 `json:"name"`
-	Vendor   string                 `json:"vendor"`
-	Category string                 `json:"category"`
-	Meta     map[string]interface{} `json:"meta,omitempty"`
-}
-
-// ChatRequest represents an incoming chat completion request.
-type ChatRequest struct {
-	Model    string            `json:"model"`
-	Messages []json.RawMessage `json:"messages"`
-	Tools    []json.RawMessage `json:"tools,omitempty"`
-	Stream   bool              `json:"stream"`
-}
-
 // OpenAICompatibleProvider implements AIProvider for any OpenAI-compatible API
 // (OpenAI, Ollama, OpenRouter, vLLM, LiteLLM, etc.).
 //

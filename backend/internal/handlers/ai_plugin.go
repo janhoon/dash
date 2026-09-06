@@ -1,76 +1,31 @@
 package handlers
 
-import (
-	"errors"
-	"fmt"
-	"sync"
+import "github.com/aceobservability/ace/backend/pkg/llm"
+
+type (
+	AIProvider  = llm.AIProvider
+	AIModel     = llm.AIModel
+	ChatRequest = llm.ChatRequest
+	LLMConfig   = llm.LLMConfig
+	LLMFactory  = llm.LLMFactory
 )
 
-// LLMConfig is the in-process config passed to an LLM plugin factory.
-type LLMConfig struct {
-	BaseURL string
-	// APIKey is decrypted plaintext for openai/openrouter/ollama/custom/anthropic.
-	// For copilot it is still-encrypted GH token; CopilotProvider decrypts
-	// EncryptedGHToken on ListModels/Chat.
-	APIKey      string
-	DisplayName string
-}
+var ErrUnknownProviderType = llm.ErrUnknownProviderType
 
-// LLMFactory constructs an AIProvider from LLMConfig.
-type LLMFactory func(LLMConfig) (AIProvider, error)
-
-// ErrUnknownProviderType is returned when ai_providers.provider_type has no
-// registered factory. Callers must fail closed: never fall through to
-// OpenAI-compat.
-var ErrUnknownProviderType = errors.New("unknown provider_type")
-
-// pluginRegistry maps provider_type to factory.
-var pluginRegistry = struct {
-	mu sync.RWMutex
-	m  map[string]LLMFactory
-}{
-	m: map[string]LLMFactory{},
-}
-
-// RegisterLLM records a factory for provider_type.
 func RegisterLLM(providerType string, factory LLMFactory) {
-	if providerType == "" {
-		panic("RegisterLLM: empty provider_type")
-	}
-	if factory == nil {
-		panic("RegisterLLM: nil factory")
-	}
-	pluginRegistry.mu.Lock()
-	defer pluginRegistry.mu.Unlock()
-	pluginRegistry.m[providerType] = factory
-}
-
-func lookupLLM(providerType string) (LLMFactory, bool) {
-	pluginRegistry.mu.RLock()
-	defer pluginRegistry.mu.RUnlock()
-	f, ok := pluginRegistry.m[providerType]
-	return f, ok
+	llm.RegisterLLM(providerType, factory)
 }
 
 func unregisterLLM(providerType string) {
-	pluginRegistry.mu.Lock()
-	defer pluginRegistry.mu.Unlock()
-	delete(pluginRegistry.m, providerType)
+	llm.UnregisterLLM(providerType)
 }
 
 func newLLMProvider(providerType string, cfg LLMConfig) (AIProvider, error) {
-	factory, ok := lookupLLM(providerType)
-	if !ok {
-		return nil, fmt.Errorf("%w: %s", ErrUnknownProviderType, providerType)
-	}
-	return factory(cfg)
+	return llm.New(providerType, cfg)
 }
 
 func requireKnownLLMType(providerType string) error {
-	if _, ok := lookupLLM(providerType); !ok {
-		return fmt.Errorf("%w: %s", ErrUnknownProviderType, providerType)
-	}
-	return nil
+	return llm.RequireKnown(providerType)
 }
 
 func init() {
