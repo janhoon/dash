@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	aceprom "github.com/aceobservability/ace-datasource-prometheus"
+
 	"github.com/aceobservability/ace/backend/internal/models"
 	"github.com/aceobservability/ace/backend/internal/ssrf"
 	dscontract "github.com/aceobservability/ace/backend/pkg/datasource"
@@ -54,6 +56,16 @@ func TestConnection(ctx context.Context, ds models.DataSource) error {
 			return err
 		}
 		return runHTTPConnectionCheck(ctx, ds, client.client, []string{"/api/v2/status", "/api/v2/alerts", "/"})
+	case models.DataSourcePrometheus:
+		client, err := NewClient(ds)
+		if err != nil {
+			return err
+		}
+		prom, ok := client.(*aceprom.Client)
+		if !ok {
+			return fmt.Errorf("prometheus client type %T", client)
+		}
+		return runHTTPConnectionCheck(ctx, ds, prom.HTTPClient(), []string{"/-/healthy", "/api/v1/query?query=1", "/"})
 	default:
 		client, err := NewClient(ds)
 		if err != nil {

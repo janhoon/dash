@@ -7,8 +7,9 @@ import (
 	"sync"
 	"time"
 
+	prometheus "github.com/aceobservability/ace-datasource-prometheus/promclient"
+
 	"github.com/aceobservability/ace/backend/internal/ssrf"
-	"github.com/aceobservability/ace/backend/pkg/prometheus"
 )
 
 // CacheEntry holds cached data with expiration

@@ -4,9 +4,11 @@ status: accepted
 
 # Module contracts for LLM and datasource adapters
 
-> **Implementation status:** Accepted for the in-core contract path that
-> [#447](https://github.com/aceobservability/ace/issues/447) lands ahead of
-> out-of-tree `ace-llm-*` / `ace-datasource-*` modules ([#446](https://github.com/aceobservability/ace/issues/446)).
+> **Implementation status:** Accepted. Contracts live in `backend/pkg/llm` and
+> `backend/pkg/datasource`. Prometheus is extracted to
+> `ace-datasource-prometheus` ([#449](https://github.com/aceobservability/ace/issues/449)).
+> Remaining `ace-llm-*` / `ace-datasource-*` extracts follow
+> [#446](https://github.com/aceobservability/ace/issues/446).
 
 Ace keeps LLM and datasource **contracts plus registries** in this repo.
 Adapters register from `init`. Construction is a registry lookup and fails
@@ -28,15 +30,18 @@ Do not import `internal/handlers` from an LLM module. Do not import
 ## In-tree wiring
 
 LLM factories still live in `internal/handlers` and call `llm.RegisterLLM` from
-`init`. Datasource factories still live in `internal/datasource` and call
-`RegisterDatasource` from `init`. HTTP handlers call
-`internal/datasource.NewClient` and `llm.New` / `llm.RequireKnown`.
-`datasource.NewClient` looks up `cfg.Type`. There is no parallel type argument.
+`init`. Remaining datasource factories live in `internal/datasource` and call
+`RegisterDatasource` from `init`. Prometheus is the first out-of-tree adapter:
+`ace-datasource-prometheus` implements the contract; Ace's `init` registers
+type `prometheus` and injects `ssrf.DatasourceClient` (auth-wrapped) into
+`New(url, httpClient)`. HTTP handlers call `internal/datasource.NewClient` and
+`llm.New` / `llm.RequireKnown`. `datasource.NewClient` looks up `cfg.Type`.
+There is no parallel type argument.
 
 `vmalert` and `alertmanager` are not query `Client` types. `TestConnection`
 keeps a dedicated path for them.
 
 ## Out of scope
 
-Moving Anthropic, Prometheus, or any other adapter out of tree. WASM,
-go-plugin, or marketplace loading.
+Moving Anthropic or remaining adapters out of tree. WASM, go-plugin, or
+marketplace loading.

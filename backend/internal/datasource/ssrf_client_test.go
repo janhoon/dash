@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	aceprom "github.com/aceobservability/ace-datasource-prometheus"
+
 	"github.com/aceobservability/ace/backend/internal/models"
 	"github.com/aceobservability/ace/backend/internal/ssrf"
 )
@@ -165,9 +167,13 @@ func isOutboundPolicyError(err error) bool {
 func constructedDatasourceHTTPClients(t *testing.T) map[string]*http.Client {
 	t.Helper()
 
-	prom, err := NewPrometheusClient(testDS(models.DataSourcePrometheus, "http://127.0.0.1:9090"))
+	prom, err := NewClient(testDS(models.DataSourcePrometheus, "http://127.0.0.1:9090"))
 	if err != nil {
-		t.Fatalf("NewPrometheusClient: %v", err)
+		t.Fatalf("NewClient prometheus: %v", err)
+	}
+	promClient, ok := prom.(*aceprom.Client)
+	if !ok {
+		t.Fatalf("expected *prometheus.Client, got %T", prom)
 	}
 	vm, err := NewVictoriaMetricsClient(testDS(models.DataSourceVictoriaMetrics, "http://127.0.0.1:8428"))
 	if err != nil {
@@ -207,7 +213,7 @@ func constructedDatasourceHTTPClients(t *testing.T) map[string]*http.Client {
 	}
 
 	return map[string]*http.Client{
-		"prometheus":          prom.httpClient,
+		"prometheus":          promClient.HTTPClient(),
 		"victoriametrics":     vm.client,
 		"loki":                loki.client,
 		"victorialogs":        vlogs.client,
@@ -224,7 +230,7 @@ func constructedDatasourceHTTPClients(t *testing.T) map[string]*http.Client {
 func datasourceQueryFns() map[string]func(context.Context, string) error {
 	return map[string]func(context.Context, string) error{
 		"prometheus": func(ctx context.Context, baseURL string) error {
-			client, err := NewPrometheusClient(testDS(models.DataSourcePrometheus, baseURL))
+			client, err := NewClient(testDS(models.DataSourcePrometheus, baseURL))
 			if err != nil {
 				return err
 			}

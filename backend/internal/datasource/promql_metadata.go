@@ -10,9 +10,9 @@ import (
 	"strings"
 )
 
-// promqlMetadata is the PromQL labels/values/metric-names API shared by
-// Prometheus and VictoriaMetrics. Paths are /api/v1/labels and
-// /api/v1/label/{}/values — not vendor-specific.
+// promqlMetadata is the PromQL labels/values/metric-names API used by
+// VictoriaMetrics. Paths are /api/v1/labels and /api/v1/label/{}/values —
+// not vendor-specific. Prometheus metadata lives in ace-datasource-prometheus.
 type promqlMetadata struct {
 	baseURL string
 	client  *http.Client
