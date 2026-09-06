@@ -73,12 +73,12 @@ func TestVictoriaTracesModule_ServicesAndTestConnectionAgainstFixtureHTTP(t *tes
 
 	var sawHealth, sawServices bool
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.URL.Path == "/health":
+		switch r.URL.Path {
+		case "/health":
 			sawHealth = true
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte("OK"))
-		case r.URL.Path == "/select/jaeger/api/services":
+		case "/select/jaeger/api/services":
 			sawServices = true
 			_, _ = w.Write([]byte(`{"data":["frontend","worker"]}`))
 		default:
