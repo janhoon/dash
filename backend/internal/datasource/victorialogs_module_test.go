@@ -123,3 +123,53 @@ func TestVictoriaLogs_TestConnectionRejectsMetadataURL(t *testing.T) {
 		t.Fatalf("error %q, want datasource url rejected", err)
 	}
 }
+
+func TestVictoriaLogsModule_StreamAgainstFixtureHTTP(t *testing.T) {
+	t.Parallel()
+
+	var sawTail bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/select/logsql/tail" {
+			http.NotFound(w, r)
+			return
+		}
+		if r.Method != http.MethodPost {
+			t.Errorf("method=%s, want POST", r.Method)
+		}
+		sawTail = true
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"_msg":"hello","_time":"2026-02-08T12:00:00Z","service":"api"}`+"\n")
+	}))
+	t.Cleanup(srv.Close)
+
+	client, err := NewClient(models.DataSource{
+		Type: models.DataSourceVictoriaLogs,
+		URL:  srv.URL,
+	})
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	streamer, ok := client.(StreamClient)
+	if !ok {
+		t.Fatalf("registry client must implement StreamClient, got %T", client)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	var gotLine string
+	err = streamer.Stream(ctx, `service:api`, time.Time{}, 1, func(entry LogEntry) error {
+		gotLine = entry.Line
+		cancel()
+		return nil
+	})
+	if err != nil && ctx.Err() == nil {
+		t.Fatalf("Stream: %v", err)
+	}
+	if !sawTail {
+		t.Fatal("expected registry client to POST fixture /select/logsql/tail")
+	}
+	if gotLine != "hello" {
+		t.Fatalf("line=%q, want hello", gotLine)
+	}
+}
