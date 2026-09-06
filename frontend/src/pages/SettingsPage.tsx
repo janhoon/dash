@@ -76,10 +76,12 @@ export function SettingsPage() {
     }
   }, [orgId])
 
+  const needsOrgData = activeSection !== 'mcp'
+
   useEffect(() => {
-    if (activeSection === 'mcp') return
+    if (!needsOrgData) return
     void loadData()
-  }, [activeSection, loadData])
+  }, [needsOrgData, loadData])
 
   const isAdmin = org?.role === 'admin'
   const showSettingsTitle = activeSection !== 'mcp'
