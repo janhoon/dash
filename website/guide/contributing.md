@@ -60,8 +60,17 @@ registered from `backend/internal/datasource/register_loki.go` via the typed
 (`github.com/aceobservability/ace-datasource-victorialogs`). Type
 `victorialogs` is registered from
 `backend/internal/datasource/register_victorialogs.go` via the typed
-`register()` helper. Ace owns `TestConnection` through
-`runHTTPConnectionCheck` and `HTTPClient()`. It does not call module `connect.go`.
+`register()` helper. Tempo and VictoriaTraces are out-of-tree
+(`github.com/aceobservability/ace-datasource-tempo`,
+`github.com/aceobservability/ace-datasource-victoriatraces`). Types `tempo`
+and `victoriatraces` are registered from
+`backend/internal/datasource/register_tempo.go` and
+`backend/internal/datasource/register_victoriatraces.go` via the typed
+`register()` helper with a real import of `New(url, httpClient)`. Shared tracing
+helpers live in `ace-datasource-tempo/tracing`. Ace injects SSRF via
+`newDatasourceHTTPClient` into `New(url, httpClient)`. Ace owns `TestConnection`
+through `testRegisteredHTTPConnection` / `runHTTPConnectionCheck` and
+`HTTPClient()`. It does not call module `connect.go`.
 
 VMAlert (`github.com/aceobservability/ace-datasource-vmalert`) and
 Alertmanager (`github.com/aceobservability/ace-datasource-alertmanager`)

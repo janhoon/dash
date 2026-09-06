@@ -13,8 +13,10 @@ import (
 	acech "github.com/aceobservability/ace-datasource-clickhouse"
 	aceloki "github.com/aceobservability/ace-datasource-loki"
 	aceprom "github.com/aceobservability/ace-datasource-prometheus"
+	acetempo "github.com/aceobservability/ace-datasource-tempo"
 	acevl "github.com/aceobservability/ace-datasource-victorialogs"
 	acevm "github.com/aceobservability/ace-datasource-victoriametrics"
+	acevt "github.com/aceobservability/ace-datasource-victoriatraces"
 
 	"github.com/aceobservability/ace/backend/internal/models"
 	"github.com/aceobservability/ace/backend/internal/ssrf"
@@ -216,13 +218,21 @@ func constructedDatasourceHTTPClients(t *testing.T) map[string]*http.Client {
 	if !ok {
 		t.Fatalf("expected *victorialogs.Client, got %T", vlogsRaw)
 	}
-	tempo, err := NewTempoClient(models.DataSource{URL: "http://127.0.0.1:3200", Type: models.DataSourceTempo})
+	tempoClient, err := NewClient(models.DataSource{URL: "http://127.0.0.1:3200", Type: models.DataSourceTempo})
 	if err != nil {
-		t.Fatalf("NewTempoClient: %v", err)
+		t.Fatalf("NewClient tempo: %v", err)
 	}
-	vtraces, err := NewVictoriaTracesClient(models.DataSource{URL: "http://127.0.0.1:10428", Type: models.DataSourceVictoriaTraces})
+	tempo, ok := tempoClient.(*acetempo.Client)
+	if !ok {
+		t.Fatalf("expected *tempo.Client, got %T", tempoClient)
+	}
+	vtracesClient, err := NewClient(models.DataSource{URL: "http://127.0.0.1:10428", Type: models.DataSourceVictoriaTraces})
 	if err != nil {
-		t.Fatalf("NewVictoriaTracesClient: %v", err)
+		t.Fatalf("NewClient victoriatraces: %v", err)
+	}
+	vtraces, ok := vtracesClient.(*acevt.Client)
+	if !ok {
+		t.Fatalf("expected *victoriatraces.Client, got %T", vtracesClient)
 	}
 	ch, err := NewClient(models.DataSource{URL: "http://127.0.0.1:8123", Type: models.DataSourceClickHouse})
 	if err != nil {
@@ -251,8 +261,8 @@ func constructedDatasourceHTTPClients(t *testing.T) map[string]*http.Client {
 		"loki":                lokiClient.HTTPClient(),
 		"victorialogs":        vlogs.HTTPClient(),
 		"victorialogs_stream": vlogs.StreamHTTPClient(),
-		"tempo":               tempo.httpClient,
-		"victoriatraces":      vtraces.httpClient,
+		"tempo":               tempo.HTTPClient(),
+		"victoriatraces":      vtraces.HTTPClient(),
 		"clickhouse":          chClient.HTTPClient(),
 		"elasticsearch":       es.httpClient,
 		"alertmanager":        am.HTTPClient(),
@@ -301,19 +311,27 @@ func datasourceQueryFns() map[string]func(context.Context, string) error {
 			return err
 		},
 		"tempo": func(ctx context.Context, baseURL string) error {
-			client, err := NewTempoClient(models.DataSource{URL: baseURL, Type: models.DataSourceTempo})
+			client, err := NewClient(models.DataSource{URL: baseURL, Type: models.DataSourceTempo})
 			if err != nil {
 				return err
 			}
-			_, err = client.GetTrace(ctx, "abc")
+			tempo, ok := client.(TracingClient)
+			if !ok {
+				return fmt.Errorf("tempo client type %T", client)
+			}
+			_, err = tempo.GetTrace(ctx, "abc")
 			return err
 		},
 		"victoriatraces": func(ctx context.Context, baseURL string) error {
-			client, err := NewVictoriaTracesClient(models.DataSource{URL: baseURL, Type: models.DataSourceVictoriaTraces})
+			client, err := NewClient(models.DataSource{URL: baseURL, Type: models.DataSourceVictoriaTraces})
 			if err != nil {
 				return err
 			}
-			_, err = client.GetTrace(ctx, "abc")
+			vtraces, ok := client.(TracingClient)
+			if !ok {
+				return fmt.Errorf("victoriatraces client type %T", client)
+			}
+			_, err = vtraces.GetTrace(ctx, "abc")
 			return err
 		},
 		"clickhouse": func(ctx context.Context, baseURL string) error {

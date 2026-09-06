@@ -1,6 +1,9 @@
 package datasource
 
-import dscontract "github.com/aceobservability/ace/backend/pkg/datasource"
+import (
+	acetracing "github.com/aceobservability/ace-datasource-tempo/tracing"
+	dscontract "github.com/aceobservability/ace/backend/pkg/datasource"
+)
 
 type (
 	Client                  = dscontract.Client
@@ -18,6 +21,13 @@ type (
 	LogEntry                = dscontract.LogEntry
 	TraceSpan               = dscontract.TraceSpan
 	TraceLog                = dscontract.TraceLog
+	TracingClient           = acetracing.TracingClient
+	Trace                   = acetracing.Trace
+	TraceSummary            = acetracing.TraceSummary
+	TraceSearchRequest      = acetracing.TraceSearchRequest
+	TraceServiceGraph       = acetracing.TraceServiceGraph
+	TraceServiceNode        = acetracing.TraceServiceNode
+	TraceServiceEdge        = acetracing.TraceServiceEdge
 )
 
 var ErrUnknownType = dscontract.ErrUnknownType

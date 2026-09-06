@@ -60,6 +60,10 @@ func TestConnection(ctx context.Context, ds models.DataSource) error {
 		return testRegisteredHTTPConnection(ctx, ds, []string{"/ready", "/loki/api/v1/labels?limit=1", "/"})
 	case models.DataSourceVictoriaLogs:
 		return testRegisteredHTTPConnection(ctx, ds, []string{"/health", "/select/logsql/field_names?query=*", "/"})
+	case models.DataSourceTempo:
+		return testRegisteredHTTPConnection(ctx, ds, []string{"/ready", "/api/search?limit=1", "/"})
+	case models.DataSourceVictoriaTraces:
+		return testRegisteredHTTPConnection(ctx, ds, []string{"/health", "/ready", "/"})
 	default:
 		client, err := NewClient(ds)
 		if err != nil {

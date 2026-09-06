@@ -19,7 +19,10 @@ status: accepted
 > `ace-datasource-victorialogs`,
 > [#451](https://github.com/aceobservability/ace/issues/451)). Loki is also
 > out-of-tree (`ace-datasource-loki`,
-> [#451](https://github.com/aceobservability/ace/issues/451)). VMAlert
+> [#451](https://github.com/aceobservability/ace/issues/451)). Tempo and
+> VictoriaTraces are out-of-tree (`ace-datasource-tempo`,
+> `ace-datasource-victoriatraces`, [#451](https://github.com/aceobservability/ace/issues/451)),
+> sharing tracing helpers in `ace-datasource-tempo/tracing`. VMAlert
 > (`ace-datasource-vmalert`) and Alertmanager (`ace-datasource-alertmanager`)
 > are out-of-tree connection-test clients
 > ([#451](https://github.com/aceobservability/ace/issues/451)). Remaining
@@ -67,7 +70,13 @@ into `New(url, httpClient)`. ClickHouse is also out-of-tree
 (`ace-datasource-clickhouse`). Ace registers type `clickhouse` from
 `internal/datasource/register_clickhouse.go` and injects
 `ssrf.DatasourceClient` (auth-wrapped) plus `AuthConfig` (database) into
-`New(url, httpClient, authConfig)`. Ace owns `TestConnection` for those types via
+`New(url, httpClient, authConfig)`. Tempo and VictoriaTraces are out-of-tree
+(`ace-datasource-tempo`, `ace-datasource-victoriatraces`). Ace registers type
+`tempo` from `backend/internal/datasource/register_tempo.go` and type
+`victoriatraces` from `backend/internal/datasource/register_victoriatraces.go`
+via the typed `register()` helper with a real import of `New(url, httpClient)`.
+Shared tracing helpers live in `ace-datasource-tempo/tracing`. Ace owns
+`TestConnection` for those types via
 `runHTTPConnectionCheck` and `HTTPClient()` (`testRegisteredHTTPConnection`).
 It does not call module `connect.go`. HTTP
 handlers call `internal/datasource.NewClient` and `llm.New` /
