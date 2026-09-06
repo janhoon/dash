@@ -17,7 +17,6 @@ func init() {
 	register(models.DataSourceVictoriaLogs, NewVictoriaLogsClient)
 	register(models.DataSourceTempo, NewTempoClient)
 	register(models.DataSourceVictoriaTraces, NewVictoriaTracesClient)
-	register(models.DataSourceClickHouse, NewClickHouseClient)
 	register(models.DataSourceCloudWatch, NewCloudWatchClient)
 	register(models.DataSourceElasticsearch, NewElasticsearchClient)
 }

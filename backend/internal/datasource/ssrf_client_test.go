@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	acech "github.com/aceobservability/ace-datasource-clickhouse"
 	aceprom "github.com/aceobservability/ace-datasource-prometheus"
 	acevm "github.com/aceobservability/ace-datasource-victoriametrics"
 
@@ -200,9 +201,13 @@ func constructedDatasourceHTTPClients(t *testing.T) map[string]*http.Client {
 	if err != nil {
 		t.Fatalf("NewVictoriaTracesClient: %v", err)
 	}
-	ch, err := NewClickHouseClient(models.DataSource{URL: "http://127.0.0.1:8123", Type: models.DataSourceClickHouse})
+	ch, err := NewClient(models.DataSource{URL: "http://127.0.0.1:8123", Type: models.DataSourceClickHouse})
 	if err != nil {
-		t.Fatalf("NewClickHouseClient: %v", err)
+		t.Fatalf("NewClient clickhouse: %v", err)
+	}
+	chClient, ok := ch.(*acech.Client)
+	if !ok {
+		t.Fatalf("expected *clickhouse.Client, got %T", ch)
 	}
 	es, err := NewElasticsearchClient(models.DataSource{URL: "http://127.0.0.1:9200", Type: models.DataSourceElasticsearch})
 	if err != nil {
@@ -225,7 +230,7 @@ func constructedDatasourceHTTPClients(t *testing.T) map[string]*http.Client {
 		"victorialogs_stream": vlogs.streamClient,
 		"tempo":               tempo.httpClient,
 		"victoriatraces":      vtraces.httpClient,
-		"clickhouse":          ch.httpClient,
+		"clickhouse":          chClient.HTTPClient(),
 		"elasticsearch":       es.httpClient,
 		"alertmanager":        am.client,
 		"vmalert":             vmalert.client,
@@ -289,7 +294,7 @@ func datasourceQueryFns() map[string]func(context.Context, string) error {
 			return err
 		},
 		"clickhouse": func(ctx context.Context, baseURL string) error {
-			client, err := NewClickHouseClient(models.DataSource{URL: baseURL, Type: models.DataSourceClickHouse})
+			client, err := NewClient(testDS(models.DataSourceClickHouse, baseURL))
 			if err != nil {
 				return err
 			}
