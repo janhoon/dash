@@ -37,7 +37,7 @@ type connectionTester interface {
 
 // NewClient creates a datasource client based on the datasource type.
 func NewClient(ds models.DataSource) (Client, error) {
-	return dscontract.NewClient(string(ds.Type), configFromDataSource(ds))
+	return dscontract.NewClient(configFromDataSource(ds))
 }
 
 func TestConnection(ctx context.Context, ds models.DataSource) error {

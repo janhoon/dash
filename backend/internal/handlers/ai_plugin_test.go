@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/aceobservability/ace/backend/internal/crypto"
+	"github.com/aceobservability/ace/backend/pkg/llm"
 )
 
 type probeProvider struct {
@@ -21,7 +22,7 @@ type probeProvider struct {
 }
 
 func TestNewLLMProvider_UnknownTypeFailsClosed(t *testing.T) {
-	p, err := newLLMProvider("nope", LLMConfig{
+	p, err := llm.New("nope", LLMConfig{
 		BaseURL:     "https://api.openai.com/v1",
 		APIKey:      "sk-should-not-be-used",
 		DisplayName: "Nope",
@@ -38,7 +39,7 @@ func TestNewLLMProvider_UnknownTypeFailsClosed(t *testing.T) {
 }
 
 func TestNewLLMProvider_AnthropicRegistered(t *testing.T) {
-	p, err := newLLMProvider("anthropic", LLMConfig{
+	p, err := llm.New("anthropic", LLMConfig{
 		BaseURL:     "https://api.anthropic.com",
 		APIKey:      "sk-ant",
 		DisplayName: "Anthropic",
@@ -79,13 +80,13 @@ func TestNewLLMProvider_OpenAICompatListsAndChats(t *testing.T) {
 
 	for _, providerType := range []string{"openai", "openrouter", "ollama", "custom"} {
 		t.Run(providerType, func(t *testing.T) {
-			p, err := newLLMProvider(providerType, LLMConfig{
+			p, err := llm.New(providerType, LLMConfig{
 				BaseURL:     server.URL,
 				APIKey:      "test-api-key",
 				DisplayName: providerType,
 			})
 			if err != nil {
-				t.Fatalf("newLLMProvider(%q): %v", providerType, err)
+				t.Fatalf("llm.New(%q): %v", providerType, err)
 			}
 			if _, ok := p.(*OpenAICompatibleProvider); !ok {
 				t.Fatalf("expected *OpenAICompatibleProvider, got %T", p)
@@ -115,7 +116,7 @@ func TestNewLLMProvider_OpenAICompatListsAndChats(t *testing.T) {
 }
 
 func TestNewLLMProvider_CopilotRegistered(t *testing.T) {
-	p, err := newLLMProvider("copilot", LLMConfig{APIKey: "encrypted-gh-token"})
+	p, err := llm.New("copilot", LLMConfig{APIKey: "encrypted-gh-token"})
 	if err != nil {
 		t.Fatalf("copilot should be registered: %v", err)
 	}
@@ -263,12 +264,12 @@ func TestInstantiateDBProvider_OpenAIDecryptsAPIKey(t *testing.T) {
 
 func TestRegisterLLM_DispatchUsesRegisteredFactory(t *testing.T) {
 	const providerType = "probe-dispatch"
-	RegisterLLM(providerType, func(cfg LLMConfig) (AIProvider, error) {
+	llm.RegisterLLM(providerType, func(cfg LLMConfig) (AIProvider, error) {
 		return &probeProvider{id: cfg.DisplayName}, nil
 	})
-	t.Cleanup(func() { unregisterLLM(providerType) })
+	t.Cleanup(func() { llm.UnregisterLLM(providerType) })
 
-	p, err := newLLMProvider(providerType, LLMConfig{DisplayName: "probe-one"})
+	p, err := llm.New(providerType, LLMConfig{DisplayName: "probe-one"})
 	if err != nil {
 		t.Fatalf("dispatch registered type: %v", err)
 	}
@@ -316,10 +317,10 @@ func TestChat_UnknownProviderType_Returns400(t *testing.T) {
 func TestChat_RegisteredTypeIsDispatched(t *testing.T) {
 	const providerType = "probe-chat-dispatch"
 	mock := &mockAIProvider{chatBody: `{"choices":[{"index":0,"delta":{"content":"from-probe"}}]}`}
-	RegisterLLM(providerType, func(LLMConfig) (AIProvider, error) {
+	llm.RegisterLLM(providerType, func(LLMConfig) (AIProvider, error) {
 		return mock, nil
 	})
-	t.Cleanup(func() { unregisterLLM(providerType) })
+	t.Cleanup(func() { llm.UnregisterLLM(providerType) })
 
 	h := NewAIHandler(nil, nil)
 	h.testProviderRow = &providerRow{
@@ -356,13 +357,13 @@ func TestChat_RegisteredTypeIsDispatched(t *testing.T) {
 }
 
 func TestRequireKnownLLMType(t *testing.T) {
-	if err := requireKnownLLMType("openai"); err != nil {
+	if err := llm.RequireKnown("openai"); err != nil {
 		t.Errorf("openai should be known: %v", err)
 	}
-	if err := requireKnownLLMType("anthropic"); err != nil {
+	if err := llm.RequireKnown("anthropic"); err != nil {
 		t.Errorf("anthropic should be known: %v", err)
 	}
-	if err := requireKnownLLMType("nope"); !errors.Is(err, ErrUnknownProviderType) {
+	if err := llm.RequireKnown("nope"); !errors.Is(err, ErrUnknownProviderType) {
 		t.Errorf("nope should fail closed, got %v", err)
 	}
 }

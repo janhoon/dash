@@ -83,3 +83,27 @@ func TestRequireKnown(t *testing.T) {
 		t.Fatalf("registered type should be known: %v", err)
 	}
 }
+
+func TestRegisterLLM_DuplicatePanics(t *testing.T) {
+	const providerType = "probe-dup-llm"
+	factory := func(LLMConfig) (AIProvider, error) { return &stubProvider{id: providerType}, nil }
+	RegisterLLM(providerType, factory)
+	t.Cleanup(func() { UnregisterLLM(providerType) })
+
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic on duplicate RegisterLLM")
+			return
+		}
+		got, ok := r.(string)
+		if !ok {
+			t.Fatalf("panic type %T, want string", r)
+		}
+		want := "RegisterLLM: provider_type already registered: " + providerType
+		if got != want {
+			t.Fatalf("panic %q, want %q", got, want)
+		}
+	}()
+	RegisterLLM(providerType, factory)
+}

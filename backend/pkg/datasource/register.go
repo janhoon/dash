@@ -42,6 +42,9 @@ func RegisterDatasource(typ string, factory Factory) {
 	}
 	registry.mu.Lock()
 	defer registry.mu.Unlock()
+	if _, exists := registry.m[typ]; exists {
+		panic(fmt.Sprintf("RegisterDatasource: type already registered: %s", typ))
+	}
 	registry.m[typ] = factory
 }
 
@@ -60,10 +63,11 @@ func UnregisterDatasource(typ string) {
 }
 
 // NewClient constructs a client from the registry. Unknown types fail closed.
-func NewClient(typ string, cfg Config) (Client, error) {
-	factory, ok := lookup(typ)
+// cfg.Type is the registry key.
+func NewClient(cfg Config) (Client, error) {
+	factory, ok := lookup(cfg.Type)
 	if !ok {
-		return nil, fmt.Errorf("%w: %s", ErrUnknownType, typ)
+		return nil, fmt.Errorf("%w: %s", ErrUnknownType, cfg.Type)
 	}
 	return factory(cfg)
 }

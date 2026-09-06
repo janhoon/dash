@@ -23,6 +23,10 @@ func register[T Client](typ models.DataSourceType, ctor func(models.DataSource) 
 	})
 }
 
+// dataSourceFromConfig and configFromDataSource map the module Config, not the
+// stored row. ID, OrganizationID, IsDefault, LinkedTraceDatasourceID, CreatedAt,
+// and UpdatedAt are omitted on purpose. After a registry round-trip, constructors
+// must not rely on those fields.
 func dataSourceFromConfig(cfg dscontract.Config) models.DataSource {
 	return models.DataSource{
 		Name:         cfg.Name,

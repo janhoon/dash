@@ -1,7 +1,9 @@
 package datasource
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"net/url"
 	"testing"
@@ -177,25 +179,51 @@ func TestNewClient_VMAlertAndAlertManagerFailClosed(t *testing.T) {
 
 func TestRegisterDatasource_DispatchUsesRegisteredFactory(t *testing.T) {
 	const typ = "probe-internal-datasource"
+	wantName := "probe-one"
+	wantURL := "http://localhost:9090"
+	wantAuthType := "bearer"
+	wantAuthConfig := json.RawMessage(`{"token":"t"}`)
+	wantTraceID := "trace_id"
+
+	var got dscontract.Config
 	dscontract.RegisterDatasource(typ, func(cfg dscontract.Config) (dscontract.Client, error) {
+		got = cfg
 		return &probeQueryClient{name: cfg.Name}, nil
 	})
 	t.Cleanup(func() { dscontract.UnregisterDatasource(typ) })
 
 	client, err := NewClient(models.DataSource{
-		Type: models.DataSourceType(typ),
-		Name: "probe-one",
-		URL:  "http://localhost:9090",
+		Type:         models.DataSourceType(typ),
+		Name:         wantName,
+		URL:          wantURL,
+		AuthType:     wantAuthType,
+		AuthConfig:   wantAuthConfig,
+		TraceIDField: wantTraceID,
 	})
 	if err != nil {
 		t.Fatalf("dispatch registered type: %v", err)
 	}
-	got, ok := client.(*probeQueryClient)
+	gotClient, ok := client.(*probeQueryClient)
 	if !ok {
 		t.Fatalf("expected *probeQueryClient, got %T", client)
 	}
-	if got.name != "probe-one" {
-		t.Errorf("factory did not receive Config, name=%q", got.name)
+	if gotClient.name != wantName {
+		t.Errorf("factory did not receive Config.Name, name=%q", gotClient.name)
+	}
+	if got.Type != typ {
+		t.Errorf("Type=%q, want %q", got.Type, typ)
+	}
+	if got.URL != wantURL {
+		t.Errorf("URL=%q, want %q", got.URL, wantURL)
+	}
+	if got.AuthType != wantAuthType {
+		t.Errorf("AuthType=%q, want %q", got.AuthType, wantAuthType)
+	}
+	if !bytes.Equal(got.AuthConfig, wantAuthConfig) {
+		t.Errorf("AuthConfig=%s, want %s", got.AuthConfig, wantAuthConfig)
+	}
+	if got.TraceIDField != wantTraceID {
+		t.Errorf("TraceIDField=%q, want %q", got.TraceIDField, wantTraceID)
 	}
 }
 

@@ -32,6 +32,9 @@ func RegisterLLM(providerType string, factory LLMFactory) {
 	}
 	pluginRegistry.mu.Lock()
 	defer pluginRegistry.mu.Unlock()
+	if _, exists := pluginRegistry.m[providerType]; exists {
+		panic(fmt.Sprintf("RegisterLLM: provider_type already registered: %s", providerType))
+	}
 	pluginRegistry.m[providerType] = factory
 }
 

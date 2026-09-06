@@ -18,7 +18,7 @@ needs one. There is no runtime loader.
 | Module family | Import | Register | Construct |
 | --- | --- | --- | --- |
 | LLM | `github.com/aceobservability/ace/backend/pkg/llm` | `RegisterLLM` | `llm.New` |
-| Datasource | `github.com/aceobservability/ace/backend/pkg/datasource` | `RegisterDatasource` | `datasource.NewClient` |
+| Datasource | `github.com/aceobservability/ace/backend/pkg/datasource` | `RegisterDatasource` | `datasource.NewClient` (lookup `cfg.Type`) |
 
 Do not import `internal/handlers` from an LLM module. Do not import
 `internal/datasource` from a datasource module.
@@ -27,11 +27,11 @@ Do not import `internal/handlers` from an LLM module. Do not import
 
 ## In-tree wiring
 
-LLM factories still live in `internal/handlers` and call `RegisterLLM` from
+LLM factories still live in `internal/handlers` and call `llm.RegisterLLM` from
 `init`. Datasource factories still live in `internal/datasource` and call
-`RegisterDatasource` from `init`. HTTP handlers keep calling
-`internal/datasource.NewClient` and the existing LLM helpers. Those functions
-are thin lookups over the `pkg` registries.
+`RegisterDatasource` from `init`. HTTP handlers call
+`internal/datasource.NewClient` and `llm.New` / `llm.RequireKnown`.
+`datasource.NewClient` looks up `cfg.Type`. There is no parallel type argument.
 
 `vmalert` and `alertmanager` are not query `Client` types. `TestConnection`
 keeps a dedicated path for them.
