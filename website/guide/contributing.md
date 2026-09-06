@@ -28,3 +28,10 @@ Five canonical triage roles mapped 1:1 to default label strings. See `docs/agent
 ### Domain docs
 
 Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+### Module contracts
+
+LLM modules import `github.com/aceobservability/ace/backend/pkg/llm`
+(`RegisterLLM`, `AIProvider`). Datasource modules import
+`github.com/aceobservability/ace/backend/pkg/datasource`
+(`RegisterDatasource`, `Client`). See `docs/adr/0004-module-contracts.md`.
