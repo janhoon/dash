@@ -5,7 +5,7 @@ go 1.25.13
 require (
 	github.com/aceobservability/ace-datasource-alertmanager v0.0.0-20260906163148-8d3946559cb3
 	github.com/aceobservability/ace-datasource-clickhouse v0.0.0-20260906163719-50ae73a9eb08
-	github.com/aceobservability/ace-datasource-cloudwatch v0.0.0-20260906164135-bdaaed43878f
+	github.com/aceobservability/ace-datasource-cloudwatch v0.0.0-20260906172818-0294316bc790
 	github.com/aceobservability/ace-datasource-elasticsearch v0.0.0-20260906164000-5cbd818f642b
 	github.com/aceobservability/ace-datasource-loki v0.0.0-20260906165404-06f9efcc1ccd
 	github.com/aceobservability/ace-datasource-prometheus v0.0.0-20260906152221-4b460476c203
