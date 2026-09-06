@@ -64,6 +64,8 @@ func TestConnection(ctx context.Context, ds models.DataSource) error {
 		return testRegisteredHTTPConnection(ctx, ds, []string{"/ready", "/api/search?limit=1", "/"})
 	case models.DataSourceVictoriaTraces:
 		return testRegisteredHTTPConnection(ctx, ds, []string{"/health", "/ready", "/"})
+	case models.DataSourceElasticsearch:
+		return testRegisteredHTTPConnection(ctx, ds, []string{"/_cluster/health", "/_cat/indices?format=json&h=index&bytes=b", "/"})
 	default:
 		client, err := NewClient(ds)
 		if err != nil {

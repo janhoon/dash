@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-// Timestamp and metric helpers still used by the in-tree Elasticsearch client
-// until that adapter is extracted (#451). The ClickHouse query Client lives in
+// Timestamp and metric helpers used by ClickHouse query-result conversion tests.
+// The ClickHouse query Client lives in
 // github.com/aceobservability/ace-datasource-clickhouse.
 
 var clickHouseTimestampColumns = []string{"timestamp", "time", "ts", "datetime", "date", "_time", "event_time"}
