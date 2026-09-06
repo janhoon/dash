@@ -4,6 +4,7 @@ go 1.25.13
 
 require (
 	github.com/aceobservability/ace-datasource-prometheus v0.0.0-20260906152221-4b460476c203
+	github.com/aceobservability/ace-datasource-victoriametrics v0.0.0-20260906162925-9dc8e06dd775
 	github.com/aceobservability/ace-llm-anthropic v0.0.0-20260906160347-542e9f4acdea
 	github.com/alicebob/miniredis/v2 v2.38.0
 	github.com/aws/aws-sdk-go-v2 v1.45.1

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	aceprom "github.com/aceobservability/ace-datasource-prometheus"
+	acevm "github.com/aceobservability/ace-datasource-victoriametrics"
 
 	"github.com/aceobservability/ace/backend/internal/models"
 	"github.com/aceobservability/ace/backend/internal/ssrf"
@@ -66,6 +67,16 @@ func TestConnection(ctx context.Context, ds models.DataSource) error {
 			return fmt.Errorf("prometheus client type %T", client)
 		}
 		return runHTTPConnectionCheck(ctx, ds, prom.HTTPClient(), []string{"/-/healthy", "/api/v1/query?query=1", "/"})
+	case models.DataSourceVictoriaMetrics:
+		client, err := NewClient(ds)
+		if err != nil {
+			return err
+		}
+		vm, ok := client.(*acevm.Client)
+		if !ok {
+			return fmt.Errorf("victoriametrics client type %T", client)
+		}
+		return runHTTPConnectionCheck(ctx, ds, vm.HTTPClient(), []string{"/health", "/api/v1/query?query=1", "/"})
 	default:
 		client, err := NewClient(ds)
 		if err != nil {

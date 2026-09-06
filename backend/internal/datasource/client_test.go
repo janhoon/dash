@@ -10,6 +10,7 @@ import (
 	"time"
 
 	aceprom "github.com/aceobservability/ace-datasource-prometheus"
+	acevm "github.com/aceobservability/ace-datasource-victoriametrics"
 
 	"github.com/aceobservability/ace/backend/internal/models"
 	dscontract "github.com/aceobservability/ace/backend/pkg/datasource"
@@ -46,8 +47,8 @@ func TestNewClient_VictoriaMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if _, ok := client.(*VictoriaMetricsClient); !ok {
-		t.Errorf("expected VictoriaMetricsClient, got %T", client)
+	if _, ok := client.(*acevm.Client); !ok {
+		t.Errorf("expected *victoriametrics.Client from ace-datasource-victoriametrics, got %T", client)
 	}
 }
 
@@ -236,11 +237,11 @@ var (
 	_ MetricNamesClient       = (*aceprom.Client)(nil)
 	_ connectionTester        = (*aceprom.Client)(nil)
 
-	_ Client                  = (*VictoriaMetricsClient)(nil)
-	_ MetricLabelsClient      = (*VictoriaMetricsClient)(nil)
-	_ MetricLabelValuesClient = (*VictoriaMetricsClient)(nil)
-	_ MetricNamesClient       = (*VictoriaMetricsClient)(nil)
-	_ connectionTester        = (*VictoriaMetricsClient)(nil)
+	_ Client                  = (*acevm.Client)(nil)
+	_ MetricLabelsClient      = (*acevm.Client)(nil)
+	_ MetricLabelValuesClient = (*acevm.Client)(nil)
+	_ MetricNamesClient       = (*acevm.Client)(nil)
+	_ connectionTester        = (*acevm.Client)(nil)
 
 	_ Client            = (*LokiClient)(nil)
 	_ StreamClient      = (*LokiClient)(nil)
