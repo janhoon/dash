@@ -4,6 +4,8 @@ github.com/aceobservability/ace-datasource-alertmanager v0.0.0-20260906163148-8d
 github.com/aceobservability/ace-datasource-alertmanager v0.0.0-20260906163148-8d3946559cb3/go.mod h1:4D+MMjwJPaeYLO9JisGNszMAQZWoGhDJNaQ1VXi4fbg=
 github.com/aceobservability/ace-datasource-clickhouse v0.0.0-20260906163719-50ae73a9eb08 h1:KewOO9sOBIgtgjqGgsNFmEO38LQ1oJJ52FYoigeDYVU=
 github.com/aceobservability/ace-datasource-clickhouse v0.0.0-20260906163719-50ae73a9eb08/go.mod h1:IGOryUVPXD/57vxdvqKYZ0ywr2YOy0A3tpe3yBUWAHc=
+github.com/aceobservability/ace-datasource-cloudwatch v0.0.0-20260906172818-0294316bc790 h1:C7oxxUul7/+oVoGbzBUAIbfsPVzhuSMS6Z5hRLZ1xBE=
+github.com/aceobservability/ace-datasource-cloudwatch v0.0.0-20260906172818-0294316bc790/go.mod h1:wJuVMXyBNG74qYV7h+OYlLlP3ZVDMMRKfx3T7zMl+bM=
 github.com/aceobservability/ace-datasource-elasticsearch v0.0.0-20260906164000-5cbd818f642b h1:WEICzvqfq7kup7oEmK1bw1wcd7oR2LzWIev1Ue3ktOk=
 github.com/aceobservability/ace-datasource-elasticsearch v0.0.0-20260906164000-5cbd818f642b/go.mod h1:BtZts7KkdtrkHrNifDZ6PvC/X8I1VNutMX4V/Pq8H6Y=
 github.com/aceobservability/ace-datasource-loki v0.0.0-20260906165404-06f9efcc1ccd h1:REgwrZrcYQg+vgR7w9mMzeezPC0rl9C5D8pfw+4eJdg=

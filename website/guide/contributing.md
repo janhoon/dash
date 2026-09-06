@@ -75,9 +75,16 @@ Type `elasticsearch` is registered from
 and VictoriaTraces use `New(url, httpClient)`; ClickHouse uses
 `New(url, httpClient, authConfig)`; Elasticsearch uses
 `New(url, authConfig, httpClient)` (`authConfig` carries index/field settings).
-Ace injects SSRF via `newDatasourceHTTPClient` into those factories. Ace owns
-`TestConnection` through `testRegisteredHTTPConnection` / `runHTTPConnectionCheck`
-and `HTTPClient()`. It does not call module `connect.go`.
+Ace injects SSRF via `newDatasourceHTTPClient` into those factories.
+CloudWatch is also out-of-tree
+(`github.com/aceobservability/ace-datasource-cloudwatch`). Type `cloudwatch`
+is registered from `backend/internal/datasource/register_cloudwatch.go`.
+Ace injects a bare `ssrf.DatasourceClient` (no auth wrap: SDK SigV4, dual-host
+metrics/logs). Ace owns `TestConnection` for Prometheus, VictoriaMetrics,
+ClickHouse, Loki, VictoriaLogs, Tempo, VictoriaTraces, and Elasticsearch
+through `testRegisteredHTTPConnection` / `runHTTPConnectionCheck` and
+`HTTPClient()`. It does not call those modules' `connect.go`. CloudWatch
+`TestConnection` uses the module method.
 
 VMAlert (`github.com/aceobservability/ace-datasource-vmalert`) and
 Alertmanager (`github.com/aceobservability/ace-datasource-alertmanager`)

@@ -23,7 +23,7 @@ check plus Go's default `http.Client`.
 | Seam | Trust model | Typical targets |
 |------|-------------|-----------------|
 | **Grafana / untrusted URL** | User-supplied URL in a request (import/connect). Must not reach the cluster or cloud metadata. | Public Grafana hosts |
-| **Configured datasource** | Operator-configured observability backends. Private/in-cluster URLs are required. | Prometheus, Loki, Victoria*, Tempo, ES, ClickHouse, Alertmanager, … |
+| **Configured datasource** | Operator-configured observability backends. Private/in-cluster URLs are required. | Prometheus, VictoriaMetrics, CloudWatch, Loki, Victoria*, Tempo, ES, ClickHouse, Alertmanager, … |
 | **AI provider** | Org-admin configured OpenAI-compatible `base_url`. Local Ollama on loopback is required; RFC1918 cluster IPs are not the intended default. | `api.openai.com`, `localhost`/`127.0.0.1` Ollama, public gateways |
 | **Org SSO identity provider** | Operator-configured public IdP (Google, Microsoft, Okta). Browser redirects to the IdP; Ace's backend then calls token / userinfo / OIDC discovery. On-prem/private Okta is **not** a product need. | `accounts.google.com`, `login.microsoftonline.com`, `*.okta.com` |
 

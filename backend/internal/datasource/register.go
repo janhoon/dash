@@ -13,7 +13,6 @@ func init() {
 	register(models.DataSourcePrometheus, func(ds models.DataSource) (*aceprom.Client, error) {
 		return aceprom.New(ds.URL, newDatasourceHTTPClient(ds, 30*time.Second))
 	})
-	register(models.DataSourceCloudWatch, NewCloudWatchClient)
 }
 
 func register[T Client](typ models.DataSourceType, ctor func(models.DataSource) (T, error)) {
