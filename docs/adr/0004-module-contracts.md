@@ -9,6 +9,7 @@ status: accepted
 > (`ace-llm-anthropic`, [#448](https://github.com/aceobservability/ace/issues/448)).
 > OpenAI-compat (`openai`, `openrouter`, `ollama`, `custom`) is the second
 > (`ace-llm-openai-compat`, [#450](https://github.com/aceobservability/ace/issues/450)).
+> Copilot is the third (`ace-llm-copilot`, [#450](https://github.com/aceobservability/ace/issues/450)).
 > Prometheus is the first out-of-tree datasource (`ace-datasource-prometheus`,
 > [#449](https://github.com/aceobservability/ace/issues/449)). VictoriaMetrics
 > is also out-of-tree (`ace-datasource-victoriametrics`,
@@ -33,14 +34,15 @@ Do not import `internal/handlers` from an LLM module. Do not import
 
 `internal/` is not a stable path for other Go modules. `pkg/` is.
 
-## In-tree wiring
+## Host wiring
 
-Remaining LLM factories live in `internal/handlers` and call `llm.RegisterLLM`
-from `init`. Anthropic is the first out-of-tree LLM. Ace blank-imports
+LLM adapters register from module `init`. Ace blank-imports
 `github.com/aceobservability/ace-llm-anthropic`, and that module's `init` calls
 `RegisterLLM("anthropic", New)`. OpenAI-compat is the second. Ace blank-imports
 `github.com/aceobservability/ace-llm-openai-compat`, and that module's `init`
-calls `RegisterLLM` for `openai`, `openrouter`, `ollama`, and `custom`.
+calls `RegisterLLM` for `openai`, `openrouter`, `ollama`, and `custom`. Copilot
+is the third. Ace blank-imports `github.com/aceobservability/ace-llm-copilot`,
+and that module's `init` calls `RegisterLLM("copilot", New)`.
 Remaining datasource factories live in
 `internal/datasource` and call `RegisterDatasource` from `init`. Prometheus and
 VictoriaMetrics are out-of-tree datasources. `ace-datasource-prometheus` and
@@ -63,4 +65,4 @@ module import cycle. Do not add a nested `pkg/llm` module for this.
 
 ## Out of scope
 
-Moving remaining adapters out of tree. WASM, go-plugin, or marketplace loading.
+WASM, go-plugin, or marketplace loading.

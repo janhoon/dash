@@ -6,8 +6,7 @@ import (
 	"net/http"
 )
 
-// AIProvider is the LLM module contract. In-tree providers and future
-// ace-llm-* modules implement this interface.
+// AIProvider is the LLM module contract.
 type AIProvider interface {
 	ListModels(ctx context.Context) ([]AIModel, error)
 	Chat(ctx context.Context, req ChatRequest, w http.ResponseWriter) error
@@ -34,7 +33,7 @@ type ChatRequest struct {
 type LLMConfig struct {
 	BaseURL string
 	// APIKey is decrypted plaintext for openai/openrouter/ollama/custom/anthropic.
-	// For copilot it is still-encrypted GH token; CopilotProvider decrypts
+	// For copilot it is still-encrypted GH token; the copilot module decrypts
 	// EncryptedGHToken on ListModels/Chat.
 	APIKey      string
 	DisplayName string

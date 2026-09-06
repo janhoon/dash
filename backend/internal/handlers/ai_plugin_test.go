@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	anthropic "github.com/aceobservability/ace-llm-anthropic"
+	copilot "github.com/aceobservability/ace-llm-copilot"
 	openaicompat "github.com/aceobservability/ace-llm-openai-compat"
 
 	"github.com/aceobservability/ace/backend/internal/crypto"
@@ -123,9 +124,9 @@ func TestNewLLMProvider_CopilotRegistered(t *testing.T) {
 	if err != nil {
 		t.Fatalf("copilot should be registered: %v", err)
 	}
-	cp, ok := p.(*CopilotProvider)
+	cp, ok := p.(*copilot.Provider)
 	if !ok {
-		t.Fatalf("expected *CopilotProvider, got %T", p)
+		t.Fatalf("expected *copilot.Provider, got %T", p)
 	}
 	if cp.EncryptedGHToken != "encrypted-gh-token" {
 		t.Errorf("expected EncryptedGHToken from LLMConfig.APIKey, got %q", cp.EncryptedGHToken)
@@ -150,9 +151,9 @@ func TestInstantiateDBProvider_CopilotKeepsCiphertext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("copilot DB path must not decrypt API key: %v", err)
 	}
-	cp, ok := p.(*CopilotProvider)
+	cp, ok := p.(*copilot.Provider)
 	if !ok {
-		t.Fatalf("expected *CopilotProvider, got %T", p)
+		t.Fatalf("expected *copilot.Provider, got %T", p)
 	}
 	if cp.EncryptedGHToken != ciphertext {
 		t.Errorf("expected ciphertext EncryptedGHToken, got %q", cp.EncryptedGHToken)
@@ -199,23 +200,18 @@ func TestInstantiateDBProvider_CopilotEncryptedKeyListsAndChats(t *testing.T) {
 		APIKey:       &enc,
 	}
 
-	copilotTokenCache.Range(func(key, value any) bool {
-		copilotTokenCache.Delete(key)
-		return true
-	})
-
 	p, _, err := instantiateDBProvider(row)
 	if err != nil {
 		t.Fatalf("instantiateDBProvider: %v", err)
 	}
-	cp, ok := p.(*CopilotProvider)
+	cp, ok := p.(*copilot.Provider)
 	if !ok {
-		t.Fatalf("expected *CopilotProvider, got %T", p)
+		t.Fatalf("expected *copilot.Provider, got %T", p)
 	}
 	if cp.EncryptedGHToken != enc {
 		t.Fatal("EncryptedGHToken must still be the stored ciphertext")
 	}
-	cp.tokenEndpoint = tokenServer.URL + "/copilot_internal/v2/token"
+	cp.TokenEndpoint = tokenServer.URL + "/copilot_internal/v2/token"
 
 	models, err := cp.ListModels(context.Background())
 	if err != nil {
@@ -236,6 +232,52 @@ func TestInstantiateDBProvider_CopilotEncryptedKeyListsAndChats(t *testing.T) {
 	if !strings.Contains(rr.Body.String(), `"content":"ok"`) {
 		t.Fatalf("chat body missing content, got %s", rr.Body.String())
 	}
+}
+
+func encryptTestToken(t *testing.T, plaintext string) string {
+	t.Helper()
+	enc, err := crypto.EncryptToken(plaintext)
+	if err != nil {
+		t.Fatalf("failed to encrypt test token: %v", err)
+	}
+	return enc
+}
+
+func copilotModelsPayload() string {
+	return `{
+		"data": [
+			{
+				"id": "gpt-4o",
+				"name": "GPT-4o",
+				"vendor": "openai",
+				"model_picker_enabled": true,
+				"model_picker_category": "chat",
+				"preview": false,
+				"policy": {"state": "enabled"},
+				"supported_endpoints": ["/chat/completions"]
+			},
+			{
+				"id": "claude-sonnet-4",
+				"name": "Claude Sonnet 4",
+				"vendor": "anthropic",
+				"model_picker_enabled": true,
+				"model_picker_category": "chat",
+				"preview": false,
+				"policy": {"state": "enabled"},
+				"supported_endpoints": ["/chat/completions"]
+			},
+			{
+				"id": "disabled-model",
+				"name": "Disabled Model",
+				"vendor": "test",
+				"model_picker_enabled": false,
+				"model_picker_category": "chat",
+				"preview": false,
+				"policy": {"state": "enabled"},
+				"supported_endpoints": ["/chat/completions"]
+			}
+		]
+	}`
 }
 
 func TestInstantiateDBProvider_OpenAIDecryptsAPIKey(t *testing.T) {
@@ -365,6 +407,9 @@ func TestRequireKnownLLMType(t *testing.T) {
 	}
 	if err := llm.RequireKnown("anthropic"); err != nil {
 		t.Errorf("anthropic should be known: %v", err)
+	}
+	if err := llm.RequireKnown("copilot"); err != nil {
+		t.Errorf("copilot should be known: %v", err)
 	}
 	if err := llm.RequireKnown("nope"); !errors.Is(err, ErrUnknownProviderType) {
 		t.Errorf("nope should fail closed, got %v", err)

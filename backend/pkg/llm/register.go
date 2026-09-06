@@ -1,8 +1,7 @@
 // Package llm is the stable import path for Ace LLM module contracts.
 //
 // External ace-llm-* modules import github.com/aceobservability/ace/backend/pkg/llm
-// and call RegisterLLM from init. In-tree providers in internal/handlers register
-// the same way. Do not import internal/handlers from a module.
+// and call RegisterLLM from init. Do not import internal/handlers from a module.
 package llm
 
 import (

@@ -41,7 +41,9 @@ Anthropic is the first out-of-tree LLM. Ace blank-imports
 `RegisterLLM`. OpenAI-compat (`openai`, `openrouter`, `ollama`, `custom`) is
 the second. Ace blank-imports
 `github.com/aceobservability/ace-llm-openai-compat` so the module `init`
-registers those four types. Prometheus is the first out-of-tree datasource
+registers those four types. Copilot is the third. Ace blank-imports
+`github.com/aceobservability/ace-llm-copilot` so the module `init`
+calls `RegisterLLM("copilot", New)`. Prometheus is the first out-of-tree datasource
 (`github.com/aceobservability/ace-datasource-prometheus`). Ace registers it
 at `init` and injects the SSRF HTTP client. VictoriaMetrics is also
 out-of-tree (`github.com/aceobservability/ace-datasource-victoriametrics`).

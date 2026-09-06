@@ -96,11 +96,10 @@ Grafana CIDR list.
 `validateBaseURL` / `checkDangerousIP`, called on AI provider **create** and
 **update** only.
 
-**Where (HTTP):** `ace-llm-openai-compat` `Provider` and
-`backend/internal/handlers/ai_provider.go` `CopilotProvider` use
-`&http.Client{Timeout: …}` with the default transport (no dial policy, no
-redirect policy, proxy via environment as Go default). Copilot also follows
-`endpoints.api` from GitHub's token JSON without `validateBaseURL`.
+**Where (HTTP):** `ace-llm-openai-compat` `Provider` and `ace-llm-copilot`
+`Provider` use `&http.Client{Timeout: …}` with the default transport (no dial
+policy, no redirect policy, proxy via environment as Go default). Copilot also
+follows `endpoints.api` from GitHub's token JSON without `validateBaseURL`.
 Device-flow / OAuth in `github_copilot.go` uses hardcoded `github.com` URLs
 and the same default client.
 
