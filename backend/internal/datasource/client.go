@@ -11,6 +11,7 @@ import (
 
 	"github.com/aceobservability/ace/backend/internal/models"
 	"github.com/aceobservability/ace/backend/internal/ssrf"
+	dscontract "github.com/aceobservability/ace/backend/pkg/datasource"
 )
 
 // QueryRequest represents a query request body
@@ -30,109 +31,13 @@ type StreamRequest struct {
 	Limit int    `json:"limit,omitempty"` // Max entries per tail batch
 }
 
-// QueryResult is the unified query result format
-type QueryResult struct {
-	Status     string     `json:"status"`
-	Data       *QueryData `json:"data,omitempty"`
-	Error      string     `json:"error,omitempty"`
-	ResultType string     `json:"resultType"` // "metrics" or "logs"
-}
-
-// QueryData contains the result
-type QueryData struct {
-	ResultType string         `json:"resultType"`
-	Result     []MetricResult `json:"result,omitempty"`
-	Logs       []LogEntry     `json:"logs,omitempty"`
-	Traces     []TraceSpan    `json:"traces,omitempty"`
-}
-
-// MetricResult represents a single metric series (for Prometheus/VictoriaMetrics)
-type MetricResult struct {
-	Metric map[string]string `json:"metric"`
-	Values [][]interface{}   `json:"values"`
-}
-
-// LogEntry represents a single log line (for Loki/VictoriaLogs)
-type LogEntry struct {
-	Timestamp string            `json:"timestamp"`
-	Line      string            `json:"line"`
-	Labels    map[string]string `json:"labels,omitempty"`
-	Level     string            `json:"level,omitempty"`
-}
-
-type LogStreamCallback func(LogEntry) error
-
-// Client is the interface that all datasource clients implement
-type Client interface {
-	Query(ctx context.Context, query string, start, end time.Time, step time.Duration, limit int) (*QueryResult, error)
-}
-
-// SignalQueryClient is implemented by datasources that dispatch on signal
-// (ClickHouse, CloudWatch, Elasticsearch).
-type SignalQueryClient interface {
-	QueryWithSignal(ctx context.Context, query, signal string, start, end time.Time, step time.Duration, limit int) (*QueryResult, error)
-}
-
-// StreamClient is implemented by log datasources that support live tail.
-type StreamClient interface {
-	Stream(ctx context.Context, query string, start time.Time, limit int, onLog LogStreamCallback) error
-}
-
-// LabelsClient is implemented by log datasources that expose label/field names.
-type LabelsClient interface {
-	Labels(ctx context.Context) ([]string, error)
-}
-
-// MetricLabelsClient is implemented by PromQL datasources that can scope labels
-// to a metric selector.
-type MetricLabelsClient interface {
-	Labels(ctx context.Context, metric string) ([]string, error)
-}
-
-// LabelValuesClient is implemented by log datasources that expose label values.
-type LabelValuesClient interface {
-	LabelValues(ctx context.Context, labelName string) ([]string, error)
-}
-
-// MetricLabelValuesClient is implemented by PromQL datasources that can scope
-// label values to a metric selector.
-type MetricLabelValuesClient interface {
-	LabelValues(ctx context.Context, label, metric string) ([]string, error)
-}
-
-// MetricNamesClient is implemented by PromQL datasources that expose metric names.
-type MetricNamesClient interface {
-	MetricNames(ctx context.Context, search string) ([]string, error)
-}
-
 type connectionTester interface {
 	TestConnection(ctx context.Context) error
 }
 
-// NewClient creates a datasource client based on the datasource type
+// NewClient creates a datasource client based on the datasource type.
 func NewClient(ds models.DataSource) (Client, error) {
-	switch ds.Type {
-	case models.DataSourcePrometheus:
-		return NewPrometheusClient(ds)
-	case models.DataSourceVictoriaMetrics:
-		return NewVictoriaMetricsClient(ds)
-	case models.DataSourceLoki:
-		return NewLokiClient(ds)
-	case models.DataSourceVictoriaLogs:
-		return NewVictoriaLogsClient(ds)
-	case models.DataSourceTempo:
-		return NewTempoClient(ds)
-	case models.DataSourceVictoriaTraces:
-		return NewVictoriaTracesClient(ds)
-	case models.DataSourceClickHouse:
-		return NewClickHouseClient(ds)
-	case models.DataSourceCloudWatch:
-		return NewCloudWatchClient(ds)
-	case models.DataSourceElasticsearch:
-		return NewElasticsearchClient(ds)
-	default:
-		return nil, fmt.Errorf("unsupported datasource type: %s", ds.Type)
-	}
+	return dscontract.NewClient(configFromDataSource(ds))
 }
 
 func TestConnection(ctx context.Context, ds models.DataSource) error {

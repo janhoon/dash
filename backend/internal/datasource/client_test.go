@@ -1,11 +1,25 @@
 package datasource
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/aceobservability/ace/backend/internal/models"
+	dscontract "github.com/aceobservability/ace/backend/pkg/datasource"
 )
+
+type probeQueryClient struct {
+	name string
+}
+
+func (c *probeQueryClient) Query(context.Context, string, time.Time, time.Time, time.Duration, int) (*QueryResult, error) {
+	return &QueryResult{Status: c.name}, nil
+}
 
 func TestNewClient_Prometheus(t *testing.T) {
 	ds := models.DataSource{
@@ -139,9 +153,77 @@ func TestNewClient_InvalidType(t *testing.T) {
 		Type: "invalid",
 		URL:  "http://localhost:9090",
 	}
-	_, err := NewClient(ds)
+	client, err := NewClient(ds)
 	if err == nil {
-		t.Error("expected error for invalid type, got nil")
+		t.Fatal("expected error for invalid type, got nil")
+	}
+	if !errors.Is(err, ErrUnknownType) {
+		t.Fatalf("expected ErrUnknownType, got %v", err)
+	}
+	if client != nil {
+		t.Fatalf("unknown type must not construct a client, got %T", client)
+	}
+}
+
+func TestNewClient_VMAlertAndAlertManagerFailClosed(t *testing.T) {
+	for _, typ := range []models.DataSourceType{models.DataSourceVMAlert, models.DataSourceAlertManager} {
+		client, err := NewClient(models.DataSource{Type: typ, URL: "http://localhost:8880"})
+		if !errors.Is(err, ErrUnknownType) {
+			t.Errorf("%s: expected ErrUnknownType, got %v", typ, err)
+		}
+		if client != nil {
+			t.Errorf("%s: unknown query type must not construct a client, got %T", typ, client)
+		}
+	}
+}
+
+func TestRegisterDatasource_DispatchUsesRegisteredFactory(t *testing.T) {
+	const typ = "probe-internal-datasource"
+	wantName := "probe-one"
+	wantURL := "http://localhost:9090"
+	wantAuthType := "bearer"
+	wantAuthConfig := json.RawMessage(`{"token":"t"}`)
+	wantTraceID := "trace_id"
+
+	var got dscontract.Config
+	dscontract.RegisterDatasource(typ, func(cfg dscontract.Config) (dscontract.Client, error) {
+		got = cfg
+		return &probeQueryClient{name: cfg.Name}, nil
+	})
+	t.Cleanup(func() { dscontract.UnregisterDatasource(typ) })
+
+	client, err := NewClient(models.DataSource{
+		Type:         models.DataSourceType(typ),
+		Name:         wantName,
+		URL:          wantURL,
+		AuthType:     wantAuthType,
+		AuthConfig:   wantAuthConfig,
+		TraceIDField: wantTraceID,
+	})
+	if err != nil {
+		t.Fatalf("dispatch registered type: %v", err)
+	}
+	gotClient, ok := client.(*probeQueryClient)
+	if !ok {
+		t.Fatalf("expected *probeQueryClient, got %T", client)
+	}
+	if gotClient.name != wantName {
+		t.Errorf("factory did not receive Config.Name, name=%q", gotClient.name)
+	}
+	if got.Type != typ {
+		t.Errorf("Type=%q, want %q", got.Type, typ)
+	}
+	if got.URL != wantURL {
+		t.Errorf("URL=%q, want %q", got.URL, wantURL)
+	}
+	if got.AuthType != wantAuthType {
+		t.Errorf("AuthType=%q, want %q", got.AuthType, wantAuthType)
+	}
+	if !bytes.Equal(got.AuthConfig, wantAuthConfig) {
+		t.Errorf("AuthConfig=%s, want %s", got.AuthConfig, wantAuthConfig)
+	}
+	if got.TraceIDField != wantTraceID {
+		t.Errorf("TraceIDField=%q, want %q", got.TraceIDField, wantTraceID)
 	}
 }
 

@@ -19,6 +19,7 @@ import (
 	"github.com/aceobservability/ace/backend/internal/auth"
 	"github.com/aceobservability/ace/backend/internal/crypto"
 	"github.com/aceobservability/ace/backend/internal/ratelimit"
+	"github.com/aceobservability/ace/backend/pkg/llm"
 )
 
 // jsonError writes a JSON error response with proper encoding, preventing JSON injection.
@@ -356,7 +357,7 @@ func instantiateDBProvider(p providerRow) (AIProvider, providerQuota, error) {
 	if err != nil {
 		return nil, quota, err
 	}
-	provider, err := newLLMProvider(p.ProviderType, LLMConfig{
+	provider, err := llm.New(p.ProviderType, LLMConfig{
 		BaseURL:     p.BaseURL,
 		APIKey:      apiKey,
 		DisplayName: p.DisplayName,
@@ -693,7 +694,7 @@ func (h *AIHandler) CreateProvider(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := requireKnownLLMType(reqBody.ProviderType); err != nil {
+	if err := llm.RequireKnown(reqBody.ProviderType); err != nil {
 		jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -827,7 +828,7 @@ func (h *AIHandler) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 		existing.RateLimitWindowSeconds = *reqBody.RateLimitWindowSeconds
 	}
 
-	if err := requireKnownLLMType(existing.ProviderType); err != nil {
+	if err := llm.RequireKnown(existing.ProviderType); err != nil {
 		jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}

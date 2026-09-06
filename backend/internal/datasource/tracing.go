@@ -45,25 +45,6 @@ type Trace struct {
 	DurationNano      int64       `json:"durationNano"`
 }
 
-// TraceSpan is a normalized span model.
-type TraceSpan struct {
-	SpanID            string            `json:"spanId"`
-	ParentSpanID      string            `json:"parentSpanId,omitempty"`
-	OperationName     string            `json:"operationName"`
-	ServiceName       string            `json:"serviceName"`
-	StartTimeUnixNano int64             `json:"startTimeUnixNano"`
-	DurationNano      int64             `json:"durationNano"`
-	Tags              map[string]string `json:"tags,omitempty"`
-	Logs              []TraceLog        `json:"logs,omitempty"`
-	Status            string            `json:"status,omitempty"`
-}
-
-// TraceLog is a normalized span log/event.
-type TraceLog struct {
-	TimestampUnixNano int64             `json:"timestampUnixNano"`
-	Fields            map[string]string `json:"fields,omitempty"`
-}
-
 // TraceSummary is a compact trace model for search results.
 type TraceSummary struct {
 	TraceID           string `json:"traceId"`
