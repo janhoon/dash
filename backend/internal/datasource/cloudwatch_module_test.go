@@ -15,10 +15,6 @@ import (
 	"github.com/aceobservability/ace/backend/internal/ssrf"
 )
 
-// CloudWatchClient aliases the extracted module client so existing compile-time
-// assertions in this package keep compiling without editing shared type files.
-type CloudWatchClient = acecw.Client
-
 func TestCloudWatchModule_InjectsDatasourceHTTPClient(t *testing.T) {
 	t.Parallel()
 
