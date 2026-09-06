@@ -24,6 +24,8 @@ status: accepted
 > `ace-datasource-victoriatraces`, [#451](https://github.com/aceobservability/ace/issues/451)),
 > sharing tracing helpers in `ace-datasource-tempo/tracing`. Elasticsearch
 > is also out-of-tree (`ace-datasource-elasticsearch`,
+> [#451](https://github.com/aceobservability/ace/issues/451)). CloudWatch is
+> also out-of-tree (`ace-datasource-cloudwatch`,
 > [#451](https://github.com/aceobservability/ace/issues/451)). VMAlert
 > (`ace-datasource-vmalert`) and Alertmanager (`ace-datasource-alertmanager`)
 > are out-of-tree connection-test clients
@@ -82,10 +84,16 @@ also out-of-tree (`ace-datasource-elasticsearch`). Ace registers type
 `elasticsearch` from `internal/datasource/register_elasticsearch.go` via the
 typed `register()` helper and injects `ssrf.DatasourceClient` (auth-wrapped)
 plus `AuthConfig` (index/field settings) into `New(url, authConfig, httpClient)`.
-Ace injects SSRF via `newDatasourceHTTPClient` into `New(url, httpClient)`. Ace owns
-`TestConnection` for those types via
+Ace injects SSRF via `newDatasourceHTTPClient` into `New(url, httpClient)`.
+CloudWatch is also out-of-tree (`ace-datasource-cloudwatch`). Ace registers type
+`cloudwatch` from `internal/datasource/register_cloudwatch.go` and injects a
+bare `ssrf.DatasourceClient` (no auth wrap: SDK SigV4 on dual-host metrics/logs)
+into `New(cfg, httpClient)`. Ace owns `TestConnection` for Prometheus,
+VictoriaMetrics, Loki, VictoriaLogs, ClickHouse, Tempo, VictoriaTraces, and
+Elasticsearch via
 `runHTTPConnectionCheck` and `HTTPClient()` (`testRegisteredHTTPConnection`).
-It does not call module `connect.go`. HTTP
+It does not call those modules' `connect.go`. CloudWatch uses the module
+`TestConnection`. HTTP
 handlers call `internal/datasource.NewClient` and `llm.New` /
 `llm.RequireKnown`. `datasource.NewClient` looks up `cfg.Type`. There is no
 parallel type argument.
