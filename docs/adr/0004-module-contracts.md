@@ -8,7 +8,9 @@ status: accepted
 > `backend/pkg/datasource`. Anthropic is the first out-of-tree LLM
 > (`ace-llm-anthropic`, [#448](https://github.com/aceobservability/ace/issues/448)).
 > Prometheus is the first out-of-tree datasource (`ace-datasource-prometheus`,
-> [#449](https://github.com/aceobservability/ace/issues/449)). Remaining
+> [#449](https://github.com/aceobservability/ace/issues/449)). VictoriaMetrics
+> is also out-of-tree (`ace-datasource-victoriametrics`,
+> [#451](https://github.com/aceobservability/ace/issues/451)). Remaining
 > `ace-llm-*` / `ace-datasource-*` extracts follow
 > [#446](https://github.com/aceobservability/ace/issues/446).
 
@@ -35,10 +37,14 @@ Remaining LLM factories live in `internal/handlers` and call `llm.RegisterLLM`
 from `init`. Anthropic is the first out-of-tree LLM. Ace blank-imports
 `github.com/aceobservability/ace-llm-anthropic`, and that module's `init` calls
 `RegisterLLM("anthropic", New)`. Remaining datasource factories live in
-`internal/datasource` and call `RegisterDatasource` from `init`. Prometheus is
-the first out-of-tree datasource. `ace-datasource-prometheus` implements the
-contract. Ace's `init` registers type `prometheus` and injects
-`ssrf.DatasourceClient` (auth-wrapped) into `New(url, httpClient)`. HTTP
+`internal/datasource` and call `RegisterDatasource` from `init`. Prometheus and
+VictoriaMetrics are out-of-tree datasources. `ace-datasource-prometheus` and
+`ace-datasource-victoriametrics` implement the contract. Ace registers type
+`prometheus` from `internal/datasource/register.go` and type `victoriametrics`
+from `internal/datasource/register_victoriametrics.go` via the typed
+`register()` helper, and injects `ssrf.DatasourceClient` (auth-wrapped) into
+`New(url, httpClient)`. Ace owns `TestConnection` for those types via
+`runHTTPConnectionCheck`. It does not call module `connect.go`. HTTP
 handlers call `internal/datasource.NewClient` and `llm.New` /
 `llm.RequireKnown`. `datasource.NewClient` looks up `cfg.Type`. There is no
 parallel type argument.
