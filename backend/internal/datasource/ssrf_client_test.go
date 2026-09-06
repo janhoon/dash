@@ -13,6 +13,7 @@ import (
 	acech "github.com/aceobservability/ace-datasource-clickhouse"
 	aceloki "github.com/aceobservability/ace-datasource-loki"
 	aceprom "github.com/aceobservability/ace-datasource-prometheus"
+	acevl "github.com/aceobservability/ace-datasource-victorialogs"
 	acevm "github.com/aceobservability/ace-datasource-victoriametrics"
 
 	"github.com/aceobservability/ace/backend/internal/models"
@@ -56,15 +57,19 @@ func TestDatasourceClientsWireDialAndRedirectPolicy(t *testing.T) {
 	}
 
 	t.Run("victorialogs_stream_timeout", func(t *testing.T) {
-		c, err := NewVictoriaLogsClient(testDS(models.DataSourceVictoriaLogs, "http://127.0.0.1:9428"))
+		raw, err := NewClient(testDS(models.DataSourceVictoriaLogs, "http://127.0.0.1:9428"))
 		if err != nil {
-			t.Fatalf("NewVictoriaLogsClient: %v", err)
+			t.Fatalf("NewClient victorialogs: %v", err)
 		}
-		if c.streamClient == nil {
-			t.Fatal("streamClient is nil")
+		c, ok := raw.(*acevl.Client)
+		if !ok {
+			t.Fatalf("expected *victorialogs.Client, got %T", raw)
 		}
-		if c.streamClient.Timeout != 0 {
-			t.Fatalf("streamClient.Timeout = %s, want 0 for long-lived tails", c.streamClient.Timeout)
+		if c.StreamHTTPClient() == nil {
+			t.Fatal("stream client is nil")
+		}
+		if c.StreamHTTPClient().Timeout != 0 {
+			t.Fatalf("streamClient.Timeout = %s, want 0 for long-lived tails", c.StreamHTTPClient().Timeout)
 		}
 	})
 }
@@ -148,9 +153,13 @@ func TestLokiStreamBlocksMetadata(t *testing.T) {
 func TestVictoriaLogsStreamBlocksMetadata(t *testing.T) {
 	t.Parallel()
 
-	client, err := NewVictoriaLogsClient(testDS(models.DataSourceVictoriaLogs, strings.TrimRight(cloudMetadataURL, "/")))
+	raw, err := NewClient(testDS(models.DataSourceVictoriaLogs, strings.TrimRight(cloudMetadataURL, "/")))
 	if err != nil {
-		t.Fatalf("NewVictoriaLogsClient failed: %v", err)
+		t.Fatalf("NewClient victorialogs failed: %v", err)
+	}
+	client, ok := raw.(StreamClient)
+	if !ok {
+		t.Fatalf("expected StreamClient, got %T", raw)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -199,9 +208,13 @@ func constructedDatasourceHTTPClients(t *testing.T) map[string]*http.Client {
 	if !ok {
 		t.Fatalf("expected *loki.Client, got %T", loki)
 	}
-	vlogs, err := NewVictoriaLogsClient(testDS(models.DataSourceVictoriaLogs, "http://127.0.0.1:9428"))
+	vlogsRaw, err := NewClient(testDS(models.DataSourceVictoriaLogs, "http://127.0.0.1:9428"))
 	if err != nil {
-		t.Fatalf("NewVictoriaLogsClient: %v", err)
+		t.Fatalf("NewClient victorialogs: %v", err)
+	}
+	vlogs, ok := vlogsRaw.(*acevl.Client)
+	if !ok {
+		t.Fatalf("expected *victorialogs.Client, got %T", vlogsRaw)
 	}
 	tempo, err := NewTempoClient(models.DataSource{URL: "http://127.0.0.1:3200", Type: models.DataSourceTempo})
 	if err != nil {
@@ -236,8 +249,8 @@ func constructedDatasourceHTTPClients(t *testing.T) map[string]*http.Client {
 		"prometheus":          promClient.HTTPClient(),
 		"victoriametrics":     vmClient.HTTPClient(),
 		"loki":                lokiClient.HTTPClient(),
-		"victorialogs":        vlogs.client,
-		"victorialogs_stream": vlogs.streamClient,
+		"victorialogs":        vlogs.HTTPClient(),
+		"victorialogs_stream": vlogs.StreamHTTPClient(),
 		"tempo":               tempo.httpClient,
 		"victoriatraces":      vtraces.httpClient,
 		"clickhouse":          chClient.HTTPClient(),
@@ -280,7 +293,7 @@ func datasourceQueryFns() map[string]func(context.Context, string) error {
 			return err
 		},
 		"victorialogs": func(ctx context.Context, baseURL string) error {
-			client, err := NewVictoriaLogsClient(testDS(models.DataSourceVictoriaLogs, baseURL))
+			client, err := NewClient(testDS(models.DataSourceVictoriaLogs, baseURL))
 			if err != nil {
 				return err
 			}

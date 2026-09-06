@@ -66,6 +66,8 @@ func TestConnection(ctx context.Context, ds models.DataSource) error {
 		return testRegisteredHTTPConnection(ctx, ds, []string{"/ping", "/?query=SELECT%201", "/"})
 	case models.DataSourceLoki:
 		return testRegisteredHTTPConnection(ctx, ds, []string{"/ready", "/loki/api/v1/labels?limit=1", "/"})
+	case models.DataSourceVictoriaLogs:
+		return testRegisteredHTTPConnection(ctx, ds, []string{"/health", "/select/logsql/field_names?query=*", "/"})
 	default:
 		client, err := NewClient(ds)
 		if err != nil {

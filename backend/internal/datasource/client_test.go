@@ -11,6 +11,7 @@ import (
 	acech "github.com/aceobservability/ace-datasource-clickhouse"
 	aceloki "github.com/aceobservability/ace-datasource-loki"
 	aceprom "github.com/aceobservability/ace-datasource-prometheus"
+	acevl "github.com/aceobservability/ace-datasource-victorialogs"
 	acevm "github.com/aceobservability/ace-datasource-victoriametrics"
 
 	"github.com/aceobservability/ace/backend/internal/models"
@@ -76,8 +77,8 @@ func TestNewClient_VictoriaLogs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if _, ok := client.(*VictoriaLogsClient); !ok {
-		t.Errorf("expected VictoriaLogsClient, got %T", client)
+	if _, ok := client.(*acevl.Client); !ok {
+		t.Errorf("expected *victorialogs.Client from ace-datasource-victorialogs, got %T", client)
 	}
 }
 
@@ -237,6 +238,7 @@ var (
 	_ MetricLabelValuesClient = (*aceprom.Client)(nil)
 	_ MetricNamesClient       = (*aceprom.Client)(nil)
 	_ connectionTester        = (*aceprom.Client)(nil)
+	_ httpClientProvider      = (*aceprom.Client)(nil)
 
 	_ Client                  = (*acevm.Client)(nil)
 	_ MetricLabelsClient      = (*acevm.Client)(nil)
@@ -250,11 +252,12 @@ var (
 	_ LabelValuesClient = (*aceloki.Client)(nil)
 	_ connectionTester  = (*aceloki.Client)(nil)
 
-	_ Client            = (*VictoriaLogsClient)(nil)
-	_ StreamClient      = (*VictoriaLogsClient)(nil)
-	_ LabelsClient      = (*VictoriaLogsClient)(nil)
-	_ LabelValuesClient = (*VictoriaLogsClient)(nil)
-	_ connectionTester  = (*VictoriaLogsClient)(nil)
+	_ Client             = (*acevl.Client)(nil)
+	_ StreamClient       = (*acevl.Client)(nil)
+	_ LabelsClient       = (*acevl.Client)(nil)
+	_ LabelValuesClient  = (*acevl.Client)(nil)
+	_ connectionTester   = (*acevl.Client)(nil)
+	_ httpClientProvider = (*acevl.Client)(nil)
 
 	_ Client            = (*acech.Client)(nil)
 	_ SignalQueryClient = (*acech.Client)(nil)
@@ -295,31 +298,5 @@ func TestDetectLogLevel(t *testing.T) {
 		if got != tt.want {
 			t.Errorf("detectLogLevel(%v, %q) = %q, want %q", tt.labels, tt.line, got, tt.want)
 		}
-	}
-}
-
-func TestParseVictoriaLogsLine(t *testing.T) {
-	entry, ok := parseVictoriaLogsLine(`{"_msg":"boom","_time":"2026-02-08T12:00:00Z","service":"api","level":"error"}`)
-	if !ok {
-		t.Fatal("expected line to parse")
-	}
-
-	if entry.Line != "boom" {
-		t.Fatalf("expected line to be boom, got %q", entry.Line)
-	}
-	if entry.Timestamp != "2026-02-08T12:00:00Z" {
-		t.Fatalf("expected timestamp to match, got %q", entry.Timestamp)
-	}
-	if entry.Labels["service"] != "api" {
-		t.Fatalf("expected service label api, got %q", entry.Labels["service"])
-	}
-	if entry.Level != "error" {
-		t.Fatalf("expected level error, got %q", entry.Level)
-	}
-}
-
-func TestParseVictoriaLogsLineInvalid(t *testing.T) {
-	if _, ok := parseVictoriaLogsLine(`not-json`); ok {
-		t.Fatal("expected invalid line to fail parsing")
 	}
 }

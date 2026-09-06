@@ -80,7 +80,7 @@ func TestQuerySendsStoredCredentials(t *testing.T) {
 		{
 			name:  "victorialogs",
 			typ:   models.DataSourceVictoriaLogs,
-			newFn: func(ds models.DataSource) (Client, error) { return NewVictoriaLogsClient(ds) },
+			newFn: func(ds models.DataSource) (Client, error) { return NewClient(ds) },
 			query: "*",
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				requireBearer(t, r, token)

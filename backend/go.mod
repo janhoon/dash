@@ -6,6 +6,7 @@ require (
 	github.com/aceobservability/ace-datasource-clickhouse v0.0.0-20260906163719-50ae73a9eb08
 	github.com/aceobservability/ace-datasource-loki v0.0.0-20260906165404-06f9efcc1ccd
 	github.com/aceobservability/ace-datasource-prometheus v0.0.0-20260906152221-4b460476c203
+	github.com/aceobservability/ace-datasource-victorialogs v0.0.0-20260906163240-46d9e35fff09
 	github.com/aceobservability/ace-datasource-victoriametrics v0.0.0-20260906162925-9dc8e06dd775
 	github.com/aceobservability/ace-llm-anthropic v0.0.0-20260906160347-542e9f4acdea
 	github.com/aceobservability/ace-llm-copilot v0.0.0-20260906163911-724e3d6190ac
