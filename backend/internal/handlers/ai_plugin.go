@@ -1,6 +1,10 @@
 package handlers
 
-import "github.com/aceobservability/ace/backend/pkg/llm"
+import (
+	_ "github.com/aceobservability/ace-llm-anthropic"
+
+	"github.com/aceobservability/ace/backend/pkg/llm"
+)
 
 type (
 	AIProvider  = llm.AIProvider
@@ -20,7 +24,6 @@ func init() {
 	llm.RegisterLLM("openrouter", openaiCompat)
 	llm.RegisterLLM("ollama", openaiCompat)
 	llm.RegisterLLM("custom", openaiCompat)
-	llm.RegisterLLM("anthropic", NewAnthropic)
 	// Copilot's live chat path remains provider_id=="copilot" (user GH token).
 	// Registering the type means a stored provider_type=copilot does not
 	// impersonate OpenAI-compat. LLMConfig.APIKey is ciphertext; the factory

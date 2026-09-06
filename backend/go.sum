@@ -2,6 +2,8 @@ cloud.google.com/go/compute/metadata v0.9.0 h1:pDUj4QMoPejqq20dK0Pg2N4yG9zIkYGdB
 cloud.google.com/go/compute/metadata v0.9.0/go.mod h1:E0bWwX5wTnLPedCKqk3pJmVgCBSM6qQI1yTBdEb3C10=
 github.com/aceobservability/ace-datasource-prometheus v0.0.0-20260906152221-4b460476c203 h1:LYanV0cWCK7oq80TSNLaU3PT1Knk9srIWevbbz8s/1s=
 github.com/aceobservability/ace-datasource-prometheus v0.0.0-20260906152221-4b460476c203/go.mod h1:teR/MAf/a8qKlGdj4yGGh+HMkZsTNtc86pxbqcndJe0=
+github.com/aceobservability/ace-llm-anthropic v0.0.0-20260906160347-542e9f4acdea h1:iOv7Vkc5mALGqDIpoW90eeQXF1Uo5YisrBhWpmLtg18=
+github.com/aceobservability/ace-llm-anthropic v0.0.0-20260906160347-542e9f4acdea/go.mod h1:IAe/QvLdRzWfIAmjGyVmv04wnQGa7NYKYxlSdKWCqVQ=
 github.com/alicebob/miniredis/v2 v2.38.0 h1:nZAzCR+Lj+Vxk4ZXzm2NuKq2O33RXj1XxJ2e2uP9jiw=
 github.com/alicebob/miniredis/v2 v2.38.0/go.mod h1:TcL7YfarKPGDAthEtl5NBeHZfeUQj6OXMm/+iu5cLMM=
 github.com/andybalholm/brotli v1.1.1 h1:PR2pgnyFznKEugtsUo0xLdDop5SKXd5Qf5ysW+7XdTA=

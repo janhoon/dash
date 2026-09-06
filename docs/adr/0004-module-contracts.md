@@ -5,9 +5,11 @@ status: accepted
 # Module contracts for LLM and datasource adapters
 
 > **Implementation status:** Accepted. Contracts live in `backend/pkg/llm` and
-> `backend/pkg/datasource`. Prometheus is extracted to
-> `ace-datasource-prometheus` ([#449](https://github.com/aceobservability/ace/issues/449)).
-> Remaining `ace-llm-*` / `ace-datasource-*` extracts follow
+> `backend/pkg/datasource`. Anthropic is the first out-of-tree LLM
+> (`ace-llm-anthropic`, [#448](https://github.com/aceobservability/ace/issues/448)).
+> Prometheus is the first out-of-tree datasource (`ace-datasource-prometheus`,
+> [#449](https://github.com/aceobservability/ace/issues/449)). Remaining
+> `ace-llm-*` / `ace-datasource-*` extracts follow
 > [#446](https://github.com/aceobservability/ace/issues/446).
 
 Ace keeps LLM and datasource **contracts plus registries** in this repo.
@@ -29,19 +31,25 @@ Do not import `internal/handlers` from an LLM module. Do not import
 
 ## In-tree wiring
 
-LLM factories still live in `internal/handlers` and call `llm.RegisterLLM` from
-`init`. Remaining datasource factories live in `internal/datasource` and call
-`RegisterDatasource` from `init`. Prometheus is the first out-of-tree adapter:
-`ace-datasource-prometheus` implements the contract; Ace's `init` registers
-type `prometheus` and injects `ssrf.DatasourceClient` (auth-wrapped) into
-`New(url, httpClient)`. HTTP handlers call `internal/datasource.NewClient` and
-`llm.New` / `llm.RequireKnown`. `datasource.NewClient` looks up `cfg.Type`.
-There is no parallel type argument.
+Remaining LLM factories live in `internal/handlers` and call `llm.RegisterLLM`
+from `init`. Anthropic is the first out-of-tree LLM. Ace blank-imports
+`github.com/aceobservability/ace-llm-anthropic`, and that module's `init` calls
+`RegisterLLM("anthropic", New)`. Remaining datasource factories live in
+`internal/datasource` and call `RegisterDatasource` from `init`. Prometheus is
+the first out-of-tree datasource. `ace-datasource-prometheus` implements the
+contract. Ace's `init` registers type `prometheus` and injects
+`ssrf.DatasourceClient` (auth-wrapped) into `New(url, httpClient)`. HTTP
+handlers call `internal/datasource.NewClient` and `llm.New` /
+`llm.RequireKnown`. `datasource.NewClient` looks up `cfg.Type`. There is no
+parallel type argument.
 
 `vmalert` and `alertmanager` are not query `Client` types. `TestConnection`
 keeps a dedicated path for them.
 
+An LLM module must depend on a `ace/backend` version that does not import that
+module. Ace's current module then depends on the adapter. That avoids a Go
+module import cycle. Do not add a nested `pkg/llm` module for this.
+
 ## Out of scope
 
-Moving Anthropic or remaining adapters out of tree. WASM, go-plugin, or
-marketplace loading.
+Moving remaining adapters out of tree. WASM, go-plugin, or marketplace loading.

@@ -34,6 +34,10 @@ Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agent
 LLM modules import `github.com/aceobservability/ace/backend/pkg/llm`
 (`RegisterLLM`, `AIProvider`). Datasource modules import
 `github.com/aceobservability/ace/backend/pkg/datasource`
-(`RegisterDatasource`, `Client`). Prometheus is
-`github.com/aceobservability/ace-datasource-prometheus` — Ace registers it at
-`init` and injects the SSRF HTTP client. See `docs/adr/0004-module-contracts.md`.
+(`RegisterDatasource`, `Client`). See `docs/adr/0004-module-contracts.md`.
+
+Anthropic is the first out-of-tree LLM. Ace blank-imports
+`github.com/aceobservability/ace-llm-anthropic` so the module `init` calls
+`RegisterLLM`. Prometheus is the first out-of-tree datasource
+(`github.com/aceobservability/ace-datasource-prometheus`). Ace registers it at
+`init` and injects the SSRF HTTP client.

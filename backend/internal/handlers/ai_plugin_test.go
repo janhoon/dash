@@ -12,6 +12,8 @@ import (
 
 	"github.com/google/uuid"
 
+	anthropic "github.com/aceobservability/ace-llm-anthropic"
+
 	"github.com/aceobservability/ace/backend/internal/crypto"
 	"github.com/aceobservability/ace/backend/pkg/llm"
 )
@@ -47,9 +49,9 @@ func TestNewLLMProvider_AnthropicRegistered(t *testing.T) {
 	if err != nil {
 		t.Fatalf("anthropic should be registered: %v", err)
 	}
-	ap, ok := p.(*AnthropicProvider)
+	ap, ok := p.(*anthropic.Provider)
 	if !ok {
-		t.Fatalf("expected *AnthropicProvider, got %T", p)
+		t.Fatalf("expected *anthropic.Provider, got %T", p)
 	}
 	if ap.APIKey != "sk-ant" {
 		t.Errorf("expected plaintext APIKey, got %q", ap.APIKey)
