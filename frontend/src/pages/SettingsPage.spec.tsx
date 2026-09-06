@@ -480,6 +480,7 @@ describe('SettingsPage', () => {
 
       expect(screen.getByTestId('settings-nav-general')).toBeTruthy()
       expect(screen.getByTestId('settings-nav-members')).toBeTruthy()
+      expect(screen.getByTestId('settings-nav-mcp')).toBeTruthy()
       expect(screen.getByTestId('settings-nav-sso')).toBeTruthy()
       expect(screen.getByTestId('settings-general')).toBeTruthy()
       expect(screen.getByTestId('settings-branding')).toBeTruthy()
@@ -490,6 +491,78 @@ describe('SettingsPage', () => {
         expect(router.state.location.pathname).toBe('/app/settings/members')
         expect(screen.getByTestId('settings-members')).toBeTruthy()
       })
+    })
+
+    it('does not refetch org data when switching general to members', async () => {
+      const user = userEvent.setup()
+      renderSettings('/app/settings/general')
+
+      await waitFor(() => {
+        expect(screen.getByTestId('settings-general')).toBeTruthy()
+      })
+      expect(organizationsApi.getOrganization).toHaveBeenCalledTimes(1)
+      expect(organizationsApi.listMembers).toHaveBeenCalledTimes(1)
+
+      await user.click(screen.getByTestId('settings-nav-members'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('settings-members')).toBeTruthy()
+      })
+      expect(screen.queryByText('Loading...')).toBeNull()
+      expect(organizationsApi.getOrganization).toHaveBeenCalledTimes(1)
+      expect(organizationsApi.listMembers).toHaveBeenCalledTimes(1)
+    })
+
+    it('opens MCP / Plugins as the Figma 12:188 list', async () => {
+      const user = userEvent.setup()
+      const router = renderSettings('/app/settings/general')
+
+      await waitFor(() => {
+        expect(screen.getByTestId('settings-nav-mcp')).toBeTruthy()
+      })
+
+      await user.click(screen.getByTestId('settings-nav-mcp'))
+
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe('/app/settings/mcp')
+        expect(screen.getByTestId('mcp-plugins-panel')).toBeTruthy()
+      })
+
+      expect(screen.getByRole('heading', { name: 'MCP / Plugins' })).toBeTruthy()
+      expect(screen.getByText('Victoria Metrics')).toBeTruthy()
+      expect(screen.getByTestId('settings-section-nav')).toBeTruthy()
+      expect(screen.getByTestId('settings-nav-mcp')).toBeTruthy()
+      expect(screen.queryByRole('heading', { name: 'Settings' })).toBeNull()
+    })
+  })
+
+  describe('MCP / Plugins section', () => {
+    it('renders /app/settings/mcp as the Figma panel', async () => {
+      renderSettings('/app/settings/mcp')
+
+      expect(await screen.findByTestId('mcp-plugins-panel')).toBeTruthy()
+      expect(screen.getByRole('heading', { name: 'MCP / Plugins' })).toBeTruthy()
+      expect(screen.getByTestId('settings-section-nav')).toBeTruthy()
+      expect(screen.getByTestId('settings-nav-mcp')).toBeTruthy()
+      expect(screen.queryByRole('heading', { name: 'Settings' })).toBeNull()
+      expect(organizationsApi.getOrganization).not.toHaveBeenCalled()
+      expect(organizationsApi.listMembers).not.toHaveBeenCalled()
+    })
+
+    it('loads org data once when leaving MCP for general', async () => {
+      const user = userEvent.setup()
+      renderSettings('/app/settings/mcp')
+
+      expect(await screen.findByTestId('mcp-plugins-panel')).toBeTruthy()
+      expect(organizationsApi.getOrganization).not.toHaveBeenCalled()
+
+      await user.click(screen.getByTestId('settings-nav-general'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('settings-general')).toBeTruthy()
+      })
+      expect(organizationsApi.getOrganization).toHaveBeenCalledTimes(1)
+      expect(organizationsApi.listMembers).toHaveBeenCalledTimes(1)
     })
   })
 })
