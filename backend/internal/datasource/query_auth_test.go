@@ -58,7 +58,7 @@ func TestQuerySendsStoredCredentials(t *testing.T) {
 		{
 			name:  "victoriametrics",
 			typ:   models.DataSourceVictoriaMetrics,
-			newFn: func(ds models.DataSource) (Client, error) { return NewVictoriaMetricsClient(ds) },
+			newFn: func(ds models.DataSource) (Client, error) { return NewClient(ds) },
 			query: "up",
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				requireBearer(t, r, token)

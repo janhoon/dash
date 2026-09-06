@@ -11,6 +11,7 @@ import (
 	"time"
 
 	aceprom "github.com/aceobservability/ace-datasource-prometheus"
+	acevm "github.com/aceobservability/ace-datasource-victoriametrics"
 
 	"github.com/aceobservability/ace/backend/internal/models"
 	"github.com/aceobservability/ace/backend/internal/ssrf"
@@ -175,9 +176,13 @@ func constructedDatasourceHTTPClients(t *testing.T) map[string]*http.Client {
 	if !ok {
 		t.Fatalf("expected *prometheus.Client, got %T", prom)
 	}
-	vm, err := NewVictoriaMetricsClient(testDS(models.DataSourceVictoriaMetrics, "http://127.0.0.1:8428"))
+	vm, err := NewClient(testDS(models.DataSourceVictoriaMetrics, "http://127.0.0.1:8428"))
 	if err != nil {
-		t.Fatalf("NewVictoriaMetricsClient: %v", err)
+		t.Fatalf("NewClient victoriametrics: %v", err)
+	}
+	vmClient, ok := vm.(*acevm.Client)
+	if !ok {
+		t.Fatalf("expected *victoriametrics.Client, got %T", vm)
 	}
 	loki, err := NewLokiClient(testDS(models.DataSourceLoki, "http://127.0.0.1:3100"))
 	if err != nil {
@@ -214,7 +219,7 @@ func constructedDatasourceHTTPClients(t *testing.T) map[string]*http.Client {
 
 	return map[string]*http.Client{
 		"prometheus":          promClient.HTTPClient(),
-		"victoriametrics":     vm.client,
+		"victoriametrics":     vmClient.HTTPClient(),
 		"loki":                loki.client,
 		"victorialogs":        vlogs.client,
 		"victorialogs_stream": vlogs.streamClient,
@@ -244,7 +249,7 @@ func datasourceQueryFns() map[string]func(context.Context, string) error {
 			return nil
 		},
 		"victoriametrics": func(ctx context.Context, baseURL string) error {
-			client, err := NewVictoriaMetricsClient(testDS(models.DataSourceVictoriaMetrics, baseURL))
+			client, err := NewClient(testDS(models.DataSourceVictoriaMetrics, baseURL))
 			if err != nil {
 				return err
 			}

@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	aceprom "github.com/aceobservability/ace-datasource-prometheus"
-
 	"github.com/aceobservability/ace/backend/internal/models"
 	"github.com/aceobservability/ace/backend/internal/ssrf"
 	dscontract "github.com/aceobservability/ace/backend/pkg/datasource"
@@ -37,6 +35,10 @@ type connectionTester interface {
 	TestConnection(ctx context.Context) error
 }
 
+type httpClientProvider interface {
+	HTTPClient() *http.Client
+}
+
 // NewClient creates a datasource client based on the datasource type.
 func NewClient(ds models.DataSource) (Client, error) {
 	return dscontract.NewClient(configFromDataSource(ds))
@@ -57,15 +59,9 @@ func TestConnection(ctx context.Context, ds models.DataSource) error {
 		}
 		return runHTTPConnectionCheck(ctx, ds, client.client, []string{"/api/v2/status", "/api/v2/alerts", "/"})
 	case models.DataSourcePrometheus:
-		client, err := NewClient(ds)
-		if err != nil {
-			return err
-		}
-		prom, ok := client.(*aceprom.Client)
-		if !ok {
-			return fmt.Errorf("prometheus client type %T", client)
-		}
-		return runHTTPConnectionCheck(ctx, ds, prom.HTTPClient(), []string{"/-/healthy", "/api/v1/query?query=1", "/"})
+		return testRegisteredHTTPConnection(ctx, ds, []string{"/-/healthy", "/api/v1/query?query=1", "/"})
+	case models.DataSourceVictoriaMetrics:
+		return testRegisteredHTTPConnection(ctx, ds, []string{"/health", "/api/v1/query?query=1", "/"})
 	default:
 		client, err := NewClient(ds)
 		if err != nil {
@@ -77,6 +73,18 @@ func TestConnection(ctx context.Context, ds models.DataSource) error {
 		}
 		return tester.TestConnection(ctx)
 	}
+}
+
+func testRegisteredHTTPConnection(ctx context.Context, ds models.DataSource, endpoints []string) error {
+	client, err := NewClient(ds)
+	if err != nil {
+		return err
+	}
+	provider, ok := client.(httpClientProvider)
+	if !ok {
+		return fmt.Errorf("%s client type %T", ds.Type, client)
+	}
+	return runHTTPConnectionCheck(ctx, ds, provider.HTTPClient(), endpoints)
 }
 
 func runHTTPConnectionCheck(ctx context.Context, ds models.DataSource, httpClient *http.Client, endpoints []string) error {

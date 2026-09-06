@@ -13,7 +13,6 @@ func init() {
 	register(models.DataSourcePrometheus, func(ds models.DataSource) (*aceprom.Client, error) {
 		return aceprom.New(ds.URL, newDatasourceHTTPClient(ds, 30*time.Second))
 	})
-	register(models.DataSourceVictoriaMetrics, NewVictoriaMetricsClient)
 	register(models.DataSourceLoki, NewLokiClient)
 	register(models.DataSourceVictoriaLogs, NewVictoriaLogsClient)
 	register(models.DataSourceTempo, NewTempoClient)
