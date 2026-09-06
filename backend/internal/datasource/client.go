@@ -47,17 +47,9 @@ func NewClient(ds models.DataSource) (Client, error) {
 func TestConnection(ctx context.Context, ds models.DataSource) error {
 	switch ds.Type {
 	case models.DataSourceVMAlert:
-		client, err := NewVMAlertClient(ds)
-		if err != nil {
-			return err
-		}
-		return runHTTPConnectionCheck(ctx, ds, client.client, []string{"/health", "/api/v1/alerts", "/"})
+		return testFactoryHTTPConnection(ctx, ds, NewVMAlertClient, []string{"/health", "/api/v1/alerts", "/"})
 	case models.DataSourceAlertManager:
-		client, err := NewAlertManagerClient(ds)
-		if err != nil {
-			return err
-		}
-		return runHTTPConnectionCheck(ctx, ds, client.client, []string{"/api/v2/status", "/api/v2/alerts", "/"})
+		return testFactoryHTTPConnection(ctx, ds, NewAlertManagerClient, []string{"/api/v2/status", "/api/v2/alerts", "/"})
 	case models.DataSourcePrometheus:
 		return testRegisteredHTTPConnection(ctx, ds, []string{"/-/healthy", "/api/v1/query?query=1", "/"})
 	case models.DataSourceVictoriaMetrics:
@@ -89,6 +81,14 @@ func testRegisteredHTTPConnection(ctx context.Context, ds models.DataSource, end
 		return fmt.Errorf("%s client type %T", ds.Type, client)
 	}
 	return runHTTPConnectionCheck(ctx, ds, provider.HTTPClient(), endpoints)
+}
+
+func testFactoryHTTPConnection[T httpClientProvider](ctx context.Context, ds models.DataSource, newClient func(models.DataSource) (T, error), endpoints []string) error {
+	client, err := newClient(ds)
+	if err != nil {
+		return err
+	}
+	return runHTTPConnectionCheck(ctx, ds, client.HTTPClient(), endpoints)
 }
 
 func runHTTPConnectionCheck(ctx context.Context, ds models.DataSource, httpClient *http.Client, endpoints []string) error {

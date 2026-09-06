@@ -18,7 +18,10 @@ status: accepted
 > is also out-of-tree (`ace-datasource-victoriametrics`,
 > [#451](https://github.com/aceobservability/ace/issues/451)). Loki is also
 > out-of-tree (`ace-datasource-loki`,
-> [#451](https://github.com/aceobservability/ace/issues/451)). Remaining
+> [#451](https://github.com/aceobservability/ace/issues/451)). VMAlert
+> (`ace-datasource-vmalert`) and Alertmanager (`ace-datasource-alertmanager`)
+> are out-of-tree connection-test clients
+> ([#451](https://github.com/aceobservability/ace/issues/451)). Remaining
 > `ace-llm-*` / `ace-datasource-*` extracts follow
 > [#446](https://github.com/aceobservability/ace/issues/446).
 
@@ -68,8 +71,13 @@ handlers call `internal/datasource.NewClient` and `llm.New` /
 `llm.RequireKnown`. `datasource.NewClient` looks up `cfg.Type`. There is no
 parallel type argument.
 
-`vmalert` and `alertmanager` are not query `Client` types. `TestConnection`
-keeps a dedicated path for them.
+`vmalert` and `alertmanager` are not query `Client` types. Ace does not
+`RegisterDatasource` for them. `ace-datasource-vmalert` and
+`ace-datasource-alertmanager` implement `New(url, httpClient)`. Ace injects
+`ssrf.DatasourceClient` (auth-wrapped) through thin factories. `TestConnection`
+keeps a dedicated Ace path that calls `runHTTPConnectionCheck`
+(`IsLocalURL` / `ValidateDatasourceURL`). Do not use the module `connect.go`
+copy on Ace's path.
 
 An LLM module must depend on a `ace/backend` version that does not import that
 module. Ace's current module then depends on the adapter. That avoids a Go
