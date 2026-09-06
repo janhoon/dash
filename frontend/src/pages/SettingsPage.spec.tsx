@@ -480,6 +480,7 @@ describe('SettingsPage', () => {
 
       expect(screen.getByTestId('settings-nav-general')).toBeTruthy()
       expect(screen.getByTestId('settings-nav-members')).toBeTruthy()
+      expect(screen.getByTestId('settings-nav-mcp')).toBeTruthy()
       expect(screen.getByTestId('settings-nav-sso')).toBeTruthy()
       expect(screen.getByTestId('settings-general')).toBeTruthy()
       expect(screen.getByTestId('settings-branding')).toBeTruthy()
@@ -490,6 +491,37 @@ describe('SettingsPage', () => {
         expect(router.state.location.pathname).toBe('/app/settings/members')
         expect(screen.getByTestId('settings-members')).toBeTruthy()
       })
+    })
+
+    it('opens MCP / Plugins as the Figma 12:188 list', async () => {
+      const user = userEvent.setup()
+      const router = renderSettings('/app/settings/general')
+
+      await waitFor(() => {
+        expect(screen.getByTestId('settings-nav-mcp')).toBeTruthy()
+      })
+
+      await user.click(screen.getByTestId('settings-nav-mcp'))
+
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe('/app/settings/mcp')
+        expect(screen.getByTestId('mcp-plugins-panel')).toBeTruthy()
+      })
+
+      expect(screen.getByRole('heading', { name: 'MCP / Plugins' })).toBeTruthy()
+      expect(screen.getByText('Victoria Metrics')).toBeTruthy()
+      expect(screen.queryByTestId('settings-section-nav')).toBeNull()
+    })
+  })
+
+  describe('MCP / Plugins section', () => {
+    it('renders /app/settings/mcp as the Figma panel', async () => {
+      renderSettings('/app/settings/mcp')
+
+      expect(await screen.findByTestId('mcp-plugins-panel')).toBeTruthy()
+      expect(screen.getByRole('heading', { name: 'MCP / Plugins' })).toBeTruthy()
+      expect(screen.queryByTestId('settings-section-nav')).toBeNull()
+      expect(screen.queryByRole('heading', { name: 'Settings' })).toBeNull()
     })
   })
 })

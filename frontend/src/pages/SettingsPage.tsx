@@ -1,4 +1,4 @@
-import { Bot, Database, Edit2, Lock, Shield, Users } from 'lucide-react'
+import { Bot, Database, Edit2, Lock, Puzzle, Shield, Users } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router'
 import { getOrganization, listMembers } from '@/api/organizations'
@@ -7,6 +7,7 @@ import { CopilotConnectionPanel } from '@/components/settings/CopilotConnectionP
 import { DataSourceSettingsPanel } from '@/components/settings/DataSourceSettingsPanel'
 import { GeneralSettingsSection } from '@/components/settings/GeneralSettingsSection'
 import { GroupsSettingsSection } from '@/components/settings/GroupsSettingsSection'
+import { McpPluginsPanel } from '@/components/settings/McpPluginsPanel'
 import { MembersSettingsSection } from '@/components/settings/MembersSettingsSection'
 import {
   isSettingsSection,
@@ -27,6 +28,7 @@ const SECTION_META: Array<{
   { key: 'groups', label: 'Groups & Permissions', icon: Shield },
   { key: 'datasources', label: 'Data Sources', icon: Database },
   { key: 'ai', label: 'AI Configuration', icon: Bot },
+  { key: 'mcp', label: 'MCP / Plugins', icon: Puzzle },
   { key: 'sso', label: 'SSO / Auth', icon: Lock },
 ]
 
@@ -75,13 +77,22 @@ export function SettingsPage() {
   }, [orgId])
 
   useEffect(() => {
+    if (activeSection === 'mcp') return
     void loadData()
-  }, [loadData])
+  }, [activeSection, loadData])
 
   const isAdmin = org?.role === 'admin'
 
   if (!isSettingsSection(sectionParam) && sectionParam !== undefined) {
     return <Navigate to="/app/settings/general" replace />
+  }
+
+  if (activeSection === 'mcp') {
+    return (
+      <div className="flex min-h-0 flex-1" style={{ color: 'var(--color-on-surface)' }}>
+        <McpPluginsPanel />
+      </div>
+    )
   }
 
   return (
