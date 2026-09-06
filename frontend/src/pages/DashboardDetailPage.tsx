@@ -1,5 +1,5 @@
-import { AlertCircle, ArrowLeft, LayoutGrid, Plus, Settings } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { AlertCircle, LayoutGrid, Plus, Settings } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { getDashboard } from '@/api/dashboards'
 import { deletePanel, listPanels } from '@/api/panels'
@@ -8,11 +8,14 @@ import { PanelEditModal } from '@/components/PanelEditModal'
 import { TimeRangePicker } from '@/components/TimeRangePicker'
 import { VariableBar } from '@/components/VariableBar'
 import { CrosshairSyncProvider } from '@/contexts/CrosshairSyncContext'
-import { VariablesProvider, useDashboardVariables } from '@/contexts/VariablesContext'
+import { useDashboardVariables, VariablesProvider } from '@/contexts/VariablesContext'
+import { useDatasources } from '@/hooks/useDatasources'
+import { useOrganization } from '@/hooks/useOrganization'
 import { useRegisterCommandContext } from '@/hooks/useRegisterCommandContext'
 import { useTimeRange } from '@/hooks/useTimeRange'
 import { useFavoritesStore } from '@/stores/favoritesStore'
 import type { Dashboard } from '@/types/dashboard'
+import type { DataSource } from '@/types/datasource'
 import type { Panel } from '@/types/panel'
 
 /** Shared with TracesExplorePanel — opens a specific trace after navigate. */
@@ -25,10 +28,28 @@ function dashboardLoadErrorMessage(cause: unknown): string {
   return 'Dashboard not found'
 }
 
+function dashboardDatasourceName(panels: Panel[], datasources: DataSource[]): string {
+  const names = new Set<string>()
+  for (const panel of panels) {
+    const datasourceId = panel.query?.datasource_id
+    if (typeof datasourceId !== 'string' || !datasourceId) continue
+    const match = datasources.find((datasource) => datasource.id === datasourceId)
+    if (match) names.add(match.name)
+  }
+  if (names.size > 1) return ''
+  if (names.size === 1) {
+    const [name] = names
+    return name ?? ''
+  }
+  return datasources.find((datasource) => datasource.is_default)?.name ?? datasources[0]?.name ?? ''
+}
+
 function DashboardDetailContent({ dashboardId }: { dashboardId: string }) {
   const navigate = useNavigate()
-  const addRecent = useFavoritesStore(state => state.addRecent)
-  const { setPreset, setRefreshInterval } = useTimeRange()
+  const addRecent = useFavoritesStore((state) => state.addRecent)
+  const { currentOrgId } = useOrganization()
+  const { data: datasources = [] } = useDatasources(currentOrgId)
+  const { displayText, setPreset, setRefreshInterval } = useTimeRange()
   const { variables, hasVariables, fetchVariables, setVariableValue } = useDashboardVariables()
 
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
@@ -46,6 +67,12 @@ function DashboardDetailContent({ dashboardId }: { dashboardId: string }) {
   const [editingPanel, setEditingPanel] = useState<Panel | null>(null)
   const [deletingPanel, setDeletingPanel] = useState<Panel | null>(null)
   const [deleting, setDeleting] = useState(false)
+
+  const datasourceName = useMemo(
+    () => dashboardDatasourceName(panels, datasources),
+    [datasources, panels],
+  )
+  const headerMeta = datasourceName ? `${displayText} · ${datasourceName}` : displayText
 
   useEffect(() => {
     setPreset('1h')
@@ -102,12 +129,12 @@ function DashboardDetailContent({ dashboardId }: { dashboardId: string }) {
   }
 
   function handlePanelSaved(saved: Panel) {
-    setPanels(current => {
-      const existingIndex = current.findIndex(panel => panel.id === saved.id)
+    setPanels((current) => {
+      const existingIndex = current.findIndex((panel) => panel.id === saved.id)
       if (existingIndex === -1) {
         return [...current, saved]
       }
-      return current.map(panel => (panel.id === saved.id ? saved : panel))
+      return current.map((panel) => (panel.id === saved.id ? saved : panel))
     })
     closePanelModal()
   }
@@ -141,7 +168,7 @@ function DashboardDetailContent({ dashboardId }: { dashboardId: string }) {
     setDeleting(true)
     try {
       await deletePanel(deletingPanel.id)
-      setPanels(current => current.filter(panel => panel.id !== deletingPanel.id))
+      setPanels((current) => current.filter((panel) => panel.id !== deletingPanel.id))
       setDeletingPanel(null)
     } catch {
       // Keep dialog open on failure; user can cancel
@@ -151,81 +178,64 @@ function DashboardDetailContent({ dashboardId }: { dashboardId: string }) {
   }
 
   return (
-    <div className="mx-auto max-w-[1600px] px-6 py-5">
+    <div className="p-[var(--section-gap)]">
       <header
-        className="relative z-20 mb-4 flex flex-col gap-3 rounded-lg px-6 py-3 sm:flex-row sm:items-center sm:justify-between"
-        style={{ backgroundColor: 'var(--color-surface-container-low)' }}
+        className="relative z-20 mb-4 flex flex-col gap-3 sm:flex-row sm:items-center"
+        data-testid="dashboard-loaded-header"
       >
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            className="flex h-[38px] w-[38px] items-center justify-center rounded-lg transition hover:opacity-80"
-            style={{
-              backgroundColor: 'var(--color-surface-container-high)',
-              color: 'var(--color-on-surface-variant)',
-            }}
-            data-testid="dashboard-back-btn"
-            title="Back to Dashboards"
-            onClick={() => navigate('/app/dashboards')}
-          >
-            <ArrowLeft size={20} />
-          </button>
-          {dashboard && (
-            <div>
-              <h1
-                className="mb-0.5 font-display text-lg font-semibold tracking-wide"
-                style={{ color: 'var(--color-on-surface)' }}
-                data-testid="dashboard-title"
-              >
-                {dashboard.title}
-              </h1>
-              {dashboard.description && (
-                <p className="text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
-                  {dashboard.description}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <TimeRangePicker />
-          <div
-            className="hidden h-6 w-px sm:block"
-            style={{ backgroundColor: 'var(--color-outline-variant)' }}
-          />
-          <div className="flex items-center gap-2">
-            {dashboard && (
-              <Link
-                to={`/app/dashboards/${dashboardId}/settings/general`}
-                className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold transition hover:opacity-80"
-                style={{
-                  backgroundColor: 'var(--color-surface-container-high)',
-                  color: 'var(--color-on-surface-variant)',
-                }}
-                data-testid="dashboard-settings-button"
-              >
-                <Settings size={16} />
-                <span>Settings</span>
-              </Link>
-            )}
-            {dashboard && !loading && !error ? (
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                style={{
-                  background:
-                    'linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))',
-                }}
-                data-testid="dashboard-add-panel-btn"
-                onClick={openAddPanel}
-                disabled={loading}
-              >
-                <Plus size={18} />
-                <span>Add Panel</span>
-              </button>
-            ) : null}
+        {dashboard ? (
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <h1
+              className="font-display text-2xl font-semibold tracking-[-0.02em]"
+              style={{ color: 'var(--color-on-surface)' }}
+              data-testid="dashboard-title"
+            >
+              {dashboard.title}
+            </h1>
+            <p
+              className="text-[13px]"
+              style={{ color: 'var(--color-on-surface-variant)' }}
+              data-testid="dashboard-header-meta"
+            >
+              {headerMeta}
+            </p>
           </div>
+        ) : null}
+
+        <div
+          className="flex flex-wrap items-center gap-2 sm:ml-auto"
+          data-testid="dashboard-header-actions"
+        >
+          <TimeRangePicker showStatus={false} />
+          {dashboard ? (
+            <Link
+              to={`/app/dashboards/${dashboardId}/settings/general`}
+              className="inline-flex h-8 items-center gap-2 rounded-lg px-2 text-xs font-medium transition hover:opacity-80"
+              style={{
+                backgroundColor: 'var(--color-surface-container-high)',
+                color: 'var(--color-on-surface)',
+              }}
+              data-testid="dashboard-settings-button"
+            >
+              <Settings size={14} />
+              <span>Settings</span>
+            </Link>
+          ) : null}
+          {dashboard && !loading && !error ? (
+            <button
+              type="button"
+              className="inline-flex h-8 items-center rounded-lg px-2 text-xs font-semibold transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              style={{
+                backgroundColor: 'var(--color-primary)',
+                color: '#0B0D0F',
+              }}
+              data-testid="dashboard-add-panel-btn"
+              onClick={openAddPanel}
+              disabled={loading}
+            >
+              Add panel
+            </button>
+          ) : null}
         </div>
       </header>
 

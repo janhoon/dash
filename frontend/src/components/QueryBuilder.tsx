@@ -64,21 +64,21 @@ export function QueryBuilder({
   const filteredMetrics = useMemo(() => {
     if (!metricSearch) return metricsCache.slice(0, 100)
     const search = metricSearch.toLowerCase()
-    return metricsCache.filter(m => m.toLowerCase().includes(search)).slice(0, 100)
+    return metricsCache.filter((m) => m.toLowerCase().includes(search)).slice(0, 100)
   }, [metricSearch, metricsCache])
 
   const availableLabelsForGroupBy = useMemo(
-    () => labelsCache.filter(label => label !== '__name__'),
+    () => labelsCache.filter((label) => label !== '__name__'),
     [labelsCache],
   )
 
   const aggregationRequiresRange = useMemo(() => {
-    const func = AGGREGATION_FUNCTIONS.find(f => f.value === aggregation)
+    const func = AGGREGATION_FUNCTIONS.find((f) => f.value === aggregation)
     return Boolean(func && 'requiresRange' in func && func.requiresRange)
   }, [aggregation])
 
   const aggregationRequiresK = useMemo(() => {
-    const func = AGGREGATION_FUNCTIONS.find(f => f.value === aggregation)
+    const func = AGGREGATION_FUNCTIONS.find((f) => f.value === aggregation)
     return Boolean(func && 'requiresK' in func && func.requiresK)
   }, [aggregation])
 
@@ -167,7 +167,12 @@ export function QueryBuilder({
       {mode === 'builder' ? (
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <label htmlFor="query-metric-search-input" className="text-sm font-medium text-[var(--color-on-surface)]">Metric</label>
+            <label
+              htmlFor="query-metric-search-input"
+              className="text-sm font-medium text-[var(--color-on-surface)]"
+            >
+              Metric
+            </label>
             <div className="relative">
               <div className="relative flex items-center">
                 <Search
@@ -177,7 +182,7 @@ export function QueryBuilder({
                 <input
                   id="query-metric-search-input"
                   value={metricSearch}
-                  onChange={event => setMetricSearch(event.target.value)}
+                  onChange={(event) => setMetricSearch(event.target.value)}
                   type="text"
                   data-testid="query-metric-search-input"
                   className="w-full rounded-sm bg-[var(--color-surface-container-high)] px-3 py-2 pl-9 text-sm text-[var(--color-on-surface)] transition-colors duration-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:outline-none"
@@ -195,12 +200,12 @@ export function QueryBuilder({
 
               {showMetricDropdown && filteredMetrics.length > 0 ? (
                 <div className="absolute top-[calc(100%+4px)] right-0 left-0 z-[100] max-h-[250px] overflow-y-auto rounded-sm bg-[var(--color-surface-container-low)] shadow-lg">
-                  {filteredMetrics.map(m => (
+                  {filteredMetrics.map((m) => (
                     <button
                       key={m}
                       type="button"
                       className={`w-full cursor-pointer border-none bg-transparent px-3 py-2 text-left font-mono text-sm text-[var(--color-on-surface)] transition-colors duration-150 hover:bg-[var(--color-surface-container-high)] ${m === metric ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]' : ''}`}
-                      onMouseDown={event => {
+                      onMouseDown={(event) => {
                         event.preventDefault()
                         selectMetric(m)
                       }}
@@ -241,16 +246,16 @@ export function QueryBuilder({
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                {labelFilters.map(filter => (
+                {labelFilters.map((filter) => (
                   <div key={filter.id} className="flex items-center gap-2">
                     <select
                       value={filter.label}
-                      onChange={event => handleLabelChange(filter, event.target.value)}
+                      onChange={(event) => handleLabelChange(filter, event.target.value)}
                       className="min-w-0 flex-1 cursor-pointer rounded-sm bg-[var(--color-surface-container-high)] px-3 py-2 text-sm text-[var(--color-on-surface)] focus:ring-1 focus:ring-[var(--color-primary)]/20 focus:outline-none"
                       disabled={disabled}
                     >
                       <option value="">Select label</option>
-                      {labelsCache.map(label => (
+                      {labelsCache.map((label) => (
                         <option key={label} value={label}>
                           {label}
                         </option>
@@ -259,7 +264,7 @@ export function QueryBuilder({
 
                     <select
                       value={filter.operator}
-                      onChange={event =>
+                      onChange={(event) =>
                         updateLabelFilter(filter.id, {
                           operator: event.target.value as LabelFilter['operator'],
                         })
@@ -267,7 +272,7 @@ export function QueryBuilder({
                       className="w-[70px] flex-none cursor-pointer rounded-sm bg-[var(--color-surface-container-high)] px-3 py-2 font-mono text-sm text-[var(--color-on-surface-variant)] focus:ring-1 focus:ring-[var(--color-primary)]/20 focus:outline-none"
                       disabled={disabled}
                     >
-                      {LABEL_OPERATORS.map(op => (
+                      {LABEL_OPERATORS.map((op) => (
                         <option key={op.value} value={op.value}>
                           {op.label}
                         </option>
@@ -277,14 +282,14 @@ export function QueryBuilder({
                     {getLabelValues(filter.label).length > 0 ? (
                       <select
                         value={filter.value}
-                        onChange={event =>
+                        onChange={(event) =>
                           updateLabelFilter(filter.id, { value: event.target.value })
                         }
                         className="min-w-0 flex-[1.5] cursor-pointer rounded-sm bg-[var(--color-surface-container-high)] px-3 py-2 text-sm text-[var(--color-on-surface)] focus:ring-1 focus:ring-[var(--color-primary)]/20 focus:outline-none"
                         disabled={disabled || loadingLabelValues === filter.label}
                       >
                         <option value="">Select value</option>
-                        {getLabelValues(filter.label).map(v => (
+                        {getLabelValues(filter.label).map((v) => (
                           <option key={v} value={v}>
                             {v}
                           </option>
@@ -294,7 +299,7 @@ export function QueryBuilder({
                       <input
                         type="text"
                         value={filter.value}
-                        onChange={event =>
+                        onChange={(event) =>
                           updateLabelFilter(filter.id, { value: event.target.value })
                         }
                         className="min-w-0 flex-[1.5] rounded-sm bg-[var(--color-surface-container-high)] px-3 py-2 text-sm text-[var(--color-on-surface)] focus:ring-1 focus:ring-[var(--color-primary)]/20 focus:outline-none"
@@ -318,19 +323,22 @@ export function QueryBuilder({
           </div>
 
           <div className="flex flex-col gap-2">
-            <label htmlFor="query-aggregation-select" className="text-sm font-medium text-[var(--color-on-surface)]">
+            <label
+              htmlFor="query-aggregation-select"
+              className="text-sm font-medium text-[var(--color-on-surface)]"
+            >
               Aggregation
             </label>
             <div className="flex items-center gap-4">
               <select
                 id="query-aggregation-select"
                 value={aggregation}
-                onChange={event => setAggregation(event.target.value as typeof aggregation)}
+                onChange={(event) => setAggregation(event.target.value as typeof aggregation)}
                 data-testid="query-aggregation-select"
                 className="max-w-[200px] flex-1 cursor-pointer rounded-sm bg-[var(--color-surface-container-high)] px-3 py-2 text-sm text-[var(--color-on-surface)] focus:ring-1 focus:ring-[var(--color-primary)]/20 focus:outline-none"
                 disabled={disabled}
               >
-                {AGGREGATION_FUNCTIONS.map(agg => (
+                {AGGREGATION_FUNCTIONS.map((agg) => (
                   <option key={agg.value} value={agg.value}>
                     {agg.label}
                   </option>
@@ -339,11 +347,16 @@ export function QueryBuilder({
 
               {aggregationRequiresRange ? (
                 <div className="flex items-center gap-2">
-                  <label htmlFor="query-range-input" className="text-sm text-[var(--color-outline)]">Range:</label>
+                  <label
+                    htmlFor="query-range-input"
+                    className="text-sm text-[var(--color-outline)]"
+                  >
+                    Range:
+                  </label>
                   <input
                     id="query-range-input"
                     value={rangeInterval}
-                    onChange={event => setRangeInterval(event.target.value)}
+                    onChange={(event) => setRangeInterval(event.target.value)}
                     type="text"
                     data-testid="query-range-input"
                     className="w-20 rounded-sm bg-[var(--color-surface-container-high)] px-3 py-2 font-mono text-sm text-[var(--color-on-surface)] focus:ring-1 focus:ring-[var(--color-primary)]/20 focus:outline-none"
@@ -355,11 +368,13 @@ export function QueryBuilder({
 
               {aggregationRequiresK ? (
                 <div className="flex items-center gap-2">
-                  <label htmlFor="query-k-input" className="text-sm text-[var(--color-outline)]">K:</label>
+                  <label htmlFor="query-k-input" className="text-sm text-[var(--color-outline)]">
+                    K:
+                  </label>
                   <input
                     id="query-k-input"
                     value={kValue}
-                    onChange={event => setKValue(Number(event.target.value))}
+                    onChange={(event) => setKValue(Number(event.target.value))}
                     type="number"
                     min={1}
                     data-testid="query-k-input"
@@ -376,7 +391,7 @@ export function QueryBuilder({
               <button
                 type="button"
                 className="flex w-full cursor-pointer items-center gap-2 border-none bg-transparent py-2 text-[var(--color-on-surface)] hover:text-[var(--color-primary)]"
-                onClick={() => setShowGroupBy(prev => !prev)}
+                onClick={() => setShowGroupBy((prev) => !prev)}
                 disabled={disabled}
               >
                 <span className="text-sm font-medium">Group By</span>
@@ -391,7 +406,7 @@ export function QueryBuilder({
               {showGroupBy ? (
                 <div className="rounded-sm bg-[var(--color-surface-container-high)] p-3">
                   <div className="flex flex-wrap gap-2">
-                    {availableLabelsForGroupBy.map(label => (
+                    {availableLabelsForGroupBy.map((label) => (
                       <label
                         key={label}
                         className="flex cursor-pointer items-center gap-1.5 rounded bg-[var(--color-surface-container-low)] px-2.5 py-1.5 text-xs text-[var(--color-on-surface)] transition-all duration-200 hover:border-[var(--color-primary)]/20"

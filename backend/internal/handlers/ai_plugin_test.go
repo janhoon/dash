@@ -12,7 +12,12 @@ import (
 
 	"github.com/google/uuid"
 
+	anthropic "github.com/aceobservability/ace-llm-anthropic"
+	copilot "github.com/aceobservability/ace-llm-copilot"
+	openaicompat "github.com/aceobservability/ace-llm-openai-compat"
+
 	"github.com/aceobservability/ace/backend/internal/crypto"
+	"github.com/aceobservability/ace/backend/pkg/llm"
 )
 
 type probeProvider struct {
@@ -21,7 +26,7 @@ type probeProvider struct {
 }
 
 func TestNewLLMProvider_UnknownTypeFailsClosed(t *testing.T) {
-	p, err := newLLMProvider("nope", LLMConfig{
+	p, err := llm.New("nope", LLMConfig{
 		BaseURL:     "https://api.openai.com/v1",
 		APIKey:      "sk-should-not-be-used",
 		DisplayName: "Nope",
@@ -38,7 +43,7 @@ func TestNewLLMProvider_UnknownTypeFailsClosed(t *testing.T) {
 }
 
 func TestNewLLMProvider_AnthropicRegistered(t *testing.T) {
-	p, err := newLLMProvider("anthropic", LLMConfig{
+	p, err := llm.New("anthropic", LLMConfig{
 		BaseURL:     "https://api.anthropic.com",
 		APIKey:      "sk-ant",
 		DisplayName: "Anthropic",
@@ -46,9 +51,9 @@ func TestNewLLMProvider_AnthropicRegistered(t *testing.T) {
 	if err != nil {
 		t.Fatalf("anthropic should be registered: %v", err)
 	}
-	ap, ok := p.(*AnthropicProvider)
+	ap, ok := p.(*anthropic.Provider)
 	if !ok {
-		t.Fatalf("expected *AnthropicProvider, got %T", p)
+		t.Fatalf("expected *anthropic.Provider, got %T", p)
 	}
 	if ap.APIKey != "sk-ant" {
 		t.Errorf("expected plaintext APIKey, got %q", ap.APIKey)
@@ -79,16 +84,16 @@ func TestNewLLMProvider_OpenAICompatListsAndChats(t *testing.T) {
 
 	for _, providerType := range []string{"openai", "openrouter", "ollama", "custom"} {
 		t.Run(providerType, func(t *testing.T) {
-			p, err := newLLMProvider(providerType, LLMConfig{
+			p, err := llm.New(providerType, LLMConfig{
 				BaseURL:     server.URL,
 				APIKey:      "test-api-key",
 				DisplayName: providerType,
 			})
 			if err != nil {
-				t.Fatalf("newLLMProvider(%q): %v", providerType, err)
+				t.Fatalf("llm.New(%q): %v", providerType, err)
 			}
-			if _, ok := p.(*OpenAICompatibleProvider); !ok {
-				t.Fatalf("expected *OpenAICompatibleProvider, got %T", p)
+			if _, ok := p.(*openaicompat.Provider); !ok {
+				t.Fatalf("expected *openaicompat.Provider, got %T", p)
 			}
 
 			models, err := p.ListModels(context.Background())
@@ -115,13 +120,13 @@ func TestNewLLMProvider_OpenAICompatListsAndChats(t *testing.T) {
 }
 
 func TestNewLLMProvider_CopilotRegistered(t *testing.T) {
-	p, err := newLLMProvider("copilot", LLMConfig{APIKey: "encrypted-gh-token"})
+	p, err := llm.New("copilot", LLMConfig{APIKey: "encrypted-gh-token"})
 	if err != nil {
 		t.Fatalf("copilot should be registered: %v", err)
 	}
-	cp, ok := p.(*CopilotProvider)
+	cp, ok := p.(*copilot.Provider)
 	if !ok {
-		t.Fatalf("expected *CopilotProvider, got %T", p)
+		t.Fatalf("expected *copilot.Provider, got %T", p)
 	}
 	if cp.EncryptedGHToken != "encrypted-gh-token" {
 		t.Errorf("expected EncryptedGHToken from LLMConfig.APIKey, got %q", cp.EncryptedGHToken)
@@ -146,9 +151,9 @@ func TestInstantiateDBProvider_CopilotKeepsCiphertext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("copilot DB path must not decrypt API key: %v", err)
 	}
-	cp, ok := p.(*CopilotProvider)
+	cp, ok := p.(*copilot.Provider)
 	if !ok {
-		t.Fatalf("expected *CopilotProvider, got %T", p)
+		t.Fatalf("expected *copilot.Provider, got %T", p)
 	}
 	if cp.EncryptedGHToken != ciphertext {
 		t.Errorf("expected ciphertext EncryptedGHToken, got %q", cp.EncryptedGHToken)
@@ -195,23 +200,18 @@ func TestInstantiateDBProvider_CopilotEncryptedKeyListsAndChats(t *testing.T) {
 		APIKey:       &enc,
 	}
 
-	copilotTokenCache.Range(func(key, value any) bool {
-		copilotTokenCache.Delete(key)
-		return true
-	})
-
 	p, _, err := instantiateDBProvider(row)
 	if err != nil {
 		t.Fatalf("instantiateDBProvider: %v", err)
 	}
-	cp, ok := p.(*CopilotProvider)
+	cp, ok := p.(*copilot.Provider)
 	if !ok {
-		t.Fatalf("expected *CopilotProvider, got %T", p)
+		t.Fatalf("expected *copilot.Provider, got %T", p)
 	}
 	if cp.EncryptedGHToken != enc {
 		t.Fatal("EncryptedGHToken must still be the stored ciphertext")
 	}
-	cp.tokenEndpoint = tokenServer.URL + "/copilot_internal/v2/token"
+	cp.TokenEndpoint = tokenServer.URL + "/copilot_internal/v2/token"
 
 	models, err := cp.ListModels(context.Background())
 	if err != nil {
@@ -234,6 +234,52 @@ func TestInstantiateDBProvider_CopilotEncryptedKeyListsAndChats(t *testing.T) {
 	}
 }
 
+func encryptTestToken(t *testing.T, plaintext string) string {
+	t.Helper()
+	enc, err := crypto.EncryptToken(plaintext)
+	if err != nil {
+		t.Fatalf("failed to encrypt test token: %v", err)
+	}
+	return enc
+}
+
+func copilotModelsPayload() string {
+	return `{
+		"data": [
+			{
+				"id": "gpt-4o",
+				"name": "GPT-4o",
+				"vendor": "openai",
+				"model_picker_enabled": true,
+				"model_picker_category": "chat",
+				"preview": false,
+				"policy": {"state": "enabled"},
+				"supported_endpoints": ["/chat/completions"]
+			},
+			{
+				"id": "claude-sonnet-4",
+				"name": "Claude Sonnet 4",
+				"vendor": "anthropic",
+				"model_picker_enabled": true,
+				"model_picker_category": "chat",
+				"preview": false,
+				"policy": {"state": "enabled"},
+				"supported_endpoints": ["/chat/completions"]
+			},
+			{
+				"id": "disabled-model",
+				"name": "Disabled Model",
+				"vendor": "test",
+				"model_picker_enabled": false,
+				"model_picker_category": "chat",
+				"preview": false,
+				"policy": {"state": "enabled"},
+				"supported_endpoints": ["/chat/completions"]
+			}
+		]
+	}`
+}
+
 func TestInstantiateDBProvider_OpenAIDecryptsAPIKey(t *testing.T) {
 	t.Setenv("JWT_SECRET", "test-secret-for-plugin-tests")
 	plain := "sk-test-openai-key"
@@ -252,9 +298,9 @@ func TestInstantiateDBProvider_OpenAIDecryptsAPIKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("openai DB path: %v", err)
 	}
-	op, ok := p.(*OpenAICompatibleProvider)
+	op, ok := p.(*openaicompat.Provider)
 	if !ok {
-		t.Fatalf("expected *OpenAICompatibleProvider, got %T", p)
+		t.Fatalf("expected *openaicompat.Provider, got %T", p)
 	}
 	if op.APIKey != plain {
 		t.Errorf("openai factory must receive plaintext, got %q", op.APIKey)
@@ -263,12 +309,12 @@ func TestInstantiateDBProvider_OpenAIDecryptsAPIKey(t *testing.T) {
 
 func TestRegisterLLM_DispatchUsesRegisteredFactory(t *testing.T) {
 	const providerType = "probe-dispatch"
-	RegisterLLM(providerType, func(cfg LLMConfig) (AIProvider, error) {
+	llm.RegisterLLM(providerType, func(cfg LLMConfig) (AIProvider, error) {
 		return &probeProvider{id: cfg.DisplayName}, nil
 	})
-	t.Cleanup(func() { unregisterLLM(providerType) })
+	t.Cleanup(func() { llm.UnregisterLLM(providerType) })
 
-	p, err := newLLMProvider(providerType, LLMConfig{DisplayName: "probe-one"})
+	p, err := llm.New(providerType, LLMConfig{DisplayName: "probe-one"})
 	if err != nil {
 		t.Fatalf("dispatch registered type: %v", err)
 	}
@@ -316,10 +362,10 @@ func TestChat_UnknownProviderType_Returns400(t *testing.T) {
 func TestChat_RegisteredTypeIsDispatched(t *testing.T) {
 	const providerType = "probe-chat-dispatch"
 	mock := &mockAIProvider{chatBody: `{"choices":[{"index":0,"delta":{"content":"from-probe"}}]}`}
-	RegisterLLM(providerType, func(LLMConfig) (AIProvider, error) {
+	llm.RegisterLLM(providerType, func(LLMConfig) (AIProvider, error) {
 		return mock, nil
 	})
-	t.Cleanup(func() { unregisterLLM(providerType) })
+	t.Cleanup(func() { llm.UnregisterLLM(providerType) })
 
 	h := NewAIHandler(nil, nil)
 	h.testProviderRow = &providerRow{
@@ -356,13 +402,16 @@ func TestChat_RegisteredTypeIsDispatched(t *testing.T) {
 }
 
 func TestRequireKnownLLMType(t *testing.T) {
-	if err := requireKnownLLMType("openai"); err != nil {
+	if err := llm.RequireKnown("openai"); err != nil {
 		t.Errorf("openai should be known: %v", err)
 	}
-	if err := requireKnownLLMType("anthropic"); err != nil {
+	if err := llm.RequireKnown("anthropic"); err != nil {
 		t.Errorf("anthropic should be known: %v", err)
 	}
-	if err := requireKnownLLMType("nope"); !errors.Is(err, ErrUnknownProviderType) {
+	if err := llm.RequireKnown("copilot"); err != nil {
+		t.Errorf("copilot should be known: %v", err)
+	}
+	if err := llm.RequireKnown("nope"); !errors.Is(err, ErrUnknownProviderType) {
 		t.Errorf("nope should fail closed, got %v", err)
 	}
 }

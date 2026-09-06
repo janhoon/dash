@@ -53,7 +53,7 @@ export function ExplorePage() {
   )
 
   const handleDatasourceChanged = useCallback((payload: ExploreDatasourceContext) => {
-    setDatasource(current => {
+    setDatasource((current) => {
       if (
         current &&
         current.id === payload.id &&
@@ -66,43 +66,50 @@ export function ExplorePage() {
     })
   }, [])
 
+  const activeTab = tabs.find((tab) => tab.key === activeType) ?? tabs[0]!
+  const subtitle = datasource ? `${activeTab.label} · ${datasource.name}` : activeTab.label
+
   return (
-    <div className="flex min-w-0 flex-1 flex-col px-8 py-6">
-      <header className="mb-6 flex items-center justify-between">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1
-            className="m-0 font-display text-2xl font-bold"
-            style={{ color: 'var(--color-on-surface)' }}
-          >
+    <div className="flex min-w-0 flex-1 flex-col gap-3 p-6">
+      <header className="flex items-center justify-between">
+        <div className="flex flex-col gap-1">
+          <h1 className="m-0 font-display text-2xl font-semibold text-[var(--color-on-surface)]">
             Explore
           </h1>
+          <p
+            className="m-0 text-[13px] text-[var(--color-on-surface-variant)]"
+            data-testid="explore-subtitle"
+          >
+            {subtitle}
+          </p>
         </div>
       </header>
 
-      <nav
-        className="mb-6 flex gap-1"
-        style={{ borderBottom: '1px solid var(--color-outline-variant)' }}
-        data-testid="explore-tab-nav"
-      >
-        {tabs.map(tab => (
-          <button
-            key={tab.key}
-            type="button"
-            className="cursor-pointer bg-transparent px-4 py-2.5 text-sm font-medium transition"
-            style={{
-              color:
-                activeType === tab.key ? 'var(--color-primary)' : 'var(--color-outline)',
-              borderBottom:
-                activeType === tab.key
-                  ? '2px solid var(--color-primary)'
-                  : '2px solid transparent',
-            }}
-            data-testid={`explore-tab-${tab.key}`}
-            onClick={() => navigateToTab(tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <nav className="flex items-start gap-4" data-testid="explore-tab-nav">
+        {tabs.map((tab) => {
+          const isActive = activeType === tab.key
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              className="flex cursor-pointer flex-col gap-1 border-none bg-transparent p-0 text-[13px] transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]"
+              style={{
+                color: isActive ? 'var(--color-on-surface)' : 'var(--color-on-surface-variant)',
+                fontWeight: isActive ? 500 : 400,
+              }}
+              data-testid={`explore-tab-${tab.key}`}
+              onClick={() => navigateToTab(tab.key)}
+            >
+              <span>{tab.label}</span>
+              <span
+                className="h-0.5 w-full rounded-[1px]"
+                style={{
+                  backgroundColor: isActive ? 'var(--color-primary)' : 'transparent',
+                }}
+              />
+            </button>
+          )
+        })}
       </nav>
 
       {activeType === 'metrics' ? (

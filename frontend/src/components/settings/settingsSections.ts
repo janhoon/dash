@@ -4,6 +4,7 @@ export const SETTINGS_SECTIONS = [
   'groups',
   'datasources',
   'ai',
+  'mcp',
   'sso',
 ] as const
 

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import GridLayout, { type Layout } from 'react-grid-layout/legacy'
 import 'react-grid-layout/css/styles.css'
-import { Panel } from '@/components/Panel'
 import { updatePanel } from '@/api/panels'
+import { Panel } from '@/components/Panel'
 import type { Panel as PanelType } from '@/types/panel'
 
 type DashboardGridProps = {
@@ -15,6 +15,8 @@ type DashboardGridProps = {
 
 const COL_NUM = 12
 const ROW_HEIGHT = 100
+/** DESIGN.md panel chrome: dashboard grid gutter. */
+export const GRID_GUTTER = 16
 
 export function DashboardGrid({
   panels,
@@ -35,7 +37,7 @@ export function DashboardGrid({
 
   const layout = useMemo<Layout>(
     () =>
-      panels.map(panel => ({
+      panels.map((panel) => ({
         i: panel.id,
         x: panel.grid_pos.x,
         y: panel.grid_pos.y,
@@ -52,7 +54,7 @@ export function DashboardGrid({
 
   useEffect(() => {
     if (!containerRef.current) return
-    const observer = new ResizeObserver(entries => {
+    const observer = new ResizeObserver((entries) => {
       const width = entries[0]?.contentRect.width
       if (width && width > 0) setGridWidth(width)
     })
@@ -60,29 +62,32 @@ export function DashboardGrid({
     return () => observer.disconnect()
   }, [])
 
-  const saveLayoutToDatabase = useCallback(async (nextLayout: Layout) => {
-    for (const item of nextLayout) {
-      const panel = panels.find(entry => entry.id === item.i)
-      if (!panel) continue
-      try {
-        await updatePanel(panel.id, {
-          grid_pos: {
-            x: item.x,
-            y: item.y,
-            w: item.w,
-            h: item.h,
-          },
-        })
-      } catch (cause) {
-        console.error('Failed to save panel position:', cause)
+  const saveLayoutToDatabase = useCallback(
+    async (nextLayout: Layout) => {
+      for (const item of nextLayout) {
+        const panel = panels.find((entry) => entry.id === item.i)
+        if (!panel) continue
+        try {
+          await updatePanel(panel.id, {
+            grid_pos: {
+              x: item.x,
+              y: item.y,
+              w: item.w,
+              h: item.h,
+            },
+          })
+        } catch (cause) {
+          console.error('Failed to save panel position:', cause)
+        }
       }
-    }
-  }, [panels])
+    },
+    [panels],
+  )
 
   const handleLayoutChange = useCallback(
     (nextLayout: Layout) => {
-      const updatedPanels = panels.map(panel => {
-        const item = nextLayout.find(entry => entry.i === panel.id)
+      const updatedPanels = panels.map((panel) => {
+        const item = nextLayout.find((entry) => entry.i === panel.id)
         if (!item) return panel
         return {
           ...panel,
@@ -115,7 +120,7 @@ export function DashboardGrid({
         cols={COL_NUM}
         rowHeight={ROW_HEIGHT}
         width={gridWidth}
-        margin={[12, 12]}
+        margin={[GRID_GUTTER, GRID_GUTTER]}
         containerPadding={[0, 0]}
         isDraggable
         isResizable
@@ -123,7 +128,7 @@ export function DashboardGrid({
         draggableHandle=".panel-header"
         onLayoutChange={handleLayoutChange}
       >
-        {panels.map(panel => (
+        {panels.map((panel) => (
           <div key={panel.id} data-testid={`dashboard-grid-item-${panel.id}`}>
             <Panel
               panel={panel}

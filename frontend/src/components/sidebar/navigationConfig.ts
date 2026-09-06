@@ -48,6 +48,7 @@ export const sectionSubNav: Record<string, SubNavItem[]> = {
     { id: 'groups', label: 'Groups & Permissions', path: '/app/settings/groups' },
     { id: 'datasources', label: 'Data Sources', path: '/app/settings/datasources' },
     { id: 'ai', label: 'AI Configuration', path: '/app/settings/ai' },
+    { id: 'mcp', label: 'MCP / Plugins', path: '/app/settings/mcp' },
     { id: 'sso', label: 'SSO / Auth', path: '/app/settings/sso' },
     { id: 'audit-log', label: 'Audit Log', path: '/app/audit-log' },
   ],

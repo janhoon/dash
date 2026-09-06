@@ -9,6 +9,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	acealert "github.com/aceobservability/ace-datasource-alertmanager"
+
 	"github.com/aceobservability/ace/backend/internal/auth"
 	"github.com/aceobservability/ace/backend/internal/datasource"
 	"github.com/aceobservability/ace/backend/internal/models"
@@ -152,7 +154,7 @@ func (h *AlertManagerHandler) CreateSilence(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var silence datasource.AMSilenceCreate
+	var silence acealert.SilenceCreate
 	if err := json.NewDecoder(r.Body).Decode(&silence); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)

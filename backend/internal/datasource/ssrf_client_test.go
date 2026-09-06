@@ -10,6 +10,15 @@ import (
 	"testing"
 	"time"
 
+	acech "github.com/aceobservability/ace-datasource-clickhouse"
+	acees "github.com/aceobservability/ace-datasource-elasticsearch"
+	aceloki "github.com/aceobservability/ace-datasource-loki"
+	aceprom "github.com/aceobservability/ace-datasource-prometheus"
+	acetempo "github.com/aceobservability/ace-datasource-tempo"
+	acevl "github.com/aceobservability/ace-datasource-victorialogs"
+	acevm "github.com/aceobservability/ace-datasource-victoriametrics"
+	acevt "github.com/aceobservability/ace-datasource-victoriatraces"
+
 	"github.com/aceobservability/ace/backend/internal/models"
 	"github.com/aceobservability/ace/backend/internal/ssrf"
 )
@@ -51,15 +60,19 @@ func TestDatasourceClientsWireDialAndRedirectPolicy(t *testing.T) {
 	}
 
 	t.Run("victorialogs_stream_timeout", func(t *testing.T) {
-		c, err := NewVictoriaLogsClient(testDS(models.DataSourceVictoriaLogs, "http://127.0.0.1:9428"))
+		raw, err := NewClient(testDS(models.DataSourceVictoriaLogs, "http://127.0.0.1:9428"))
 		if err != nil {
-			t.Fatalf("NewVictoriaLogsClient: %v", err)
+			t.Fatalf("NewClient victorialogs: %v", err)
 		}
-		if c.streamClient == nil {
-			t.Fatal("streamClient is nil")
+		c, ok := raw.(*acevl.Client)
+		if !ok {
+			t.Fatalf("expected *victorialogs.Client, got %T", raw)
 		}
-		if c.streamClient.Timeout != 0 {
-			t.Fatalf("streamClient.Timeout = %s, want 0 for long-lived tails", c.streamClient.Timeout)
+		if c.StreamHTTPClient() == nil {
+			t.Fatal("stream client is nil")
+		}
+		if c.StreamHTTPClient().Timeout != 0 {
+			t.Fatalf("streamClient.Timeout = %s, want 0 for long-lived tails", c.StreamHTTPClient().Timeout)
 		}
 	})
 }
@@ -121,15 +134,20 @@ func TestDatasourceClientsBlockMetadataRedirect(t *testing.T) {
 func TestLokiStreamBlocksMetadata(t *testing.T) {
 	t.Parallel()
 
-	client, err := NewLokiClient(testDS(models.DataSourceLoki, strings.TrimRight(cloudMetadataURL, "/")))
+	client, err := NewClient(testDS(models.DataSourceLoki, strings.TrimRight(cloudMetadataURL, "/")))
 	if err != nil {
-		t.Fatalf("NewLokiClient failed: %v", err)
+		t.Fatalf("NewClient failed: %v", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	err = client.Stream(ctx, `{job="ace"}`, time.Time{}, 1, func(LogEntry) error { return nil })
+	streamer, ok := client.(StreamClient)
+	if !ok {
+		t.Fatalf("expected StreamClient, got %T", client)
+	}
+
+	err = streamer.Stream(ctx, `{job="ace"}`, time.Time{}, 1, func(LogEntry) error { return nil })
 	if err == nil {
 		t.Fatal("Loki websocket stream to cloud metadata endpoint should fail")
 	}
@@ -138,9 +156,13 @@ func TestLokiStreamBlocksMetadata(t *testing.T) {
 func TestVictoriaLogsStreamBlocksMetadata(t *testing.T) {
 	t.Parallel()
 
-	client, err := NewVictoriaLogsClient(testDS(models.DataSourceVictoriaLogs, strings.TrimRight(cloudMetadataURL, "/")))
+	raw, err := NewClient(testDS(models.DataSourceVictoriaLogs, strings.TrimRight(cloudMetadataURL, "/")))
 	if err != nil {
-		t.Fatalf("NewVictoriaLogsClient failed: %v", err)
+		t.Fatalf("NewClient victorialogs failed: %v", err)
+	}
+	client, ok := raw.(StreamClient)
+	if !ok {
+		t.Fatalf("expected StreamClient, got %T", raw)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -165,37 +187,69 @@ func isOutboundPolicyError(err error) bool {
 func constructedDatasourceHTTPClients(t *testing.T) map[string]*http.Client {
 	t.Helper()
 
-	prom, err := NewPrometheusClient(testDS(models.DataSourcePrometheus, "http://127.0.0.1:9090"))
+	prom, err := NewClient(testDS(models.DataSourcePrometheus, "http://127.0.0.1:9090"))
 	if err != nil {
-		t.Fatalf("NewPrometheusClient: %v", err)
+		t.Fatalf("NewClient prometheus: %v", err)
 	}
-	vm, err := NewVictoriaMetricsClient(testDS(models.DataSourceVictoriaMetrics, "http://127.0.0.1:8428"))
-	if err != nil {
-		t.Fatalf("NewVictoriaMetricsClient: %v", err)
+	promClient, ok := prom.(*aceprom.Client)
+	if !ok {
+		t.Fatalf("expected *prometheus.Client, got %T", prom)
 	}
-	loki, err := NewLokiClient(testDS(models.DataSourceLoki, "http://127.0.0.1:3100"))
+	vm, err := NewClient(testDS(models.DataSourceVictoriaMetrics, "http://127.0.0.1:8428"))
 	if err != nil {
-		t.Fatalf("NewLokiClient: %v", err)
+		t.Fatalf("NewClient victoriametrics: %v", err)
 	}
-	vlogs, err := NewVictoriaLogsClient(testDS(models.DataSourceVictoriaLogs, "http://127.0.0.1:9428"))
-	if err != nil {
-		t.Fatalf("NewVictoriaLogsClient: %v", err)
+	vmClient, ok := vm.(*acevm.Client)
+	if !ok {
+		t.Fatalf("expected *victoriametrics.Client, got %T", vm)
 	}
-	tempo, err := NewTempoClient(models.DataSource{URL: "http://127.0.0.1:3200", Type: models.DataSourceTempo})
+	loki, err := NewClient(testDS(models.DataSourceLoki, "http://127.0.0.1:3100"))
 	if err != nil {
-		t.Fatalf("NewTempoClient: %v", err)
+		t.Fatalf("NewClient loki: %v", err)
 	}
-	vtraces, err := NewVictoriaTracesClient(models.DataSource{URL: "http://127.0.0.1:10428", Type: models.DataSourceVictoriaTraces})
-	if err != nil {
-		t.Fatalf("NewVictoriaTracesClient: %v", err)
+	lokiClient, ok := loki.(*aceloki.Client)
+	if !ok {
+		t.Fatalf("expected *loki.Client, got %T", loki)
 	}
-	ch, err := NewClickHouseClient(models.DataSource{URL: "http://127.0.0.1:8123", Type: models.DataSourceClickHouse})
+	vlogsRaw, err := NewClient(testDS(models.DataSourceVictoriaLogs, "http://127.0.0.1:9428"))
 	if err != nil {
-		t.Fatalf("NewClickHouseClient: %v", err)
+		t.Fatalf("NewClient victorialogs: %v", err)
 	}
-	es, err := NewElasticsearchClient(models.DataSource{URL: "http://127.0.0.1:9200", Type: models.DataSourceElasticsearch})
+	vlogs, ok := vlogsRaw.(*acevl.Client)
+	if !ok {
+		t.Fatalf("expected *victorialogs.Client, got %T", vlogsRaw)
+	}
+	tempoClient, err := NewClient(models.DataSource{URL: "http://127.0.0.1:3200", Type: models.DataSourceTempo})
 	if err != nil {
-		t.Fatalf("NewElasticsearchClient: %v", err)
+		t.Fatalf("NewClient tempo: %v", err)
+	}
+	tempo, ok := tempoClient.(*acetempo.Client)
+	if !ok {
+		t.Fatalf("expected *tempo.Client, got %T", tempoClient)
+	}
+	vtracesClient, err := NewClient(models.DataSource{URL: "http://127.0.0.1:10428", Type: models.DataSourceVictoriaTraces})
+	if err != nil {
+		t.Fatalf("NewClient victoriatraces: %v", err)
+	}
+	vtraces, ok := vtracesClient.(*acevt.Client)
+	if !ok {
+		t.Fatalf("expected *victoriatraces.Client, got %T", vtracesClient)
+	}
+	ch, err := NewClient(models.DataSource{URL: "http://127.0.0.1:8123", Type: models.DataSourceClickHouse})
+	if err != nil {
+		t.Fatalf("NewClient clickhouse: %v", err)
+	}
+	chClient, ok := ch.(*acech.Client)
+	if !ok {
+		t.Fatalf("expected *clickhouse.Client, got %T", ch)
+	}
+	es, err := NewClient(testDS(models.DataSourceElasticsearch, "http://127.0.0.1:9200"))
+	if err != nil {
+		t.Fatalf("NewClient elasticsearch: %v", err)
+	}
+	esClient, ok := es.(*acees.Client)
+	if !ok {
+		t.Fatalf("expected *elasticsearch.Client, got %T", es)
 	}
 	am, err := NewAlertManagerClient(models.DataSource{URL: "http://127.0.0.1:9093", Type: models.DataSourceAlertManager})
 	if err != nil {
@@ -207,24 +261,24 @@ func constructedDatasourceHTTPClients(t *testing.T) map[string]*http.Client {
 	}
 
 	return map[string]*http.Client{
-		"prometheus":          prom.httpClient,
-		"victoriametrics":     vm.client,
-		"loki":                loki.client,
-		"victorialogs":        vlogs.client,
-		"victorialogs_stream": vlogs.streamClient,
-		"tempo":               tempo.httpClient,
-		"victoriatraces":      vtraces.httpClient,
-		"clickhouse":          ch.httpClient,
-		"elasticsearch":       es.httpClient,
-		"alertmanager":        am.client,
-		"vmalert":             vmalert.client,
+		"prometheus":          promClient.HTTPClient(),
+		"victoriametrics":     vmClient.HTTPClient(),
+		"loki":                lokiClient.HTTPClient(),
+		"victorialogs":        vlogs.HTTPClient(),
+		"victorialogs_stream": vlogs.StreamHTTPClient(),
+		"tempo":               tempo.HTTPClient(),
+		"victoriatraces":      vtraces.HTTPClient(),
+		"clickhouse":          chClient.HTTPClient(),
+		"elasticsearch":       esClient.HTTPClient(),
+		"alertmanager":        am.HTTPClient(),
+		"vmalert":             vmalert.HTTPClient(),
 	}
 }
 
 func datasourceQueryFns() map[string]func(context.Context, string) error {
 	return map[string]func(context.Context, string) error{
 		"prometheus": func(ctx context.Context, baseURL string) error {
-			client, err := NewPrometheusClient(testDS(models.DataSourcePrometheus, baseURL))
+			client, err := NewClient(testDS(models.DataSourcePrometheus, baseURL))
 			if err != nil {
 				return err
 			}
@@ -238,7 +292,7 @@ func datasourceQueryFns() map[string]func(context.Context, string) error {
 			return nil
 		},
 		"victoriametrics": func(ctx context.Context, baseURL string) error {
-			client, err := NewVictoriaMetricsClient(testDS(models.DataSourceVictoriaMetrics, baseURL))
+			client, err := NewClient(testDS(models.DataSourceVictoriaMetrics, baseURL))
 			if err != nil {
 				return err
 			}
@@ -246,7 +300,7 @@ func datasourceQueryFns() map[string]func(context.Context, string) error {
 			return err
 		},
 		"loki": func(ctx context.Context, baseURL string) error {
-			client, err := NewLokiClient(testDS(models.DataSourceLoki, baseURL))
+			client, err := NewClient(testDS(models.DataSourceLoki, baseURL))
 			if err != nil {
 				return err
 			}
@@ -254,7 +308,7 @@ func datasourceQueryFns() map[string]func(context.Context, string) error {
 			return err
 		},
 		"victorialogs": func(ctx context.Context, baseURL string) error {
-			client, err := NewVictoriaLogsClient(testDS(models.DataSourceVictoriaLogs, baseURL))
+			client, err := NewClient(testDS(models.DataSourceVictoriaLogs, baseURL))
 			if err != nil {
 				return err
 			}
@@ -262,23 +316,31 @@ func datasourceQueryFns() map[string]func(context.Context, string) error {
 			return err
 		},
 		"tempo": func(ctx context.Context, baseURL string) error {
-			client, err := NewTempoClient(models.DataSource{URL: baseURL, Type: models.DataSourceTempo})
+			client, err := NewClient(models.DataSource{URL: baseURL, Type: models.DataSourceTempo})
 			if err != nil {
 				return err
 			}
-			_, err = client.GetTrace(ctx, "abc")
+			tempo, ok := client.(TracingClient)
+			if !ok {
+				return fmt.Errorf("tempo client type %T", client)
+			}
+			_, err = tempo.GetTrace(ctx, "abc")
 			return err
 		},
 		"victoriatraces": func(ctx context.Context, baseURL string) error {
-			client, err := NewVictoriaTracesClient(models.DataSource{URL: baseURL, Type: models.DataSourceVictoriaTraces})
+			client, err := NewClient(models.DataSource{URL: baseURL, Type: models.DataSourceVictoriaTraces})
 			if err != nil {
 				return err
 			}
-			_, err = client.GetTrace(ctx, "abc")
+			vtraces, ok := client.(TracingClient)
+			if !ok {
+				return fmt.Errorf("victoriatraces client type %T", client)
+			}
+			_, err = vtraces.GetTrace(ctx, "abc")
 			return err
 		},
 		"clickhouse": func(ctx context.Context, baseURL string) error {
-			client, err := NewClickHouseClient(models.DataSource{URL: baseURL, Type: models.DataSourceClickHouse})
+			client, err := NewClient(testDS(models.DataSourceClickHouse, baseURL))
 			if err != nil {
 				return err
 			}
@@ -286,7 +348,7 @@ func datasourceQueryFns() map[string]func(context.Context, string) error {
 			return err
 		},
 		"elasticsearch": func(ctx context.Context, baseURL string) error {
-			client, err := NewElasticsearchClient(models.DataSource{URL: baseURL, Type: models.DataSourceElasticsearch})
+			client, err := NewClient(testDS(models.DataSourceElasticsearch, baseURL))
 			if err != nil {
 				return err
 			}

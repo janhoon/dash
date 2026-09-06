@@ -1,12 +1,12 @@
-import type { ReactNode } from 'react'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { createMemoryRouter } from 'react-router'
 import { RouterProvider } from 'react-router/dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('echarts/core', async importOriginal => {
+vi.mock('echarts/core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('echarts/core')>()
   return {
     ...actual,
@@ -24,22 +24,6 @@ vi.mock('echarts/core', async importOriginal => {
 vi.mock('react-grid-layout/legacy', () => ({
   default: ({ children }: { children: ReactNode }) => (
     <div data-testid="dashboard-grid-mock">{children}</div>
-  ),
-}))
-
-vi.mock('@/components/QueryBuilder', () => ({
-  QueryBuilder: ({
-    value,
-    onChange,
-  }: {
-    value: string
-    onChange: (value: string) => void
-  }) => (
-    <textarea
-      data-testid="promql-query-input"
-      value={value}
-      onChange={event => onChange(event.target.value)}
-    />
   ),
 }))
 
@@ -62,6 +46,18 @@ vi.mock('@/hooks/useDatasources', () => ({
         created_at: '2026-01-01T00:00:00Z',
         updated_at: '2026-01-01T00:00:00Z',
       },
+      {
+        id: 'ds-2',
+        organization_id: 'org-1',
+        name: 'Loki',
+        type: 'loki',
+        url: 'http://localhost:3100',
+        is_default: false,
+        auth_type: 'none',
+        trace_id_field: 'trace_id',
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
     ],
   }),
 }))
@@ -70,8 +66,8 @@ import * as dashboardApi from '@/api/dashboards'
 import * as datasourceApi from '@/api/datasources'
 import * as panelApi from '@/api/panels'
 import * as variableApi from '@/api/variables'
-import * as promqlClient from '@/promql/client'
 import { DashboardDetailPage } from '@/pages/DashboardDetailPage'
+import * as promqlClient from '@/promql/client'
 import { useFavoritesStore } from '@/stores/favoritesStore'
 import { useTimeRangeStore } from '@/stores/timeRangeStore'
 import { createTestQueryClient } from '@/test/renderWithProviders'
@@ -224,19 +220,46 @@ describe('DashboardDetailPage', () => {
       expect(screen.getByTestId('dashboard-error')).toBeTruthy()
     })
     expect(screen.getByText('Dashboard not found')).toBeTruthy()
+    expect(screen.queryByTestId('dashboard-title')).toBeNull()
+    expect(screen.getByTestId('dashboard-header-actions').className).toContain('sm:ml-auto')
   })
 
-  it('navigates back to dashboards list', async () => {
-    const user = userEvent.setup()
+  it('renders loaded header with time range, datasource, and solid gold add panel', async () => {
     renderDashboardDetail()
 
     await waitFor(() => {
-      expect(screen.getByTestId('dashboard-back-btn')).toBeTruthy()
+      expect(screen.getByTestId('dashboard-title').textContent).toContain('Test Dashboard')
     })
 
-    await user.click(screen.getByTestId('dashboard-back-btn'))
+    const header = screen.getByTestId('dashboard-loaded-header')
+    expect(header.getAttribute('style')).toBeNull()
+    expect(screen.getByTestId('dashboard-header-meta').textContent).toBe('Last 1 hour · Prometheus')
+    expect(screen.getByTestId('dashboard-header-actions').className).toContain('sm:ml-auto')
+
+    const addPanel = screen.getByTestId('dashboard-add-panel-btn')
+    expect(addPanel.textContent).toBe('Add panel')
+    expect(addPanel.style.backgroundColor).toBe('var(--color-primary)')
+    expect(addPanel.style.color).toBe('#0B0D0F')
+  })
+
+  it('omits datasource from the header when panels use different datasources', async () => {
+    vi.mocked(panelApi.listPanels).mockResolvedValue([
+      {
+        ...mockPanels[1]!,
+        id: 'panel-a',
+        query: { datasource_id: 'ds-1', expr: 'up', signal: 'metrics' },
+      },
+      {
+        ...mockPanels[1]!,
+        id: 'panel-b',
+        query: { datasource_id: 'ds-2', expr: 'up', signal: 'logs' },
+      },
+    ])
+
+    renderDashboardDetail()
+
     await waitFor(() => {
-      expect(screen.getByText('Dashboards list')).toBeTruthy()
+      expect(screen.getByTestId('dashboard-header-meta').textContent).toBe('Last 1 hour')
     })
   })
 
@@ -250,7 +273,7 @@ describe('DashboardDetailPage', () => {
 
     await user.click(screen.getByTestId('dashboard-add-panel-btn'))
     expect(screen.getByTestId('panel-edit-modal')).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'Add Panel' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Add panel' })).toBeTruthy()
   })
 
   it('opens edit panel modal from panel edit button', async () => {
@@ -264,7 +287,7 @@ describe('DashboardDetailPage', () => {
     const editButtons = screen.getAllByTestId('panel-edit-btn')
     await user.click(editButtons[0]!)
     expect(screen.getByTestId('panel-edit-modal')).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'Edit Panel' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Edit panel' })).toBeTruthy()
     expect((screen.getByTestId('panel-title-input') as HTMLInputElement).value).toBe('CPU Usage')
   })
 

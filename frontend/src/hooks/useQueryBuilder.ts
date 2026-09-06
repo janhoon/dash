@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { trackEvent } from '@/analytics'
 import {
-  fetchDataSourceLabelValues,
   fetchDataSourceLabels,
+  fetchDataSourceLabelValues,
   fetchDataSourceMetricNames,
 } from '@/api/datasources'
-import { trackEvent } from '@/analytics'
 
 export const AGGREGATION_FUNCTIONS = [
   { value: '', label: 'None' },
@@ -87,8 +87,8 @@ export function useQueryBuilder(initialQuery = '', datasourceId = '') {
 
     if (labelFilters.length > 0) {
       const filters = labelFilters
-        .filter(f => f.label && f.value)
-        .map(f => `${f.label}${f.operator}"${escapePromQLLabelValue(f.value)}"`)
+        .filter((f) => f.label && f.value)
+        .map((f) => `${f.label}${f.operator}"${escapePromQLLabelValue(f.value)}"`)
         .join(',')
 
       if (filters) {
@@ -96,7 +96,7 @@ export function useQueryBuilder(initialQuery = '', datasourceId = '') {
       }
     }
 
-    const aggFunc = AGGREGATION_FUNCTIONS.find(a => a.value === aggregation)
+    const aggFunc = AGGREGATION_FUNCTIONS.find((a) => a.value === aggregation)
     if (aggFunc && 'requiresRange' in aggFunc && aggFunc.requiresRange) {
       query = `${aggregation}(${query}[${rangeInterval}])`
     }
@@ -124,7 +124,7 @@ export function useQueryBuilder(initialQuery = '', datasourceId = '') {
   const activeQuery = mode === 'builder' ? generatedQuery : codeQuery
 
   const setDatasourceId = useCallback((id: string) => {
-    setCurrentDatasourceId(prev => {
+    setCurrentDatasourceId((prev) => {
       if (prev === id) return prev
       setMetricsCache([])
       setLabelsCache([])
@@ -179,7 +179,7 @@ export function useQueryBuilder(initialQuery = '', datasourceId = '') {
       setLoadingLabelValues(labelName)
       try {
         const values = await fetchDataSourceLabelValues(currentDatasourceId, labelName)
-        setLabelValuesCache(prev => {
+        setLabelValuesCache((prev) => {
           const next = new Map(prev)
           next.set(labelName, values)
           return next
@@ -200,7 +200,7 @@ export function useQueryBuilder(initialQuery = '', datasourceId = '') {
   )
 
   const addLabelFilter = useCallback(() => {
-    setLabelFilters(prev => [
+    setLabelFilters((prev) => [
       ...prev,
       { id: generateFilterId(), label: '', operator: '=', value: '' },
     ])
@@ -208,23 +208,23 @@ export function useQueryBuilder(initialQuery = '', datasourceId = '') {
   }, [labelFilters.length])
 
   const removeLabelFilter = useCallback((id: string) => {
-    setLabelFilters(prev => {
-      const next = prev.filter(f => f.id !== id)
+    setLabelFilters((prev) => {
+      const next = prev.filter((f) => f.id !== id)
       trackEvent('query_builder_filter_removed', { filter_count: next.length })
       return next
     })
   }, [])
 
   const updateLabelFilter = useCallback((id: string, updates: Partial<LabelFilter>) => {
-    setLabelFilters(prev =>
-      prev.map(filter => (filter.id === id ? { ...filter, ...updates } : filter)),
+    setLabelFilters((prev) =>
+      prev.map((filter) => (filter.id === id ? { ...filter, ...updates } : filter)),
     )
   }, [])
 
   const toggleGroupByLabel = useCallback((label: string) => {
-    setGroupByLabels(prev => {
+    setGroupByLabels((prev) => {
       const index = prev.indexOf(label)
-      const next = index === -1 ? [...prev, label] : prev.filter(l => l !== label)
+      const next = index === -1 ? [...prev, label] : prev.filter((l) => l !== label)
       trackEvent('query_builder_group_by_toggled', {
         label,
         group_by_count: next.length,

@@ -19,6 +19,7 @@ import (
 	"github.com/aceobservability/ace/backend/internal/auth"
 	"github.com/aceobservability/ace/backend/internal/crypto"
 	"github.com/aceobservability/ace/backend/internal/ratelimit"
+	"github.com/aceobservability/ace/backend/pkg/llm"
 )
 
 // jsonError writes a JSON error response with proper encoding, preventing JSON injection.
@@ -32,7 +33,7 @@ func jsonError(w http.ResponseWriter, msg string, code int) {
 // It is not ssrf.ValidateURL or ssrf.ValidateDatasourceURL: localhost and
 // 127.0.0.1 are allowed for Ollama; other private/loopback addresses are
 // rejected; only 169.254.169.254 is treated as metadata. Enforcement is
-// save-time only — outbound HTTP in ai_provider.go uses the default
+// save-time only — outbound HTTP in the LLM modules uses the default
 // http.Client (no dial/redirect policy). See
 // docs/adr/0003-outbound-http-ssrf-policy-seams.md.
 func validateBaseURL(raw string) error {
@@ -277,7 +278,7 @@ func writeResolveError(w http.ResponseWriter, err error) {
 	jsonError(w, err.Error(), status)
 }
 
-func (h *AIHandler) buildCopilotProvider(ctx context.Context, userID uuid.UUID) (*CopilotProvider, error) {
+func (h *AIHandler) buildCopilotProvider(ctx context.Context, userID uuid.UUID) (AIProvider, error) {
 	if h.pool == nil {
 		return nil, fmt.Errorf("failed to load copilot connection")
 	}
@@ -295,7 +296,7 @@ func (h *AIHandler) buildCopilotProvider(ctx context.Context, userID uuid.UUID) 
 		return nil, fmt.Errorf("copilot access not available for your GitHub account")
 	}
 
-	return &CopilotProvider{EncryptedGHToken: encryptedToken}, nil
+	return llm.New("copilot", LLMConfig{APIKey: encryptedToken})
 }
 
 // providerQuota holds the per-user rate limit config for a provider.
@@ -329,9 +330,6 @@ func (h *AIHandler) buildDBProvider(ctx context.Context, providerID, orgID uuid.
 	return instantiateDBProvider(p)
 }
 
-// dbAPIKeyForFactory returns LLMConfig.APIKey for a stored ai_providers row.
-// OpenAI-compat types get decrypted plaintext. Copilot keeps ciphertext because
-// CopilotProvider decrypts EncryptedGHToken on ListModels/Chat.
 func dbAPIKeyForFactory(providerType string, stored *string) (string, error) {
 	if stored == nil || *stored == "" {
 		return "", nil
@@ -356,7 +354,7 @@ func instantiateDBProvider(p providerRow) (AIProvider, providerQuota, error) {
 	if err != nil {
 		return nil, quota, err
 	}
-	provider, err := newLLMProvider(p.ProviderType, LLMConfig{
+	provider, err := llm.New(p.ProviderType, LLMConfig{
 		BaseURL:     p.BaseURL,
 		APIKey:      apiKey,
 		DisplayName: p.DisplayName,
@@ -693,7 +691,7 @@ func (h *AIHandler) CreateProvider(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := requireKnownLLMType(reqBody.ProviderType); err != nil {
+	if err := llm.RequireKnown(reqBody.ProviderType); err != nil {
 		jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -827,7 +825,7 @@ func (h *AIHandler) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 		existing.RateLimitWindowSeconds = *reqBody.RateLimitWindowSeconds
 	}
 
-	if err := requireKnownLLMType(existing.ProviderType); err != nil {
+	if err := llm.RequireKnown(existing.ProviderType); err != nil {
 		jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}

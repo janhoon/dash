@@ -133,19 +133,6 @@ func wrapDatasourceAuth(client *http.Client, ds models.DataSource) *http.Client 
 	return client
 }
 
-// dataSourceAuthHeader is the websocket call site for the same credential
-// helper used by dataSourceAuthRoundTripper.
-func dataSourceAuthHeader(ds models.DataSource) (http.Header, error) {
-	req, err := http.NewRequest(http.MethodGet, "http://datasource.invalid", nil)
-	if err != nil {
-		return nil, err
-	}
-	if err := applyDataSourceAuth(req, ds); err != nil {
-		return nil, err
-	}
-	return req.Header, nil
-}
-
 type datasourceAuthConfig struct {
 	Username string `json:"username"`
 	Password string `json:"password"`

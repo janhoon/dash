@@ -1,14 +1,24 @@
-import { X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { fetchDataSourceLabels } from '@/api/datasources'
 import { createPanel, updatePanel } from '@/api/panels'
+import { ChartBuilderPreview } from '@/components/ChartBuilderPreview'
 import { ClickHouseSQLEditor } from '@/components/ClickHouseSQLEditor'
 import { CloudWatchQueryEditor } from '@/components/CloudWatchQueryEditor'
+import {
+  CHART_BUILDER_DEFAULT_QUERY,
+  CHART_BUILDER_SUBTITLE,
+  CHART_BUILDER_TYPES,
+  chartBuilderPinLabel,
+  chartBuilderTypeLabel,
+  isChartBuilderType,
+  resolveChartBuilderTitle,
+} from '@/components/chartBuilder'
 import { ElasticsearchQueryEditor } from '@/components/ElasticsearchQueryEditor'
 import { LogQLQueryBuilder } from '@/components/LogQLQueryBuilder'
 import { PanelTypeOptions } from '@/components/panelEdit/PanelTypeOptions'
 import {
+  buildPanelTypeGroups,
   DEFAULT_GRID_POS,
   getDefaultQuerySignal,
   getQueryMode,
@@ -16,13 +26,12 @@ import {
   isSignalDatasourceType,
   type QuerySignal,
   validatePanelSave,
-  buildPanelTypeGroups,
 } from '@/components/panelEdit/panelEditHelpers'
 import {
-  type Threshold,
   readQueryNumber,
   readQueryString,
   readThresholds,
+  type Threshold,
   thresholdsForQuery,
   toThreshold,
 } from '@/components/panelEdit/thresholdFields'
@@ -54,6 +63,12 @@ const fieldStyle = {
   border: '1px solid var(--color-outline-variant)',
 } as const
 
+function isUnsupportedPanelType(panelType: string): boolean {
+  const status = lookupPanel(panelType)?.supportStatus
+  if (panelType === 'heatmap') return status !== 'ready'
+  return status === 'unsupported'
+}
+
 export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEditModalProps) {
   const isEditing = Boolean(panel)
   const { currentOrgId } = useOrganization()
@@ -65,7 +80,9 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
     readQueryString(panel?.query, 'datasource_id'),
   )
   const [queryText, setQueryText] = useState(
-    readQueryString(panel?.query, 'promql') || readQueryString(panel?.query, 'expr'),
+    readQueryString(panel?.query, 'promql') ||
+      readQueryString(panel?.query, 'expr') ||
+      (panel ? '' : CHART_BUILDER_DEFAULT_QUERY),
   )
   const [querySignal, setQuerySignal] = useState<QuerySignal>(
     isQuerySignal(panel?.query?.signal)
@@ -73,7 +90,6 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
       : getDefaultQuerySignal(panel?.type ?? 'line_chart'),
   )
 
-  // Gauge options
   const [gaugeMin, setGaugeMin] = useState(readQueryNumber(panel?.query, 'min', 0))
   const [gaugeMax, setGaugeMax] = useState(readQueryNumber(panel?.query, 'max', 100))
   const [gaugeUnit, setGaugeUnit] = useState(readQueryString(panel?.query, 'unit'))
@@ -83,21 +99,20 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
     return existing.length > 0 ? existing : [toThreshold(80, '#ff6b6b')]
   })
 
-  // Pie options
   const [pieDisplayAs, setPieDisplayAs] = useState<'pie' | 'donut'>(
     panel?.query?.displayAs === 'donut' ? 'donut' : 'pie',
   )
   const [pieShowLegend, setPieShowLegend] = useState(panel?.query?.showLegend !== false)
   const [pieShowLabels, setPieShowLabels] = useState(panel?.query?.showLabels !== false)
 
-  // Stat options
   const [statUnit, setStatUnit] = useState(readQueryString(panel?.query, 'unit'))
   const [statDecimals, setStatDecimals] = useState(readQueryNumber(panel?.query, 'decimals', 2))
   const [statShowTrend, setStatShowTrend] = useState(panel?.query?.showTrend !== false)
   const [statShowSparkline, setStatShowSparkline] = useState(panel?.query?.showSparkline !== false)
-  const [statThresholds, setStatThresholds] = useState<Threshold[]>(() => readThresholds(panel?.query))
+  const [statThresholds, setStatThresholds] = useState<Threshold[]>(() =>
+    readThresholds(panel?.query),
+  )
 
-  // Trace options
   const [traceService, setTraceService] = useState(readQueryString(panel?.query, 'service'))
   const [traceLimit, setTraceLimit] = useState(() => {
     const limit = readQueryNumber(panel?.query, 'limit', 50)
@@ -118,9 +133,13 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
   const isGaugeType = panelType === 'gauge'
   const isPieType = panelType === 'pie'
   const isStatType = panelType === 'stat'
+  const panelTypeUnsupported = isUnsupportedPanelType(panelType)
+  const showChartBuilderTypeChips =
+    isChartBuilderType(panelType) && (isEditing ? !panelTypeUnsupported : true)
+  const hideFullTypeSelect = showChartBuilderTypeChips && !isEditing
 
   const selectedDatasource: DataSource | null = useMemo(
-    () => datasources.find(ds => ds.id === selectedDatasourceId) ?? null,
+    () => datasources.find((ds) => ds.id === selectedDatasourceId) ?? null,
     [datasources, selectedDatasourceId],
   )
 
@@ -134,33 +153,29 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
 
   const availableDatasources = useMemo(() => {
     if (isTracePanelType) {
-      return datasources.filter(ds => isTracingType(ds.type))
+      return datasources.filter((ds) => isTracingType(ds.type))
     }
     if (isLogsPanelType) {
-      return datasources.filter(ds => isLogsType(ds.type))
+      return datasources.filter((ds) => isLogsType(ds.type))
     }
     return datasources
   }, [datasources, isLogsPanelType, isTracePanelType])
 
-  // Keep datasource selection valid when panel type or datasource list changes.
-  // Intentionally does not depend on selectedDatasourceId so manual clears are preserved
-  // (matches Vue PanelEditModal watch on [panelType, datasources] only).
   useEffect(() => {
     if (isTracePanelType || isLogsPanelType) {
-      setSelectedDatasourceId(current => {
-        if (availableDatasources.some(ds => ds.id === current)) return current
+      setSelectedDatasourceId((current) => {
+        if (availableDatasources.some((ds) => ds.id === current)) return current
         return availableDatasources[0]?.id ?? ''
       })
       return
     }
 
-    setSelectedDatasourceId(current => {
-      if (current && !datasources.some(ds => ds.id === current)) return ''
+    setSelectedDatasourceId((current) => {
+      if (current && !datasources.some((ds) => ds.id === current)) return ''
       return current
     })
   }, [availableDatasources, datasources, isLogsPanelType, isTracePanelType])
 
-  // Reset query signal when panel type changes on signal datasources (skip initial mount)
   const previousPanelTypeRef = useRef(panelType)
   useEffect(() => {
     if (previousPanelTypeRef.current === panelType) return
@@ -169,7 +184,6 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
     setQuerySignal(getDefaultQuerySignal(panelType))
   }, [panelType, isSignalDatasource])
 
-  // Reset query signal when switching onto a signal datasource type
   const previousDatasourceTypeRef = useRef(selectedDatasource?.type)
   useEffect(() => {
     const nextType = selectedDatasource?.type
@@ -180,7 +194,6 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
     setQuerySignal(getDefaultQuerySignal(panelType))
   }, [selectedDatasource?.type, panelType])
 
-  // Fetch indexed labels for native log datasources
   useEffect(() => {
     if (!selectedDatasourceId || !isLogsPanelType || !isNativeLogsDatasource) {
       setIndexedLabels([])
@@ -189,7 +202,7 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
 
     let cancelled = false
     void fetchDataSourceLabels(selectedDatasourceId)
-      .then(labels => {
+      .then((labels) => {
         if (!cancelled) setIndexedLabels(labels)
       })
       .catch(() => {
@@ -201,53 +214,64 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
     }
   }, [selectedDatasourceId, isLogsPanelType, isNativeLogsDatasource])
 
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
+
   function handleNonTraceSignalChange(signal: 'logs' | 'metrics') {
     setQuerySignal(signal)
   }
 
   function addGaugeThreshold() {
-    setGaugeThresholds(current => {
+    setGaugeThresholds((current) => {
       const lastValue = current.length > 0 ? current[current.length - 1].value + 10 : 50
       return [...current, toThreshold(lastValue, '#feca57')]
     })
   }
 
   function removeGaugeThreshold(id: string) {
-    setGaugeThresholds(current => current.filter(threshold => threshold.id !== id))
+    setGaugeThresholds((current) => current.filter((threshold) => threshold.id !== id))
   }
 
   function updateGaugeThreshold(id: string, patch: Partial<Pick<Threshold, 'value' | 'color'>>) {
-    setGaugeThresholds(current =>
-      current.map(threshold => (threshold.id === id ? { ...threshold, ...patch } : threshold)),
+    setGaugeThresholds((current) =>
+      current.map((threshold) => (threshold.id === id ? { ...threshold, ...patch } : threshold)),
     )
   }
 
   function addStatThreshold() {
-    setStatThresholds(current => {
+    setStatThresholds((current) => {
       const lastValue = current.length > 0 ? current[current.length - 1].value + 10 : 50
       return [...current, toThreshold(lastValue, '#feca57')]
     })
   }
 
   function removeStatThreshold(id: string) {
-    setStatThresholds(current => current.filter(threshold => threshold.id !== id))
+    setStatThresholds((current) => current.filter((threshold) => threshold.id !== id))
   }
 
   function updateStatThreshold(id: string, patch: Partial<Pick<Threshold, 'value' | 'color'>>) {
-    setStatThresholds(current =>
-      current.map(threshold => (threshold.id === id ? { ...threshold, ...patch } : threshold)),
+    setStatThresholds((current) =>
+      current.map((threshold) => (threshold.id === id ? { ...threshold, ...patch } : threshold)),
     )
   }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
 
-    const size = isEditing && panel?.grid_pos
-      ? { w: panel.grid_pos.w, h: panel.grid_pos.h }
-      : { w: DEFAULT_GRID_POS.w, h: DEFAULT_GRID_POS.h }
+    const size =
+      isEditing && panel?.grid_pos
+        ? { w: panel.grid_pos.w, h: panel.grid_pos.h }
+        : { w: DEFAULT_GRID_POS.w, h: DEFAULT_GRID_POS.h }
+
+    const resolvedTitle = isEditing ? title.trim() : resolveChartBuilderTitle(title, queryText)
 
     const validationError = validatePanelSave({
-      title,
+      title: resolvedTitle,
       panelType,
       size,
       queryMode: currentQueryMode,
@@ -258,6 +282,12 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
     })
     if (validationError) {
       setError(validationError)
+      return
+    }
+
+    if (panelTypeUnsupported && !(isEditing && panelType === panel?.type)) {
+      const unsupportedLabel = chartBuilderTypeLabel(panelType)
+      setError(`${unsupportedLabel} is not supported`)
       return
     }
 
@@ -272,7 +302,7 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
       }
 
       const trimmedQuery = queryText.trim()
-      if (trimmedQuery) {
+      if (trimmedQuery && !isBuiltinTracePanel) {
         if (selectedDatasourceId) {
           query.expr = trimmedQuery
         } else {
@@ -281,10 +311,7 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
       }
 
       if (isSignalDatasource) {
-        if (
-          (isCloudWatchDatasource || isElasticsearchDatasource) &&
-          querySignal === 'traces'
-        ) {
+        if ((isCloudWatchDatasource || isElasticsearchDatasource) && querySignal === 'traces') {
           query.signal = panelType === 'logs' ? 'logs' : 'metrics'
         } else {
           query.signal = querySignal
@@ -333,14 +360,14 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
     try {
       if (isEditing && panel) {
         const updated = await updatePanel(panel.id, {
-          title: title.trim(),
+          title: resolvedTitle,
           type: panelType,
           query: finalQuery,
         })
         onSaved(updated)
       } else {
         const created = await createPanel(dashboardId, {
-          title: title.trim(),
+          title: resolvedTitle,
           type: panelType,
           grid_pos: DEFAULT_GRID_POS,
           query: finalQuery,
@@ -354,123 +381,147 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
     }
   }
 
-  const queryEditorLabel = isClickHouseDatasource
-    ? 'SQL Query'
-    : isCloudWatchDatasource
-      ? 'CloudWatch Query'
-      : isElasticsearchDatasource
-        ? 'Elasticsearch Query'
-        : isNativeLogsDatasource
-          ? 'Log Query'
-          : 'Query'
+  const showQueryBlock = needsDatasource && (!isTracePanelType || isSignalDatasource)
+  const previewTypeLabel = isChartBuilderType(panelType)
+    ? chartBuilderTypeLabel(panelType)
+    : (lookupPanel(panelType)?.label ?? chartBuilderTypeLabel(panelType))
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50"
       data-testid="panel-edit-modal"
+      style={{ backgroundColor: 'var(--color-surface)' }}
     >
-      <button
-        type="button"
-        aria-label="Close"
-        className="absolute inset-0 cursor-default border-none p-0"
-        style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(4px)' }}
-        onClick={onClose}
-      />
-      <div
+      <form
         role="dialog"
         aria-modal="true"
         aria-labelledby="panel-edit-title"
-        className="relative max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg shadow-lg"
-        style={{
-          backgroundColor: 'var(--color-surface-bright)',
-          backdropFilter: 'blur(20px)',
-        }}
+        className="relative flex h-full w-full flex-col gap-4 overflow-auto p-6 min-[425px]:flex-row"
+        data-testid="chart-builder"
+        onSubmit={(event) => void handleSubmit(event)}
       >
-        <header
-          className="sticky top-0 z-10 flex items-center justify-between px-6 py-4"
-          style={{
-            backgroundColor: 'var(--color-surface-bright)',
-            borderBottom: '1px solid var(--color-outline-variant)',
-          }}
+        <div
+          className="flex min-h-0 w-full min-w-0 max-w-[360px] shrink-0 flex-col gap-3 overflow-auto min-[425px]:h-full min-[425px]:w-[360px]"
+          data-testid="chart-builder-config"
         >
-          <h2
-            id="panel-edit-title"
-            className="font-display text-lg font-semibold"
-            style={{ color: 'var(--color-on-surface)' }}
-          >
-            {isEditing ? 'Edit Panel' : 'Add Panel'}
-          </h2>
-          <button
-            type="button"
-            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition hover:opacity-80"
-            style={{ color: 'var(--color-outline)', backgroundColor: 'transparent' }}
-            data-testid="panel-edit-close-btn"
-            onClick={onClose}
-          >
-            <X size={20} />
-          </button>
-        </header>
+          <div className="flex items-start justify-between gap-2">
+            <h2
+              id="panel-edit-title"
+              className="m-0 text-[22px] font-semibold leading-normal"
+              style={{ color: 'var(--color-on-surface)' }}
+            >
+              {isEditing ? 'Edit panel' : 'Add panel'}
+            </h2>
+            <button
+              type="button"
+              className="cursor-pointer rounded-lg px-2 py-1 text-[13px] leading-normal"
+              style={{ color: 'var(--color-on-surface-variant)' }}
+              data-testid="panel-edit-close-btn"
+              onClick={onClose}
+            >
+              Close
+            </button>
+          </div>
+          {!isEditing ? (
+            <p
+              className="m-0 text-[13px] leading-normal"
+              style={{ color: 'var(--color-on-surface-variant)' }}
+              data-testid="chart-builder-subtitle"
+            >
+              {CHART_BUILDER_SUBTITLE}
+            </p>
+          ) : null}
 
-        <form className="px-6 py-4" onSubmit={event => void handleSubmit(event)}>
-          <div className="grid grid-cols-[1fr_auto] gap-4">
-            <div className="mb-5">
-              <label
-                htmlFor="panel-title"
-                className="mb-2 block text-sm font-medium"
-                style={{ color: 'var(--color-on-surface)' }}
-              >
-                Title <span style={{ color: 'var(--color-error)' }}>*</span>
-              </label>
-              <input
-                id="panel-title"
-                type="text"
-                value={title}
-                onChange={event => setTitle(event.target.value)}
-                placeholder="Panel title"
-                disabled={loading}
-                autoComplete="off"
-                data-testid="panel-title-input"
-                className={inputClass}
-                style={fieldStyle}
-              />
-            </div>
+          <div className={isEditing ? 'flex flex-col gap-2' : 'sr-only'}>
+            <label
+              htmlFor="panel-title"
+              className="text-sm font-medium"
+              style={{ color: 'var(--color-on-surface)' }}
+            >
+              Title
+            </label>
+            <input
+              id="panel-title"
+              type="text"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Panel title"
+              disabled={loading}
+              autoComplete="off"
+              data-testid="panel-title-input"
+              className={inputClass}
+              style={fieldStyle}
+            />
+          </div>
 
-            <div className="mb-5 min-w-[160px]">
-              <label
-                htmlFor="panel-type"
-                className="mb-2 block text-sm font-medium"
-                style={{ color: 'var(--color-on-surface)' }}
-              >
-                Panel Type
-              </label>
-              <select
-                id="panel-type"
-                value={panelType}
-                onChange={event => setPanelType(event.target.value)}
-                disabled={loading}
-                data-testid="panel-type-select"
-                className={selectClass}
-                style={fieldStyle}
-              >
-                {panelTypeGroups.map(group => (
-                  <optgroup key={group.id} label={group.label}>
-                    {group.options.map(option => (
-                      <option
-                        key={option.value}
-                        value={option.value}
-                        disabled={option.disabled}
-                      >
-                        {option.label}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
+          {showChartBuilderTypeChips ? (
+            <div className="flex w-full flex-col gap-2" data-testid="chart-builder-types">
+              {CHART_BUILDER_TYPES.map((entry) => {
+                const selected = panelType === entry.type
+                const chipUnsupported = isUnsupportedPanelType(entry.type)
+                return (
+                  <button
+                    key={entry.type}
+                    type="button"
+                    data-testid={`chart-builder-type-${entry.type}`}
+                    aria-pressed={selected}
+                    disabled={loading || chipUnsupported}
+                    className="w-full cursor-pointer rounded-lg p-2.5 text-left text-[13px] leading-normal disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{
+                      backgroundColor: selected
+                        ? 'var(--color-surface-container-high)'
+                        : 'var(--color-surface-container-low)',
+                      borderWidth: '1px',
+                      borderStyle: 'solid',
+                      borderColor: selected
+                        ? 'var(--color-primary)'
+                        : 'var(--color-surface-container-high)',
+                      color: 'var(--color-on-surface)',
+                      fontWeight: selected ? 500 : 400,
+                    }}
+                    onClick={() => {
+                      if (chipUnsupported) return
+                      setPanelType(entry.type)
+                    }}
+                  >
+                    {entry.label}
+                  </button>
+                )
+              })}
             </div>
+          ) : null}
+
+          <div className={hideFullTypeSelect ? 'sr-only' : 'flex flex-col gap-2'}>
+            <label
+              htmlFor="panel-type"
+              className="text-sm font-medium"
+              style={{ color: 'var(--color-on-surface)' }}
+            >
+              Panel Type
+            </label>
+            <select
+              id="panel-type"
+              value={panelType}
+              onChange={(event) => setPanelType(event.target.value)}
+              disabled={loading}
+              data-testid="panel-type-select"
+              className={selectClass}
+              style={fieldStyle}
+            >
+              {panelTypeGroups.map((group) => (
+                <optgroup key={group.id} label={group.label}>
+                  {group.options.map((option) => (
+                    <option key={option.value} value={option.value} disabled={option.disabled}>
+                      {option.label}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
           </div>
 
           {needsDatasource && datasources.length > 0 ? (
-            <div className="mb-5">
+            <div>
               <label
                 htmlFor="panel-datasource"
                 className="mb-2 block text-sm font-medium"
@@ -481,7 +532,7 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
               <select
                 id="panel-datasource"
                 value={selectedDatasourceId}
-                onChange={event => setSelectedDatasourceId(event.target.value)}
+                onChange={(event) => setSelectedDatasourceId(event.target.value)}
                 disabled={loading}
                 data-testid="panel-datasource-select"
                 className={selectClass}
@@ -494,7 +545,7 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
                 ) : (
                   <option value="">Default (Prometheus)</option>
                 )}
-                {availableDatasources.map(ds => (
+                {availableDatasources.map((ds) => (
                   <option key={ds.id} value={ds.id}>
                     {ds.name} ({ds.type})
                   </option>
@@ -503,16 +554,21 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
             </div>
           ) : null}
 
-          {needsDatasource && (!isTracePanelType || isSignalDatasource) ? (
+          {showQueryBlock ? (
             <div
-              className="mb-5 pt-5"
-              style={{ borderTop: '1px solid var(--color-outline-variant)' }}
+              className="flex w-full flex-col gap-2 rounded-lg p-3"
+              style={{
+                backgroundColor: 'var(--color-surface-container-low)',
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: 'var(--color-surface-container-high)',
+              }}
             >
               <div
-                className="mb-2 block text-sm font-medium"
-                style={{ color: 'var(--color-on-surface)' }}
+                className="text-[11px] font-medium leading-normal"
+                style={{ color: 'var(--color-on-surface-variant)' }}
               >
-                {queryEditorLabel}
+                Query
               </div>
               {isLogsPanelType && isNativeLogsDatasource ? (
                 <LogQLQueryBuilder
@@ -522,13 +578,6 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
                   datasourceId={selectedDatasourceId}
                   indexedLabels={indexedLabels}
                   disabled={loading}
-                />
-              ) : !isSignalDatasource ? (
-                <QueryBuilder
-                  value={queryText}
-                  onChange={setQueryText}
-                  disabled={loading}
-                  datasourceId={selectedDatasourceId}
                 />
               ) : isClickHouseDatasource ? (
                 <ClickHouseSQLEditor
@@ -547,13 +596,30 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
                   disabled={loading}
                   onSignalChange={handleNonTraceSignalChange}
                 />
-              ) : (
+              ) : isElasticsearchDatasource ? (
                 <ElasticsearchQueryEditor
                   value={queryText}
                   onChange={setQueryText}
                   signal={querySignal === 'traces' ? 'metrics' : querySignal}
                   disabled={loading}
                   onSignalChange={handleNonTraceSignalChange}
+                />
+              ) : isEditing ? (
+                <QueryBuilder
+                  value={queryText}
+                  onChange={setQueryText}
+                  disabled={loading}
+                  datasourceId={selectedDatasourceId}
+                />
+              ) : (
+                <input
+                  id="promql-query"
+                  data-testid="promql-query-input"
+                  value={queryText}
+                  disabled={loading}
+                  onChange={(event) => setQueryText(event.target.value)}
+                  className="w-full border-none bg-transparent p-0 font-mono text-[12px] leading-normal outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{ color: 'var(--color-on-surface)' }}
                 />
               )}
             </div>
@@ -603,7 +669,7 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
 
           {error ? (
             <div
-              className="mb-5 rounded-lg px-4 py-3 text-sm"
+              className="rounded-lg px-4 py-3 text-sm"
               style={{
                 backgroundColor: 'color-mix(in srgb, var(--color-error) 10%, transparent)',
                 color: 'var(--color-error)',
@@ -614,39 +680,37 @@ export function PanelEditModal({ dashboardId, panel, onClose, onSaved }: PanelEd
             </div>
           ) : null}
 
-          <div
-            className="mt-2 flex justify-end gap-3 pt-4"
-            style={{ borderTop: '1px solid var(--color-outline-variant)' }}
-          >
+          <div className="flex items-center gap-3">
             <button
               type="button"
+              className="w-fit cursor-pointer rounded-lg p-2.5 text-[12px] font-medium leading-normal"
+              style={{ color: 'var(--color-on-surface-variant)' }}
               data-testid="panel-edit-cancel-btn"
-              className="cursor-pointer rounded-lg px-5 py-2.5 text-sm font-semibold transition hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
-              style={{
-                backgroundColor: 'var(--color-surface-container-high)',
-                color: 'var(--color-on-surface)',
-                border: '1px solid var(--color-outline-variant)',
-              }}
               onClick={onClose}
-              disabled={loading}
             >
               Cancel
             </button>
             <button
               type="submit"
               data-testid="panel-edit-save-btn"
-              className="cursor-pointer rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-fit cursor-pointer rounded-lg p-2.5 text-[12px] font-semibold leading-normal disabled:cursor-not-allowed disabled:opacity-50"
               style={{
-                background:
-                  'linear-gradient(135deg, var(--color-primary), var(--color-primary-dim))',
+                backgroundColor: 'var(--color-primary)',
+                color: 'var(--primary-foreground)',
               }}
               disabled={loading}
             >
-              {loading ? 'Saving...' : isEditing ? 'Save Changes' : 'Add Panel'}
+              {loading
+                ? 'Saving...'
+                : isEditing
+                  ? 'Save Changes'
+                  : chartBuilderPinLabel(selectedDatasource)}
             </button>
           </div>
-        </form>
-      </div>
+        </div>
+
+        <ChartBuilderPreview typeLabel={previewTypeLabel} />
+      </form>
     </div>,
     document.body,
   )

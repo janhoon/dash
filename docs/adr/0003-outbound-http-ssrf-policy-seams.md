@@ -23,7 +23,7 @@ check plus Go's default `http.Client`.
 | Seam | Trust model | Typical targets |
 |------|-------------|-----------------|
 | **Grafana / untrusted URL** | User-supplied URL in a request (import/connect). Must not reach the cluster or cloud metadata. | Public Grafana hosts |
-| **Configured datasource** | Operator-configured observability backends. Private/in-cluster URLs are required. | Prometheus, Loki, Victoria*, Tempo, ES, ClickHouse, Alertmanager, … |
+| **Configured datasource** | Operator-configured observability backends. Private/in-cluster URLs are required. | Prometheus, VictoriaMetrics, CloudWatch, Loki, Victoria*, Tempo, ES, ClickHouse, Alertmanager, … |
 | **AI provider** | Org-admin configured OpenAI-compatible `base_url`. Local Ollama on loopback is required; RFC1918 cluster IPs are not the intended default. | `api.openai.com`, `localhost`/`127.0.0.1` Ollama, public gateways |
 | **Org SSO identity provider** | Operator-configured public IdP (Google, Microsoft, Okta). Browser redirects to the IdP; Ace's backend then calls token / userinfo / OIDC discovery. On-prem/private Okta is **not** a product need. | `accounts.google.com`, `login.microsoftonline.com`, `*.okta.com` |
 
@@ -96,13 +96,12 @@ Grafana CIDR list.
 `validateBaseURL` / `checkDangerousIP`, called on AI provider **create** and
 **update** only.
 
-**Where (HTTP):** `backend/internal/handlers/ai_provider.go` —
-`OpenAICompatibleProvider` and `CopilotProvider` use `&http.Client{Timeout: …}`
-with the default transport (no dial policy, no redirect policy, proxy via
-environment as Go default). Copilot also follows `endpoints.api` from GitHub's
-token JSON without `validateBaseURL`. Device-flow / OAuth in
-`github_copilot.go` uses hardcoded `github.com` URLs and the same default
-client.
+**Where (HTTP):** `ace-llm-openai-compat` `Provider` and `ace-llm-copilot`
+`Provider` use `&http.Client{Timeout: …}` with the default transport (no dial
+policy, no redirect policy, proxy via environment as Go default). Copilot also
+follows `endpoints.api` from GitHub's token JSON without `validateBaseURL`.
+Device-flow / OAuth in `github_copilot.go` uses hardcoded `github.com` URLs
+and the same default client.
 
 **Allows:**
 

@@ -229,7 +229,7 @@ ace/
 │   │   └── seed-correlated/# Telemetry generator (realistic web app traces/logs/metrics)
 │   └── internal/
 │       ├── handlers/       # HTTP handlers (datasource proxy, AI chat, dashboards, auth, SSO)
-│       ├── datasource/     # Datasource clients (Prometheus, VictoriaMetrics, Loki, Tempo, ClickHouse, ES)
+│       ├── datasource/     # Registry wiring and SSRF/TestConnection (implementations are out-of-tree modules)
 │       ├── models/         # Data models
 │       ├── db/             # Database connection, migrations
 │       ├── auth/           # JWT, password hashing, middleware
