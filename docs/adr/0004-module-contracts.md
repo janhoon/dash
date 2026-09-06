@@ -75,7 +75,8 @@ into `New(url, httpClient)`. ClickHouse is also out-of-tree
 `tempo` from `backend/internal/datasource/register_tempo.go` and type
 `victoriatraces` from `backend/internal/datasource/register_victoriatraces.go`
 via the typed `register()` helper with a real import of `New(url, httpClient)`.
-Shared tracing helpers live in `ace-datasource-tempo/tracing`. Ace owns
+Shared tracing helpers live in `ace-datasource-tempo/tracing`. Ace injects SSRF
+via `newDatasourceHTTPClient` into `New(url, httpClient)`. Ace owns
 `TestConnection` for those types via
 `runHTTPConnectionCheck` and `HTTPClient()` (`testRegisteredHTTPConnection`).
 It does not call module `connect.go`. HTTP
