@@ -41,7 +41,11 @@ registers those four types. Copilot is the third. Ace blank-imports
 `github.com/aceobservability/ace-llm-copilot` so the module `init`
 calls `RegisterLLM("copilot", New)`. Prometheus is the first out-of-tree datasource
 (`github.com/aceobservability/ace-datasource-prometheus`). Ace registers it
-at `init` and injects the SSRF HTTP client. VictoriaMetrics is also
+at `init` and injects the SSRF HTTP client. ClickHouse is also
+out-of-tree (`github.com/aceobservability/ace-datasource-clickhouse`). Ace
+registers type `clickhouse` at `init` from
+`backend/internal/datasource/register_clickhouse.go` and injects the SSRF HTTP
+client (+ AuthConfig for database). VictoriaMetrics is also
 out-of-tree (`github.com/aceobservability/ace-datasource-victoriametrics`).
 Type `victoriametrics` is registered from
 `backend/internal/datasource/register_victoriametrics.go` via the typed
