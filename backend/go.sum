@@ -6,8 +6,8 @@ github.com/andybalholm/brotli v1.1.1 h1:PR2pgnyFznKEugtsUo0xLdDop5SKXd5Qf5ysW+7X
 github.com/andybalholm/brotli v1.1.1/go.mod h1:05ib4cKhjx3OQYUY22hTVd34Bc8upXjOLL2rKwwZBoA=
 github.com/aws/aws-sdk-go-v2 v1.45.1 h1:iIoG3NaLhV6UZpPXyPXlDj2I9oS8tV/nMcMnITCC6Ks=
 github.com/aws/aws-sdk-go-v2 v1.45.1/go.mod h1:bttEH6JqnUL8LepvDVfdrds/fZ5bCIxzpe3abyUrhDU=
-github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.18 h1:LAfOuhAH331fmOjTQpAaOlH+Ftn7RzSDJ2VFwjdMMy4=
-github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.18/go.mod h1:4e5xhuXHx1e4U9EthvbPP1r/DIMp5c2823OL8karzcM=
+github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.20 h1:GPRlPwz40I2B2VrBEASOA3Bi77NyeqejNLkifosX0rs=
+github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.20/go.mod h1:g7PNzKcsOKWb4fkSRBA7BZVAS6Y8IcxzN+nRohhQ1Q8=
 github.com/aws/aws-sdk-go-v2/config v1.33.2 h1:Pj4+nF2kc4Z+1BJysVPnX9d5dMN7IYFXR4UJaWK2IpA=
 github.com/aws/aws-sdk-go-v2/config v1.33.2/go.mod h1:Igw+HTwbR2tsTU/ydifAS9EHAFJ2s/FCgkwQWFnAdE4=
 github.com/aws/aws-sdk-go-v2/credentials v1.20.2 h1:VQjZODPNfdikCX2ZZrltw4zNLkcwjyUFDUl2vT9yTwg=
@@ -22,8 +22,8 @@ github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.1 h1:yhw5KD1phVyP9vijxOUzDfEtJx+b
 github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.1/go.mod h1:ZW2e0d7DYlRxlS9hEiMXE47gTdX5KRN4byUiNbUpG+Q=
 github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.69.1 h1:l3ky9d9jfBxYcFEErV4k80DSYzoUP6YzrJZDDRuBEQ4=
 github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.69.1/go.mod h1:rmlhLCdedUIhyhhkK9E2BBqHiaUpsmb0Yg7S58r6aaE=
-github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.82.2 h1:g0Hm/up9LDheflUekqCl19nTJatL6MHyvZHJSXOVyBI=
-github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.82.2/go.mod h1:AdyGGib8td8DR+9F5xKLooxlSSoXo4pBVl+FkTpzpNA=
+github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.85.0 h1:8Qhh84Cm/ae7HxhRh9A5Fz+H/qpumvT7c9HqdymGeRo=
+github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.85.0/go.mod h1:hp3qwCtX+QPXVJMyKsFO/sLXkirzH0R3UHRVM4QBGV4=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.19 h1:bAdDl/HkGCcGPoe25ToSHEw23VIxt6CT5fLcg111BKg=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.19/go.mod h1:KaUzbLxv4CeSxh6ZCl9B4m7CuFenS8kUEaDs+f/DQr4=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.1 h1:RmmWQPREQdk9U+PfqeHW3MqZaBaNK7TpV9W3RY+b+7g=
