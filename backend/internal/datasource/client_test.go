@@ -11,8 +11,10 @@ import (
 	acech "github.com/aceobservability/ace-datasource-clickhouse"
 	aceloki "github.com/aceobservability/ace-datasource-loki"
 	aceprom "github.com/aceobservability/ace-datasource-prometheus"
+	acetempo "github.com/aceobservability/ace-datasource-tempo"
 	acevl "github.com/aceobservability/ace-datasource-victorialogs"
 	acevm "github.com/aceobservability/ace-datasource-victoriametrics"
+	acevt "github.com/aceobservability/ace-datasource-victoriatraces"
 
 	"github.com/aceobservability/ace/backend/internal/models"
 	dscontract "github.com/aceobservability/ace/backend/pkg/datasource"
@@ -91,8 +93,8 @@ func TestNewClient_Tempo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if _, ok := client.(*TempoClient); !ok {
-		t.Errorf("expected TempoClient, got %T", client)
+	if _, ok := client.(*acetempo.Client); !ok {
+		t.Errorf("expected *tempo.Client from ace-datasource-tempo, got %T", client)
 	}
 }
 
@@ -105,8 +107,8 @@ func TestNewClient_VictoriaTraces(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if _, ok := client.(*VictoriaTracesClient); !ok {
-		t.Errorf("expected VictoriaTracesClient, got %T", client)
+	if _, ok := client.(*acevt.Client); !ok {
+		t.Errorf("expected *victoriatraces.Client from ace-datasource-victoriatraces, got %T", client)
 	}
 }
 
@@ -271,8 +273,15 @@ var (
 	_ SignalQueryClient = (*ElasticsearchClient)(nil)
 	_ connectionTester  = (*ElasticsearchClient)(nil)
 
-	_ connectionTester = (*TempoClient)(nil)
-	_ connectionTester = (*VictoriaTracesClient)(nil)
+	_ Client             = (*acetempo.Client)(nil)
+	_ TracingClient      = (*acetempo.Client)(nil)
+	_ connectionTester   = (*acetempo.Client)(nil)
+	_ httpClientProvider = (*acetempo.Client)(nil)
+
+	_ Client             = (*acevt.Client)(nil)
+	_ TracingClient      = (*acevt.Client)(nil)
+	_ connectionTester   = (*acevt.Client)(nil)
+	_ httpClientProvider = (*acevt.Client)(nil)
 )
 
 func TestDetectLogLevel(t *testing.T) {
