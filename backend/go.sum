@@ -2,8 +2,8 @@ cloud.google.com/go/compute/metadata v0.9.0 h1:pDUj4QMoPejqq20dK0Pg2N4yG9zIkYGdB
 cloud.google.com/go/compute/metadata v0.9.0/go.mod h1:E0bWwX5wTnLPedCKqk3pJmVgCBSM6qQI1yTBdEb3C10=
 github.com/aceobservability/ace-datasource-clickhouse v0.0.0-20260906163719-50ae73a9eb08 h1:KewOO9sOBIgtgjqGgsNFmEO38LQ1oJJ52FYoigeDYVU=
 github.com/aceobservability/ace-datasource-clickhouse v0.0.0-20260906163719-50ae73a9eb08/go.mod h1:IGOryUVPXD/57vxdvqKYZ0ywr2YOy0A3tpe3yBUWAHc=
-github.com/aceobservability/ace-datasource-loki v0.0.0-20260906163517-2c21206d6374 h1:1n/Qsm3TG004lKHvvpXqVldyvByZkaCtGSJcK6K86sA=
-github.com/aceobservability/ace-datasource-loki v0.0.0-20260906163517-2c21206d6374/go.mod h1:VPCexUflWG5DiiVH84ddDvex3JnDSXdE/8luZ4QUcso=
+github.com/aceobservability/ace-datasource-loki v0.0.0-20260906165404-06f9efcc1ccd h1:REgwrZrcYQg+vgR7w9mMzeezPC0rl9C5D8pfw+4eJdg=
+github.com/aceobservability/ace-datasource-loki v0.0.0-20260906165404-06f9efcc1ccd/go.mod h1:VPCexUflWG5DiiVH84ddDvex3JnDSXdE/8luZ4QUcso=
 github.com/aceobservability/ace-datasource-prometheus v0.0.0-20260906152221-4b460476c203 h1:LYanV0cWCK7oq80TSNLaU3PT1Knk9srIWevbbz8s/1s=
 github.com/aceobservability/ace-datasource-prometheus v0.0.0-20260906152221-4b460476c203/go.mod h1:teR/MAf/a8qKlGdj4yGGh+HMkZsTNtc86pxbqcndJe0=
 github.com/aceobservability/ace-datasource-victoriametrics v0.0.0-20260906162925-9dc8e06dd775 h1:C72kqVe9hVOLi/guMmN2byGlCByT7hr1UVdJ8hU3osA=

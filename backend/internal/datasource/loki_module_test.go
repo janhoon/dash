@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -16,23 +17,23 @@ import (
 func TestLokiModule_QueryAndTestConnectionAgainstFixtureHTTP(t *testing.T) {
 	t.Parallel()
 
-	var sawQueryRange, sawReady, sawLabels, sawLabelValues bool
+	var sawQueryRange, sawReady, sawLabels, sawLabelValues atomic.Bool
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case strings.Contains(r.URL.Path, "/loki/api/v1/query_range"):
-			sawQueryRange = true
+			sawQueryRange.Store(true)
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"status":"success","data":{"resultType":"streams","result":[{"stream":{"job":"ace"},"values":[["1700000000000000000","hello from loki"]]}]}}`))
 		case r.URL.Path == "/ready":
-			sawReady = true
+			sawReady.Store(true)
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte("ready"))
 		case strings.HasSuffix(r.URL.Path, "/loki/api/v1/labels") && !strings.Contains(r.URL.Path, "/values"):
-			sawLabels = true
+			sawLabels.Store(true)
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"status":"success","data":["job","level"]}`))
 		case strings.Contains(r.URL.Path, "/loki/api/v1/label/") && strings.HasSuffix(r.URL.Path, "/values"):
-			sawLabelValues = true
+			sawLabelValues.Store(true)
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"status":"success","data":["ace","api"]}`))
 		default:
@@ -70,7 +71,7 @@ func TestLokiModule_QueryAndTestConnectionAgainstFixtureHTTP(t *testing.T) {
 	if result.Data == nil || len(result.Data.Logs) != 1 || result.Data.Logs[0].Line != "hello from loki" {
 		t.Fatalf("unexpected query result %+v", result.Data)
 	}
-	if !sawQueryRange {
+	if !sawQueryRange.Load() {
 		t.Fatal("expected registry client to hit fixture /loki/api/v1/query_range")
 	}
 
@@ -81,7 +82,7 @@ func TestLokiModule_QueryAndTestConnectionAgainstFixtureHTTP(t *testing.T) {
 	if len(labels) != 2 || labels[0] != "job" || labels[1] != "level" {
 		t.Fatalf("Labels=%v", labels)
 	}
-	if !sawLabels {
+	if !sawLabels.Load() {
 		t.Fatal("expected Labels to hit fixture /loki/api/v1/labels")
 	}
 
@@ -92,14 +93,14 @@ func TestLokiModule_QueryAndTestConnectionAgainstFixtureHTTP(t *testing.T) {
 	if len(values) != 2 || values[0] != "ace" {
 		t.Fatalf("LabelValues=%v", values)
 	}
-	if !sawLabelValues {
+	if !sawLabelValues.Load() {
 		t.Fatal("expected LabelValues to hit fixture /loki/api/v1/label/job/values")
 	}
 
 	if err := TestConnection(ctx, ds); err != nil {
 		t.Fatalf("TestConnection: %v", err)
 	}
-	if !sawReady {
+	if !sawReady.Load() {
 		t.Fatal("expected TestConnection to hit fixture /ready")
 	}
 }
