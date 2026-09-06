@@ -34,7 +34,7 @@ Do not import `internal/handlers` from an LLM module. Do not import
 
 `internal/` is not a stable path for other Go modules. `pkg/` is.
 
-## In-tree wiring
+## Host wiring
 
 LLM adapters register from module `init`. Ace blank-imports
 `github.com/aceobservability/ace-llm-anthropic`, and that module's `init` calls

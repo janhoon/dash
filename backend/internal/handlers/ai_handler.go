@@ -330,9 +330,6 @@ func (h *AIHandler) buildDBProvider(ctx context.Context, providerID, orgID uuid.
 	return instantiateDBProvider(p)
 }
 
-// dbAPIKeyForFactory returns LLMConfig.APIKey for a stored ai_providers row.
-// OpenAI-compat types get decrypted plaintext. Copilot keeps ciphertext because
-// the copilot module decrypts EncryptedGHToken on ListModels/Chat.
 func dbAPIKeyForFactory(providerType string, stored *string) (string, error) {
 	if stored == nil || *stored == "" {
 		return "", nil

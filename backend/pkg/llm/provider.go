@@ -6,8 +6,7 @@ import (
 	"net/http"
 )
 
-// AIProvider is the LLM module contract. In-tree providers and future
-// ace-llm-* modules implement this interface.
+// AIProvider is the LLM module contract.
 type AIProvider interface {
 	ListModels(ctx context.Context) ([]AIModel, error)
 	Chat(ctx context.Context, req ChatRequest, w http.ResponseWriter) error
