@@ -1,11 +1,23 @@
 package datasource
 
 import (
+	"context"
+	"errors"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/aceobservability/ace/backend/internal/models"
+	dscontract "github.com/aceobservability/ace/backend/pkg/datasource"
 )
+
+type probeQueryClient struct {
+	name string
+}
+
+func (c *probeQueryClient) Query(context.Context, string, time.Time, time.Time, time.Duration, int) (*QueryResult, error) {
+	return &QueryResult{Status: c.name}, nil
+}
 
 func TestNewClient_Prometheus(t *testing.T) {
 	ds := models.DataSource{
@@ -139,9 +151,51 @@ func TestNewClient_InvalidType(t *testing.T) {
 		Type: "invalid",
 		URL:  "http://localhost:9090",
 	}
-	_, err := NewClient(ds)
+	client, err := NewClient(ds)
 	if err == nil {
-		t.Error("expected error for invalid type, got nil")
+		t.Fatal("expected error for invalid type, got nil")
+	}
+	if !errors.Is(err, ErrUnknownType) {
+		t.Fatalf("expected ErrUnknownType, got %v", err)
+	}
+	if client != nil {
+		t.Fatalf("unknown type must not construct a client, got %T", client)
+	}
+}
+
+func TestNewClient_VMAlertAndAlertManagerFailClosed(t *testing.T) {
+	for _, typ := range []models.DataSourceType{models.DataSourceVMAlert, models.DataSourceAlertManager} {
+		client, err := NewClient(models.DataSource{Type: typ, URL: "http://localhost:8880"})
+		if !errors.Is(err, ErrUnknownType) {
+			t.Errorf("%s: expected ErrUnknownType, got %v", typ, err)
+		}
+		if client != nil {
+			t.Errorf("%s: unknown query type must not construct a client, got %T", typ, client)
+		}
+	}
+}
+
+func TestRegisterDatasource_DispatchUsesRegisteredFactory(t *testing.T) {
+	const typ = "probe-internal-datasource"
+	dscontract.RegisterDatasource(typ, func(cfg dscontract.Config) (dscontract.Client, error) {
+		return &probeQueryClient{name: cfg.Name}, nil
+	})
+	t.Cleanup(func() { dscontract.UnregisterDatasource(typ) })
+
+	client, err := NewClient(models.DataSource{
+		Type: models.DataSourceType(typ),
+		Name: "probe-one",
+		URL:  "http://localhost:9090",
+	})
+	if err != nil {
+		t.Fatalf("dispatch registered type: %v", err)
+	}
+	got, ok := client.(*probeQueryClient)
+	if !ok {
+		t.Fatalf("expected *probeQueryClient, got %T", client)
+	}
+	if got.name != "probe-one" {
+		t.Errorf("factory did not receive Config, name=%q", got.name)
 	}
 }
 
