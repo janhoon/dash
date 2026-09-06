@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	aceprom "github.com/aceobservability/ace-datasource-prometheus"
+
 	"github.com/aceobservability/ace/backend/internal/models"
 	dscontract "github.com/aceobservability/ace/backend/pkg/datasource"
 )
@@ -30,8 +32,8 @@ func TestNewClient_Prometheus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if _, ok := client.(*PrometheusClient); !ok {
-		t.Errorf("expected PrometheusClient, got %T", client)
+	if _, ok := client.(*aceprom.Client); !ok {
+		t.Errorf("expected *prometheus.Client from ace-datasource-prometheus, got %T", client)
 	}
 }
 
@@ -228,11 +230,11 @@ func TestRegisterDatasource_DispatchUsesRegisteredFactory(t *testing.T) {
 }
 
 var (
-	_ Client                  = (*PrometheusClient)(nil)
-	_ MetricLabelsClient      = (*PrometheusClient)(nil)
-	_ MetricLabelValuesClient = (*PrometheusClient)(nil)
-	_ MetricNamesClient       = (*PrometheusClient)(nil)
-	_ connectionTester        = (*PrometheusClient)(nil)
+	_ Client                  = (*aceprom.Client)(nil)
+	_ MetricLabelsClient      = (*aceprom.Client)(nil)
+	_ MetricLabelValuesClient = (*aceprom.Client)(nil)
+	_ MetricNamesClient       = (*aceprom.Client)(nil)
+	_ connectionTester        = (*aceprom.Client)(nil)
 
 	_ Client                  = (*VictoriaMetricsClient)(nil)
 	_ MetricLabelsClient      = (*VictoriaMetricsClient)(nil)

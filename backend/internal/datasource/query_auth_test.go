@@ -47,7 +47,7 @@ func TestQuerySendsStoredCredentials(t *testing.T) {
 		{
 			name:  "prometheus",
 			typ:   models.DataSourcePrometheus,
-			newFn: func(ds models.DataSource) (Client, error) { return NewPrometheusClient(ds) },
+			newFn: func(ds models.DataSource) (Client, error) { return NewClient(ds) },
 			query: "up",
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				requireBearer(t, r, token)

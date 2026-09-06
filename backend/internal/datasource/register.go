@@ -1,12 +1,19 @@
 package datasource
 
 import (
+	"time"
+
+	aceprom "github.com/aceobservability/ace-datasource-prometheus"
+
 	"github.com/aceobservability/ace/backend/internal/models"
 	dscontract "github.com/aceobservability/ace/backend/pkg/datasource"
 )
 
 func init() {
-	register(models.DataSourcePrometheus, NewPrometheusClient)
+	dscontract.RegisterDatasource(string(models.DataSourcePrometheus), func(cfg dscontract.Config) (dscontract.Client, error) {
+		ds := dataSourceFromConfig(cfg)
+		return aceprom.New(cfg.URL, newDatasourceHTTPClient(ds, 30*time.Second))
+	})
 	register(models.DataSourceVictoriaMetrics, NewVictoriaMetricsClient)
 	register(models.DataSourceLoki, NewLokiClient)
 	register(models.DataSourceVictoriaLogs, NewVictoriaLogsClient)
