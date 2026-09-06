@@ -11,6 +11,7 @@ import (
 	"time"
 
 	acech "github.com/aceobservability/ace-datasource-clickhouse"
+	aceloki "github.com/aceobservability/ace-datasource-loki"
 	aceprom "github.com/aceobservability/ace-datasource-prometheus"
 	acevm "github.com/aceobservability/ace-datasource-victoriametrics"
 
@@ -125,15 +126,20 @@ func TestDatasourceClientsBlockMetadataRedirect(t *testing.T) {
 func TestLokiStreamBlocksMetadata(t *testing.T) {
 	t.Parallel()
 
-	client, err := NewLokiClient(testDS(models.DataSourceLoki, strings.TrimRight(cloudMetadataURL, "/")))
+	client, err := NewClient(testDS(models.DataSourceLoki, strings.TrimRight(cloudMetadataURL, "/")))
 	if err != nil {
-		t.Fatalf("NewLokiClient failed: %v", err)
+		t.Fatalf("NewClient failed: %v", err)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	err = client.Stream(ctx, `{job="ace"}`, time.Time{}, 1, func(LogEntry) error { return nil })
+	streamer, ok := client.(StreamClient)
+	if !ok {
+		t.Fatalf("expected StreamClient, got %T", client)
+	}
+
+	err = streamer.Stream(ctx, `{job="ace"}`, time.Time{}, 1, func(LogEntry) error { return nil })
 	if err == nil {
 		t.Fatal("Loki websocket stream to cloud metadata endpoint should fail")
 	}
@@ -185,9 +191,13 @@ func constructedDatasourceHTTPClients(t *testing.T) map[string]*http.Client {
 	if !ok {
 		t.Fatalf("expected *victoriametrics.Client, got %T", vm)
 	}
-	loki, err := NewLokiClient(testDS(models.DataSourceLoki, "http://127.0.0.1:3100"))
+	loki, err := NewClient(testDS(models.DataSourceLoki, "http://127.0.0.1:3100"))
 	if err != nil {
-		t.Fatalf("NewLokiClient: %v", err)
+		t.Fatalf("NewClient loki: %v", err)
+	}
+	lokiClient, ok := loki.(*aceloki.Client)
+	if !ok {
+		t.Fatalf("expected *loki.Client, got %T", loki)
 	}
 	vlogs, err := NewVictoriaLogsClient(testDS(models.DataSourceVictoriaLogs, "http://127.0.0.1:9428"))
 	if err != nil {
@@ -225,7 +235,7 @@ func constructedDatasourceHTTPClients(t *testing.T) map[string]*http.Client {
 	return map[string]*http.Client{
 		"prometheus":          promClient.HTTPClient(),
 		"victoriametrics":     vmClient.HTTPClient(),
-		"loki":                loki.client,
+		"loki":                lokiClient.HTTPClient(),
 		"victorialogs":        vlogs.client,
 		"victorialogs_stream": vlogs.streamClient,
 		"tempo":               tempo.httpClient,
@@ -262,7 +272,7 @@ func datasourceQueryFns() map[string]func(context.Context, string) error {
 			return err
 		},
 		"loki": func(ctx context.Context, baseURL string) error {
-			client, err := NewLokiClient(testDS(models.DataSourceLoki, baseURL))
+			client, err := NewClient(testDS(models.DataSourceLoki, baseURL))
 			if err != nil {
 				return err
 			}

@@ -69,7 +69,7 @@ func TestQuerySendsStoredCredentials(t *testing.T) {
 		{
 			name:  "loki",
 			typ:   models.DataSourceLoki,
-			newFn: func(ds models.DataSource) (Client, error) { return NewLokiClient(ds) },
+			newFn: func(ds models.DataSource) (Client, error) { return NewClient(ds) },
 			query: `{job="ace"}`,
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				requireBearer(t, r, token)
@@ -133,7 +133,12 @@ func TestLokiStreamSendsStoredCredentialsOnWebsocketHeaders(t *testing.T) {
 		}
 		defer conn.Close()
 
-		payload, _ := json.Marshal(lokiTailResponse{
+		payload, _ := json.Marshal(struct {
+			Streams []struct {
+				Stream map[string]string `json:"stream"`
+				Values [][]string        `json:"values"`
+			} `json:"streams"`
+		}{
 			Streams: []struct {
 				Stream map[string]string `json:"stream"`
 				Values [][]string        `json:"values"`
@@ -149,15 +154,20 @@ func TestLokiStreamSendsStoredCredentialsOnWebsocketHeaders(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	client, err := NewLokiClient(bearerDS(models.DataSourceLoki, srv.URL, token))
+	client, err := NewClient(bearerDS(models.DataSourceLoki, srv.URL, token))
 	if err != nil {
-		t.Fatalf("NewLokiClient: %v", err)
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	streamer, ok := client.(StreamClient)
+	if !ok {
+		t.Fatalf("expected StreamClient, got %T", client)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	err = client.Stream(ctx, `{job="ace"}`, time.Time{}, 1, func(LogEntry) error {
+	err = streamer.Stream(ctx, `{job="ace"}`, time.Time{}, 1, func(LogEntry) error {
 		cancel()
 		return context.Canceled
 	})
@@ -216,15 +226,20 @@ func TestLokiLabelsSendsStoredCredentials(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	client, err := NewLokiClient(bearerDS(models.DataSourceLoki, srv.URL, token))
+	client, err := NewClient(bearerDS(models.DataSourceLoki, srv.URL, token))
 	if err != nil {
-		t.Fatalf("NewLokiClient: %v", err)
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	labelsClient, ok := client.(LabelsClient)
+	if !ok {
+		t.Fatalf("expected LabelsClient, got %T", client)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	labels, err := client.Labels(ctx)
+	labels, err := labelsClient.Labels(ctx)
 	if err != nil {
 		t.Fatalf("Labels: %v", err)
 	}

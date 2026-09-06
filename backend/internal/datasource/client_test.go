@@ -5,11 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"net/url"
 	"testing"
 	"time"
 
 	acech "github.com/aceobservability/ace-datasource-clickhouse"
+	aceloki "github.com/aceobservability/ace-datasource-loki"
 	aceprom "github.com/aceobservability/ace-datasource-prometheus"
 	acevm "github.com/aceobservability/ace-datasource-victoriametrics"
 
@@ -62,8 +62,8 @@ func TestNewClient_Loki(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if _, ok := client.(*LokiClient); !ok {
-		t.Errorf("expected LokiClient, got %T", client)
+	if _, ok := client.(*aceloki.Client); !ok {
+		t.Errorf("expected *loki.Client from ace-datasource-loki, got %T", client)
 	}
 }
 
@@ -244,11 +244,11 @@ var (
 	_ MetricNamesClient       = (*acevm.Client)(nil)
 	_ connectionTester        = (*acevm.Client)(nil)
 
-	_ Client            = (*LokiClient)(nil)
-	_ StreamClient      = (*LokiClient)(nil)
-	_ LabelsClient      = (*LokiClient)(nil)
-	_ LabelValuesClient = (*LokiClient)(nil)
-	_ connectionTester  = (*LokiClient)(nil)
+	_ Client            = (*aceloki.Client)(nil)
+	_ StreamClient      = (*aceloki.Client)(nil)
+	_ LabelsClient      = (*aceloki.Client)(nil)
+	_ LabelValuesClient = (*aceloki.Client)(nil)
+	_ connectionTester  = (*aceloki.Client)(nil)
 
 	_ Client            = (*VictoriaLogsClient)(nil)
 	_ StreamClient      = (*VictoriaLogsClient)(nil)
@@ -295,31 +295,6 @@ func TestDetectLogLevel(t *testing.T) {
 		if got != tt.want {
 			t.Errorf("detectLogLevel(%v, %q) = %q, want %q", tt.labels, tt.line, got, tt.want)
 		}
-	}
-}
-
-func TestToWebSocketURL(t *testing.T) {
-	params := url.Values{}
-	params.Set("query", `{job="api"}`)
-
-	wsURL, err := toWebSocketURL("http://localhost:3100", "/loki/api/v1/tail", params)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	parsedURL, err := url.Parse(wsURL)
-	if err != nil {
-		t.Fatalf("failed to parse URL: %v", err)
-	}
-
-	if parsedURL.Scheme != "ws" {
-		t.Fatalf("expected ws scheme, got %s", parsedURL.Scheme)
-	}
-	if parsedURL.Path != "/loki/api/v1/tail" {
-		t.Fatalf("expected /loki/api/v1/tail path, got %s", parsedURL.Path)
-	}
-	if parsedURL.Query().Get("query") != `{job="api"}` {
-		t.Fatalf("expected encoded query to round-trip, got %s", parsedURL.Query().Get("query"))
 	}
 }
 

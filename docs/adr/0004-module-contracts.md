@@ -16,6 +16,8 @@ status: accepted
 > [#451](https://github.com/aceobservability/ace/issues/451),
 > [#461](https://github.com/aceobservability/ace/pull/461)). VictoriaMetrics
 > is also out-of-tree (`ace-datasource-victoriametrics`,
+> [#451](https://github.com/aceobservability/ace/issues/451)). Loki is also
+> out-of-tree (`ace-datasource-loki`,
 > [#451](https://github.com/aceobservability/ace/issues/451)). Remaining
 > `ace-llm-*` / `ace-datasource-*` extracts follow
 > [#446](https://github.com/aceobservability/ace/issues/446).
@@ -47,18 +49,21 @@ calls `RegisterLLM` for `openai`, `openrouter`, `ollama`, and `custom`. Copilot
 is the third. Ace blank-imports `github.com/aceobservability/ace-llm-copilot`,
 and that module's `init` calls `RegisterLLM("copilot", New)`.
 Remaining datasource factories live in
-`internal/datasource` and call `RegisterDatasource` from `init`. Prometheus and
-VictoriaMetrics are out-of-tree datasources. `ace-datasource-prometheus` and
-`ace-datasource-victoriametrics` implement the contract. Ace registers type
-`prometheus` from `internal/datasource/register.go` and type `victoriametrics`
-from `internal/datasource/register_victoriametrics.go` via the typed
+`internal/datasource` and call `RegisterDatasource` from `init`. Prometheus,
+VictoriaMetrics, and Loki are out-of-tree datasources.
+`ace-datasource-prometheus`, `ace-datasource-victoriametrics`, and
+`ace-datasource-loki` implement the contract. Ace registers type
+`prometheus` from `internal/datasource/register.go`, type `victoriametrics`
+from `internal/datasource/register_victoriametrics.go`, and type `loki` from
+`internal/datasource/register_loki.go` via the typed
 `register()` helper, and injects `ssrf.DatasourceClient` (auth-wrapped) into
 `New(url, httpClient)`. ClickHouse is also out-of-tree
 (`ace-datasource-clickhouse`). Ace registers type `clickhouse` from
 `internal/datasource/register_clickhouse.go` and injects
 `ssrf.DatasourceClient` (auth-wrapped) plus `AuthConfig` (database) into
 `New(url, httpClient, authConfig)`. Ace owns `TestConnection` for those types via
-`runHTTPConnectionCheck`. It does not call module `connect.go`. HTTP
+`runHTTPConnectionCheck` and `HTTPClient()` (`testRegisteredHTTPConnection`).
+It does not call module `connect.go`. HTTP
 handlers call `internal/datasource.NewClient` and `llm.New` /
 `llm.RequireKnown`. `datasource.NewClient` looks up `cfg.Type`. There is no
 parallel type argument.
