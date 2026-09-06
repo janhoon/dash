@@ -54,3 +54,11 @@ Type `victoriametrics` is registered from
 registered from `backend/internal/datasource/register_loki.go` via the typed
 `register()` helper. Ace owns `TestConnection` through
 `runHTTPConnectionCheck` and `HTTPClient()`. It does not call module `connect.go`.
+
+VMAlert (`github.com/aceobservability/ace-datasource-vmalert`) and
+Alertmanager (`github.com/aceobservability/ace-datasource-alertmanager`)
+are out-of-tree but not query `Client` types. Ace does not
+`RegisterDatasource` for them. Ace injects the same SSRF HTTP client into
+`New(url, httpClient)`. `TestConnection` stays on Ace's path
+(`runHTTPConnectionCheck` with `IsLocalURL` / `ValidateDatasourceURL`).
+Do not call module `connect.go` / module `TestConnection`.
