@@ -22,7 +22,9 @@ status: accepted
 > [#451](https://github.com/aceobservability/ace/issues/451)). Tempo and
 > VictoriaTraces are out-of-tree (`ace-datasource-tempo`,
 > `ace-datasource-victoriatraces`, [#451](https://github.com/aceobservability/ace/issues/451)),
-> sharing tracing helpers in `ace-datasource-tempo/tracing`. VMAlert
+> sharing tracing helpers in `ace-datasource-tempo/tracing`. Elasticsearch
+> is also out-of-tree (`ace-datasource-elasticsearch`,
+> [#451](https://github.com/aceobservability/ace/issues/451)). VMAlert
 > (`ace-datasource-vmalert`) and Alertmanager (`ace-datasource-alertmanager`)
 > are out-of-tree connection-test clients
 > ([#451](https://github.com/aceobservability/ace/issues/451)). Remaining
@@ -75,8 +77,12 @@ into `New(url, httpClient)`. ClickHouse is also out-of-tree
 `tempo` from `backend/internal/datasource/register_tempo.go` and type
 `victoriatraces` from `backend/internal/datasource/register_victoriatraces.go`
 via the typed `register()` helper with a real import of `New(url, httpClient)`.
-Shared tracing helpers live in `ace-datasource-tempo/tracing`. Ace injects SSRF
-via `newDatasourceHTTPClient` into `New(url, httpClient)`. Ace owns
+Shared tracing helpers live in `ace-datasource-tempo/tracing`. Elasticsearch is
+also out-of-tree (`ace-datasource-elasticsearch`). Ace registers type
+`elasticsearch` from `internal/datasource/register_elasticsearch.go` via the
+typed `register()` helper and injects `ssrf.DatasourceClient` (auth-wrapped)
+plus `AuthConfig` (index/field settings) into `New(url, authConfig, httpClient)`.
+Ace injects SSRF via `newDatasourceHTTPClient` into `New(url, httpClient)`. Ace owns
 `TestConnection` for those types via
 `runHTTPConnectionCheck` and `HTTPClient()` (`testRegisteredHTTPConnection`).
 It does not call module `connect.go`. HTTP

@@ -67,10 +67,17 @@ and `victoriatraces` are registered from
 `backend/internal/datasource/register_tempo.go` and
 `backend/internal/datasource/register_victoriatraces.go` via the typed
 `register()` helper with a real import of `New(url, httpClient)`. Shared tracing
-helpers live in `ace-datasource-tempo/tracing`. Ace injects SSRF via
-`newDatasourceHTTPClient` into `New(url, httpClient)`. Ace owns `TestConnection`
-through `testRegisteredHTTPConnection` / `runHTTPConnectionCheck` and
-`HTTPClient()`. It does not call module `connect.go`.
+helpers live in `ace-datasource-tempo/tracing`. Elasticsearch is also
+out-of-tree (`github.com/aceobservability/ace-datasource-elasticsearch`).
+Type `elasticsearch` is registered from
+`backend/internal/datasource/register_elasticsearch.go` via the typed
+`register()` helper. Prometheus, VictoriaMetrics, Loki, VictoriaLogs, Tempo,
+and VictoriaTraces use `New(url, httpClient)`; ClickHouse uses
+`New(url, httpClient, authConfig)`; Elasticsearch uses
+`New(url, authConfig, httpClient)` (`authConfig` carries index/field settings).
+Ace injects SSRF via `newDatasourceHTTPClient` into those factories. Ace owns
+`TestConnection` through `testRegisteredHTTPConnection` / `runHTTPConnectionCheck`
+and `HTTPClient()`. It does not call module `connect.go`.
 
 VMAlert (`github.com/aceobservability/ace-datasource-vmalert`) and
 Alertmanager (`github.com/aceobservability/ace-datasource-alertmanager`)
