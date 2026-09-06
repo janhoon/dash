@@ -93,11 +93,27 @@ describe('McpPluginsPanel', () => {
     const pagerOn = within(rowNamed('PagerDuty')).getByTestId('mcp-plugin-toggle')
     expect(pagerOn.textContent).toBe('On')
     expectGoldInk(pagerOn)
+    expect(within(rowNamed('PagerDuty')).getByText('Connected')).toBeTruthy()
 
     await user.click(within(rowNamed('Victoria Metrics')).getByTestId('mcp-plugin-toggle'))
     const victoriaOff = within(rowNamed('Victoria Metrics')).getByTestId('mcp-plugin-toggle')
     expect(victoriaOff.textContent).toBe('Off')
     expectQuietChip(victoriaOff)
+    expect(within(rowNamed('Victoria Metrics')).getByText('Off · not configured')).toBeTruthy()
+  })
+
+  it('restores catalog Connected details when turning Victoria Metrics and GitHub back On', async () => {
+    const user = userEvent.setup()
+    render(<McpPluginsPanel />)
+
+    await user.click(within(rowNamed('Victoria Metrics')).getByTestId('mcp-plugin-toggle'))
+    await user.click(within(rowNamed('Victoria Metrics')).getByTestId('mcp-plugin-toggle'))
+    expect(within(rowNamed('Victoria Metrics')).getByText('Connected · queries + labels')).toBeTruthy()
+
+    await user.click(within(rowNamed('GitHub')).getByTestId('mcp-plugin-toggle'))
+    expect(within(rowNamed('GitHub')).getByText('Off · not configured')).toBeTruthy()
+    await user.click(within(rowNamed('GitHub')).getByTestId('mcp-plugin-toggle'))
+    expect(within(rowNamed('GitHub')).getByText('Connected · issues, PRs')).toBeTruthy()
   })
 
   it('retries an error row inline without a toast', async () => {
@@ -122,6 +138,8 @@ describe('McpPluginsPanel', () => {
     const recovered = rowNamed('Broken')
     expect(within(recovered).queryByTestId('mcp-plugin-retry')).toBeNull()
     expect(within(recovered).queryByText(UNREACHABLE_SERVER_ERROR)).toBeNull()
+    expect(within(recovered).queryByText('timeout')).toBeNull()
+    expect(within(recovered).getByText('Connected')).toBeTruthy()
     const chip = within(recovered).getByTestId('mcp-plugin-toggle')
     expect(chip.textContent).toBe('On')
     expectGoldInk(chip)

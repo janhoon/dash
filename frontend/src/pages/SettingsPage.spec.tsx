@@ -510,7 +510,9 @@ describe('SettingsPage', () => {
 
       expect(screen.getByRole('heading', { name: 'MCP / Plugins' })).toBeTruthy()
       expect(screen.getByText('Victoria Metrics')).toBeTruthy()
-      expect(screen.queryByTestId('settings-section-nav')).toBeNull()
+      expect(screen.getByTestId('settings-section-nav')).toBeTruthy()
+      expect(screen.getByTestId('settings-nav-mcp')).toBeTruthy()
+      expect(screen.queryByRole('heading', { name: 'Settings' })).toBeNull()
     })
   })
 
@@ -520,7 +522,8 @@ describe('SettingsPage', () => {
 
       expect(await screen.findByTestId('mcp-plugins-panel')).toBeTruthy()
       expect(screen.getByRole('heading', { name: 'MCP / Plugins' })).toBeTruthy()
-      expect(screen.queryByTestId('settings-section-nav')).toBeNull()
+      expect(screen.getByTestId('settings-section-nav')).toBeTruthy()
+      expect(screen.getByTestId('settings-nav-mcp')).toBeTruthy()
       expect(screen.queryByRole('heading', { name: 'Settings' })).toBeNull()
     })
   })

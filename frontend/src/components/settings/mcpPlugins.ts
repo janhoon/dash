@@ -3,6 +3,7 @@ export const MCP_PLUGINS_TITLE = 'MCP / Plugins'
 export const MCP_PLUGINS_SUBTITLE = 'Tools the agent can call. Quiet list, one gold enable.'
 export const MCP_PLUGINS_ADD_LABEL = 'Add server'
 export const MCP_PLUGINS_EMPTY = 'No servers yet'
+export const MCP_PLUGINS_CONNECTED_DETAIL = 'Connected'
 export const MCP_PLUGINS_OFF_DETAIL = 'Off · not configured'
 export const MCP_PLUGINS_RETRY_LABEL = 'Retry'
 
@@ -38,12 +39,7 @@ export function toggleMcpPlugin(plugin: McpPlugin): McpPlugin {
       return { id: plugin.id, name: plugin.name, state: 'off', detail: MCP_PLUGINS_OFF_DETAIL }
     case 'off':
     case 'error':
-      return {
-        id: plugin.id,
-        name: plugin.name,
-        state: 'on',
-        detail: connectedDetail(plugin.detail),
-      }
+      return enableMcpPlugin(plugin)
     default: {
       const _exhaustive: never = plugin
       return _exhaustive
@@ -54,7 +50,7 @@ export function toggleMcpPlugin(plugin: McpPlugin): McpPlugin {
 export function retryMcpPlugin(plugin: McpPlugin): McpPlugin {
   switch (plugin.state) {
     case 'error':
-      return { id: plugin.id, name: plugin.name, state: 'on', detail: plugin.detail }
+      return enableMcpPlugin(plugin)
     case 'on':
     case 'off':
       return plugin
@@ -79,8 +75,19 @@ export function addMcpPlugin(plugins: McpPlugin[], name: string): McpPlugin[] {
   ]
 }
 
-function connectedDetail(detail: string): string {
-  return detail.startsWith('Off') ? 'Connected' : detail
+function enableMcpPlugin(plugin: McpPlugin): McpPlugin {
+  return {
+    id: plugin.id,
+    name: plugin.name,
+    state: 'on',
+    detail: connectedOnDetail(plugin.id),
+  }
+}
+
+function connectedOnDetail(id: string): string {
+  const catalog = FIGMA_MCP_PLUGINS.find((row) => row.id === id)
+  if (catalog?.state === 'on') return catalog.detail
+  return MCP_PLUGINS_CONNECTED_DETAIL
 }
 
 function slugify(name: string): string {

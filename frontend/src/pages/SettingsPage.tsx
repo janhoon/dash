@@ -82,36 +82,33 @@ export function SettingsPage() {
   }, [activeSection, loadData])
 
   const isAdmin = org?.role === 'admin'
+  const showSettingsTitle = activeSection !== 'mcp'
 
   if (!isSettingsSection(sectionParam) && sectionParam !== undefined) {
     return <Navigate to="/app/settings/general" replace />
-  }
-
-  if (activeSection === 'mcp') {
-    return (
-      <div className="flex min-h-0 flex-1" style={{ color: 'var(--color-on-surface)' }}>
-        <McpPluginsPanel />
-      </div>
-    )
   }
 
   return (
     <div className="flex min-h-0 flex-1" style={{ color: 'var(--color-on-surface)' }}>
       <div className="flex-1 overflow-y-auto px-8 py-6">
         <header className="mb-6">
-          <h1
-            className="font-display text-2xl font-semibold"
-            style={{ color: 'var(--color-on-surface)' }}
-          >
-            Settings
-          </h1>
-          <p className="mt-1 text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
-            {org?.name
-              ? `Manage ${org.name} profile, members, datasources, and preferences`
-              : 'Manage organization profile, members, datasources, and preferences'}
-          </p>
+          {showSettingsTitle ? (
+            <>
+              <h1
+                className="font-display text-2xl font-semibold"
+                style={{ color: 'var(--color-on-surface)' }}
+              >
+                Settings
+              </h1>
+              <p className="mt-1 text-sm" style={{ color: 'var(--color-on-surface-variant)' }}>
+                {org?.name
+                  ? `Manage ${org.name} profile, members, datasources, and preferences`
+                  : 'Manage organization profile, members, datasources, and preferences'}
+              </p>
+            </>
+          ) : null}
           <nav
-            className="mt-4 flex flex-wrap gap-2"
+            className={showSettingsTitle ? 'mt-4 flex flex-wrap gap-2' : 'flex flex-wrap gap-2'}
             aria-label="Settings sections"
             data-testid="settings-section-nav"
           >
@@ -143,94 +140,100 @@ export function SettingsPage() {
           </nav>
         </header>
 
-        {loading ? (
-          <div className="py-8 text-center" style={{ color: 'var(--color-outline)' }}>
-            Loading...
-          </div>
-        ) : null}
-        {!loading && error ? (
-          <div className="py-8 text-center" style={{ color: 'var(--color-error)' }}>
-            {error}
-          </div>
-        ) : null}
-        {!loading && !error && !orgId ? (
-          <div className="py-8 text-center" style={{ color: 'var(--color-outline)' }}>
-            No organization selected.
-          </div>
-        ) : null}
-
-        {!loading && !error && orgId && org ? (
+        {activeSection === 'mcp' ? (
+          <McpPluginsPanel />
+        ) : (
           <>
-            {activeSection === 'general' ? (
-              <GeneralSettingsSection
-                org={org}
-                orgId={orgId}
-                isAdmin={Boolean(isAdmin)}
-                onOrgUpdated={setOrg}
-              />
+            {loading ? (
+              <div className="py-8 text-center" style={{ color: 'var(--color-outline)' }}>
+                Loading...
+              </div>
+            ) : null}
+            {!loading && error ? (
+              <div className="py-8 text-center" style={{ color: 'var(--color-error)' }}>
+                {error}
+              </div>
+            ) : null}
+            {!loading && !error && !orgId ? (
+              <div className="py-8 text-center" style={{ color: 'var(--color-outline)' }}>
+                No organization selected.
+              </div>
             ) : null}
 
-            {activeSection === 'members' ? (
-              <MembersSettingsSection
-                orgId={orgId}
-                isAdmin={Boolean(isAdmin)}
-                currentUserId={currentUserId}
-                members={members}
-                onMembersChange={setMembers}
-              />
-            ) : null}
+            {!loading && !error && orgId && org ? (
+              <>
+                {activeSection === 'general' ? (
+                  <GeneralSettingsSection
+                    org={org}
+                    orgId={orgId}
+                    isAdmin={Boolean(isAdmin)}
+                    onOrgUpdated={setOrg}
+                  />
+                ) : null}
 
-            {activeSection === 'groups' ? (
-              <GroupsSettingsSection
-                orgId={orgId}
-                isAdmin={Boolean(isAdmin)}
-                orgMembers={members}
-              />
-            ) : null}
+                {activeSection === 'members' ? (
+                  <MembersSettingsSection
+                    orgId={orgId}
+                    isAdmin={Boolean(isAdmin)}
+                    currentUserId={currentUserId}
+                    members={members}
+                    onMembersChange={setMembers}
+                  />
+                ) : null}
 
-            {activeSection === 'datasources' ? (
-              <section
-                className="flex max-w-3xl flex-col gap-4"
-                data-testid="settings-datasources"
-              >
-                <div
-                  className="rounded-lg p-6"
-                  style={{ backgroundColor: 'var(--color-surface-container-low)' }}
-                >
-                  <h2
-                    className="mb-2 flex items-center gap-2 font-display text-base font-semibold"
-                    style={{ color: 'var(--color-on-surface)' }}
+                {activeSection === 'groups' ? (
+                  <GroupsSettingsSection
+                    orgId={orgId}
+                    isAdmin={Boolean(isAdmin)}
+                    orgMembers={members}
+                  />
+                ) : null}
+
+                {activeSection === 'datasources' ? (
+                  <section
+                    className="flex max-w-3xl flex-col gap-4"
+                    data-testid="settings-datasources"
                   >
-                    <Database size={20} /> Data Sources
-                  </h2>
-                  <p
-                    className="mb-4 text-sm"
-                    style={{ color: 'var(--color-on-surface-variant)' }}
-                  >
-                    Configure connections to Prometheus, Loki, Tempo, VictoriaMetrics, and other
-                    data sources.
-                  </p>
-                  <DataSourceSettingsPanel orgId={orgId} isAdmin={Boolean(isAdmin)} />
-                </div>
-              </section>
-            ) : null}
+                    <div
+                      className="rounded-lg p-6"
+                      style={{ backgroundColor: 'var(--color-surface-container-low)' }}
+                    >
+                      <h2
+                        className="mb-2 flex items-center gap-2 font-display text-base font-semibold"
+                        style={{ color: 'var(--color-on-surface)' }}
+                      >
+                        <Database size={20} /> Data Sources
+                      </h2>
+                      <p
+                        className="mb-4 text-sm"
+                        style={{ color: 'var(--color-on-surface-variant)' }}
+                      >
+                        Configure connections to Prometheus, Loki, Tempo, VictoriaMetrics, and
+                        other data sources.
+                      </p>
+                      <DataSourceSettingsPanel orgId={orgId} isAdmin={Boolean(isAdmin)} />
+                    </div>
+                  </section>
+                ) : null}
 
-            {activeSection === 'ai' ? (
-              <section className="flex max-w-2xl flex-col gap-4" data-testid="settings-ai">
-                <AIProviderSettings
-                  orgId={orgId}
-                  isAdmin={Boolean(isAdmin)}
-                  onProviderCount={count => setHasOrgProviders(count > 0)}
-                />
-                {!hasOrgProviders ? <CopilotConnectionPanel orgId={orgId} /> : null}
-              </section>
-            ) : null}
+                {activeSection === 'ai' ? (
+                  <section className="flex max-w-2xl flex-col gap-4" data-testid="settings-ai">
+                    <AIProviderSettings
+                      orgId={orgId}
+                      isAdmin={Boolean(isAdmin)}
+                      onProviderCount={count => setHasOrgProviders(count > 0)}
+                    />
+                    {!hasOrgProviders ? <CopilotConnectionPanel orgId={orgId} /> : null}
+                  </section>
+                ) : null}
 
-            {activeSection === 'sso' ? (
-              <SsoSettingsSection orgId={orgId} isAdmin={Boolean(isAdmin)} />
+                {activeSection === 'sso' ? (
+                  <SsoSettingsSection orgId={orgId} isAdmin={Boolean(isAdmin)} />
+                ) : null}
+              </>
             ) : null}
           </>
-        ) : null}
+        )}
       </div>
     </div>
   )

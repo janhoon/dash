@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   addMcpPlugin,
   FIGMA_MCP_PLUGINS,
+  MCP_PLUGINS_CONNECTED_DETAIL,
+  MCP_PLUGINS_OFF_DETAIL,
   retryMcpPlugin,
   toggleMcpPlugin,
   UNREACHABLE_SERVER_ERROR,
@@ -13,7 +15,7 @@ describe('toggleMcpPlugin', () => {
       id: 'victoria-metrics',
       name: 'Victoria Metrics',
       state: 'off',
-      detail: 'Off · not configured',
+      detail: MCP_PLUGINS_OFF_DETAIL,
     })
   })
 
@@ -22,28 +24,33 @@ describe('toggleMcpPlugin', () => {
       id: 'pagerduty',
       name: 'PagerDuty',
       state: 'on',
-      detail: 'Connected',
+      detail: MCP_PLUGINS_CONNECTED_DETAIL,
     })
   })
 
-  it('clears error into On and keeps a non-Off detail', () => {
+  it('restores catalog Connected details when turning Victoria Metrics and GitHub back On', () => {
+    expect(toggleMcpPlugin(toggleMcpPlugin(FIGMA_MCP_PLUGINS[0]!))).toEqual(FIGMA_MCP_PLUGINS[0])
+    expect(toggleMcpPlugin(toggleMcpPlugin(FIGMA_MCP_PLUGINS[1]!))).toEqual(FIGMA_MCP_PLUGINS[1])
+  })
+
+  it('clears error into On with an explicit Connected detail', () => {
     const plugin = {
       id: 'broken',
       name: 'Broken',
       state: 'error' as const,
-      detail: UNREACHABLE_SERVER_ERROR,
+      detail: 'timeout',
     }
     expect(toggleMcpPlugin(plugin)).toEqual({
       id: 'broken',
       name: 'Broken',
       state: 'on',
-      detail: UNREACHABLE_SERVER_ERROR,
+      detail: MCP_PLUGINS_CONNECTED_DETAIL,
     })
   })
 })
 
 describe('retryMcpPlugin', () => {
-  it('turns error into On and keeps detail', () => {
+  it('turns error into On with an explicit Connected detail', () => {
     const plugin = {
       id: 'broken',
       name: 'Broken',
@@ -54,8 +61,19 @@ describe('retryMcpPlugin', () => {
       id: 'broken',
       name: 'Broken',
       state: 'on',
-      detail: UNREACHABLE_SERVER_ERROR,
+      detail: MCP_PLUGINS_CONNECTED_DETAIL,
     })
+  })
+
+  it('retries a catalog error row back to its Connected detail', () => {
+    expect(
+      retryMcpPlugin({
+        id: 'github',
+        name: 'GitHub',
+        state: 'error',
+        detail: 'timeout',
+      }),
+    ).toEqual(FIGMA_MCP_PLUGINS[1])
   })
 
   it('is identity for On and Off', () => {
