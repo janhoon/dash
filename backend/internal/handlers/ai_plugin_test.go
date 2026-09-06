@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	anthropic "github.com/aceobservability/ace-llm-anthropic"
+	openaicompat "github.com/aceobservability/ace-llm-openai-compat"
 
 	"github.com/aceobservability/ace/backend/internal/crypto"
 	"github.com/aceobservability/ace/backend/pkg/llm"
@@ -90,8 +91,8 @@ func TestNewLLMProvider_OpenAICompatListsAndChats(t *testing.T) {
 			if err != nil {
 				t.Fatalf("llm.New(%q): %v", providerType, err)
 			}
-			if _, ok := p.(*OpenAICompatibleProvider); !ok {
-				t.Fatalf("expected *OpenAICompatibleProvider, got %T", p)
+			if _, ok := p.(*openaicompat.Provider); !ok {
+				t.Fatalf("expected *openaicompat.Provider, got %T", p)
 			}
 
 			models, err := p.ListModels(context.Background())
@@ -255,9 +256,9 @@ func TestInstantiateDBProvider_OpenAIDecryptsAPIKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("openai DB path: %v", err)
 	}
-	op, ok := p.(*OpenAICompatibleProvider)
+	op, ok := p.(*openaicompat.Provider)
 	if !ok {
-		t.Fatalf("expected *OpenAICompatibleProvider, got %T", p)
+		t.Fatalf("expected *openaicompat.Provider, got %T", p)
 	}
 	if op.APIKey != plain {
 		t.Errorf("openai factory must receive plaintext, got %q", op.APIKey)
