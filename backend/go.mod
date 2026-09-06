@@ -5,6 +5,7 @@ go 1.25.13
 require (
 	github.com/aceobservability/ace-datasource-alertmanager v0.0.0-20260906163148-8d3946559cb3
 	github.com/aceobservability/ace-datasource-clickhouse v0.0.0-20260906163719-50ae73a9eb08
+	github.com/aceobservability/ace-datasource-cloudwatch v0.0.0-20260906164135-bdaaed43878f
 	github.com/aceobservability/ace-datasource-elasticsearch v0.0.0-20260906164000-5cbd818f642b
 	github.com/aceobservability/ace-datasource-loki v0.0.0-20260906165404-06f9efcc1ccd
 	github.com/aceobservability/ace-datasource-prometheus v0.0.0-20260906152221-4b460476c203
@@ -17,11 +18,6 @@ require (
 	github.com/aceobservability/ace-llm-copilot v0.0.0-20260906163911-724e3d6190ac
 	github.com/aceobservability/ace-llm-openai-compat v0.0.0-20260906163134-4077ef660565
 	github.com/alicebob/miniredis/v2 v2.38.0
-	github.com/aws/aws-sdk-go-v2 v1.45.1
-	github.com/aws/aws-sdk-go-v2/config v1.33.2
-	github.com/aws/aws-sdk-go-v2/credentials v1.20.2
-	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.69.1
-	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.85.0
 	github.com/coreos/go-oidc/v3 v3.20.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
@@ -44,11 +40,16 @@ require (
 require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.45.1 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.20 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.33.2 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.20.2 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.19.1 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.1 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.1 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.69.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.85.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.19 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/signin v1.8.0 // indirect
