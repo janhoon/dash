@@ -15,7 +15,8 @@ status: accepted
 > also out-of-tree (`ace-datasource-clickhouse`,
 > [#451](https://github.com/aceobservability/ace/issues/451),
 > [#461](https://github.com/aceobservability/ace/pull/461)). VictoriaMetrics
-> is also out-of-tree (`ace-datasource-victoriametrics`,
+> and VictoriaLogs are also out-of-tree (`ace-datasource-victoriametrics`,
+> `ace-datasource-victorialogs`,
 > [#451](https://github.com/aceobservability/ace/issues/451)). Loki is also
 > out-of-tree (`ace-datasource-loki`,
 > [#451](https://github.com/aceobservability/ace/issues/451)). VMAlert
@@ -53,14 +54,16 @@ is the third. Ace blank-imports `github.com/aceobservability/ace-llm-copilot`,
 and that module's `init` calls `RegisterLLM("copilot", New)`.
 Remaining datasource factories live in
 `internal/datasource` and call `RegisterDatasource` from `init`. Prometheus,
-VictoriaMetrics, and Loki are out-of-tree datasources.
-`ace-datasource-prometheus`, `ace-datasource-victoriametrics`, and
-`ace-datasource-loki` implement the contract. Ace registers type
+VictoriaMetrics, Loki, and VictoriaLogs are out-of-tree datasources.
+`ace-datasource-prometheus`, `ace-datasource-victoriametrics`,
+`ace-datasource-loki`, and
+`ace-datasource-victorialogs` implement the contract. Ace registers type
 `prometheus` from `internal/datasource/register.go`, type `victoriametrics`
-from `internal/datasource/register_victoriametrics.go`, and type `loki` from
-`internal/datasource/register_loki.go` via the typed
-`register()` helper, and injects `ssrf.DatasourceClient` (auth-wrapped) into
-`New(url, httpClient)`. ClickHouse is also out-of-tree
+from `internal/datasource/register_victoriametrics.go`, type `loki` from
+`internal/datasource/register_loki.go`, and type
+`victorialogs` from `internal/datasource/register_victorialogs.go` via the
+typed `register()` helper, and injects `ssrf.DatasourceClient` (auth-wrapped)
+into `New(url, httpClient)`. ClickHouse is also out-of-tree
 (`ace-datasource-clickhouse`). Ace registers type `clickhouse` from
 `internal/datasource/register_clickhouse.go` and injects
 `ssrf.DatasourceClient` (auth-wrapped) plus `AuthConfig` (database) into
