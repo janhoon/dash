@@ -108,7 +108,9 @@ describe('McpPluginsPanel', () => {
 
     await user.click(within(rowNamed('Victoria Metrics')).getByTestId('mcp-plugin-toggle'))
     await user.click(within(rowNamed('Victoria Metrics')).getByTestId('mcp-plugin-toggle'))
-    expect(within(rowNamed('Victoria Metrics')).getByText('Connected · queries + labels')).toBeTruthy()
+    expect(
+      within(rowNamed('Victoria Metrics')).getByText('Connected · queries + labels'),
+    ).toBeTruthy()
 
     await user.click(within(rowNamed('GitHub')).getByTestId('mcp-plugin-toggle'))
     expect(within(rowNamed('GitHub')).getByText('Off · not configured')).toBeTruthy()

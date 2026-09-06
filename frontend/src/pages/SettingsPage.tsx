@@ -208,8 +208,8 @@ export function SettingsPage() {
                         className="mb-4 text-sm"
                         style={{ color: 'var(--color-on-surface-variant)' }}
                       >
-                        Configure connections to Prometheus, Loki, Tempo, VictoriaMetrics, and
-                        other data sources.
+                        Configure connections to Prometheus, Loki, Tempo, VictoriaMetrics, and other
+                        data sources.
                       </p>
                       <DataSourceSettingsPanel orgId={orgId} isAdmin={Boolean(isAdmin)} />
                     </div>
