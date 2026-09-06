@@ -11,7 +11,10 @@ status: accepted
 > (`ace-llm-openai-compat`, [#450](https://github.com/aceobservability/ace/issues/450)).
 > Copilot is the third (`ace-llm-copilot`, [#450](https://github.com/aceobservability/ace/issues/450)).
 > Prometheus is the first out-of-tree datasource (`ace-datasource-prometheus`,
-> [#449](https://github.com/aceobservability/ace/issues/449)). VictoriaMetrics
+> [#449](https://github.com/aceobservability/ace/issues/449)). ClickHouse is
+> also out-of-tree (`ace-datasource-clickhouse`,
+> [#451](https://github.com/aceobservability/ace/issues/451),
+> [#461](https://github.com/aceobservability/ace/pull/461)). VictoriaMetrics
 > is also out-of-tree (`ace-datasource-victoriametrics`,
 > [#451](https://github.com/aceobservability/ace/issues/451)). Remaining
 > `ace-llm-*` / `ace-datasource-*` extracts follow
@@ -50,7 +53,11 @@ VictoriaMetrics are out-of-tree datasources. `ace-datasource-prometheus` and
 `prometheus` from `internal/datasource/register.go` and type `victoriametrics`
 from `internal/datasource/register_victoriametrics.go` via the typed
 `register()` helper, and injects `ssrf.DatasourceClient` (auth-wrapped) into
-`New(url, httpClient)`. Ace owns `TestConnection` for those types via
+`New(url, httpClient)`. ClickHouse is also out-of-tree
+(`ace-datasource-clickhouse`). Ace registers type `clickhouse` from
+`internal/datasource/register_clickhouse.go` and injects
+`ssrf.DatasourceClient` (auth-wrapped) plus `AuthConfig` (database) into
+`New(url, httpClient, authConfig)`. Ace owns `TestConnection` for those types via
 `runHTTPConnectionCheck`. It does not call module `connect.go`. HTTP
 handlers call `internal/datasource.NewClient` and `llm.New` /
 `llm.RequireKnown`. `datasource.NewClient` looks up `cfg.Type`. There is no

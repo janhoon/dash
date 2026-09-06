@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	acech "github.com/aceobservability/ace-datasource-clickhouse"
 	aceprom "github.com/aceobservability/ace-datasource-prometheus"
 	acevm "github.com/aceobservability/ace-datasource-victoriametrics"
 
@@ -117,8 +118,8 @@ func TestNewClient_ClickHouse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if _, ok := client.(*ClickHouseClient); !ok {
-		t.Errorf("expected ClickHouseClient, got %T", client)
+	if _, ok := client.(*acech.Client); !ok {
+		t.Errorf("expected *clickhouse.Client from ace-datasource-clickhouse, got %T", client)
 	}
 }
 
@@ -255,9 +256,9 @@ var (
 	_ LabelValuesClient = (*VictoriaLogsClient)(nil)
 	_ connectionTester  = (*VictoriaLogsClient)(nil)
 
-	_ Client            = (*ClickHouseClient)(nil)
-	_ SignalQueryClient = (*ClickHouseClient)(nil)
-	_ connectionTester  = (*ClickHouseClient)(nil)
+	_ Client            = (*acech.Client)(nil)
+	_ SignalQueryClient = (*acech.Client)(nil)
+	_ connectionTester  = (*acech.Client)(nil)
 
 	_ Client            = (*CloudWatchClient)(nil)
 	_ SignalQueryClient = (*CloudWatchClient)(nil)
