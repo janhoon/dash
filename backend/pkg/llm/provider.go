@@ -34,7 +34,7 @@ type ChatRequest struct {
 type LLMConfig struct {
 	BaseURL string
 	// APIKey is decrypted plaintext for openai/openrouter/ollama/custom/anthropic.
-	// For copilot it is still-encrypted GH token; CopilotProvider decrypts
+	// For copilot it is still-encrypted GH token; the copilot module decrypts
 	// EncryptedGHToken on ListModels/Chat.
 	APIKey      string
 	DisplayName string

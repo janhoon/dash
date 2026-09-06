@@ -33,7 +33,7 @@ func jsonError(w http.ResponseWriter, msg string, code int) {
 // It is not ssrf.ValidateURL or ssrf.ValidateDatasourceURL: localhost and
 // 127.0.0.1 are allowed for Ollama; other private/loopback addresses are
 // rejected; only 169.254.169.254 is treated as metadata. Enforcement is
-// save-time only — outbound HTTP in ai_provider.go uses the default
+// save-time only — outbound HTTP in the LLM modules uses the default
 // http.Client (no dial/redirect policy). See
 // docs/adr/0003-outbound-http-ssrf-policy-seams.md.
 func validateBaseURL(raw string) error {
@@ -278,7 +278,7 @@ func writeResolveError(w http.ResponseWriter, err error) {
 	jsonError(w, err.Error(), status)
 }
 
-func (h *AIHandler) buildCopilotProvider(ctx context.Context, userID uuid.UUID) (*CopilotProvider, error) {
+func (h *AIHandler) buildCopilotProvider(ctx context.Context, userID uuid.UUID) (AIProvider, error) {
 	if h.pool == nil {
 		return nil, fmt.Errorf("failed to load copilot connection")
 	}
@@ -296,7 +296,7 @@ func (h *AIHandler) buildCopilotProvider(ctx context.Context, userID uuid.UUID) 
 		return nil, fmt.Errorf("copilot access not available for your GitHub account")
 	}
 
-	return &CopilotProvider{EncryptedGHToken: encryptedToken}, nil
+	return llm.New("copilot", LLMConfig{APIKey: encryptedToken})
 }
 
 // providerQuota holds the per-user rate limit config for a provider.
@@ -332,7 +332,7 @@ func (h *AIHandler) buildDBProvider(ctx context.Context, providerID, orgID uuid.
 
 // dbAPIKeyForFactory returns LLMConfig.APIKey for a stored ai_providers row.
 // OpenAI-compat types get decrypted plaintext. Copilot keeps ciphertext because
-// CopilotProvider decrypts EncryptedGHToken on ListModels/Chat.
+// the copilot module decrypts EncryptedGHToken on ListModels/Chat.
 func dbAPIKeyForFactory(providerType string, stored *string) (string, error) {
 	if stored == nil || *stored == "" {
 		return "", nil
