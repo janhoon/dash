@@ -1,5 +1,7 @@
 cloud.google.com/go/compute/metadata v0.9.0 h1:pDUj4QMoPejqq20dK0Pg2N4yG9zIkYGdBtwLoEkH9Zs=
 cloud.google.com/go/compute/metadata v0.9.0/go.mod h1:E0bWwX5wTnLPedCKqk3pJmVgCBSM6qQI1yTBdEb3C10=
+github.com/aceobservability/ace-datasource-alertmanager v0.0.0-20260906163148-8d3946559cb3 h1:Mx9KiVpOWhCFKxyV/wJgVsen/A2KGqvlNlfcDrelo9k=
+github.com/aceobservability/ace-datasource-alertmanager v0.0.0-20260906163148-8d3946559cb3/go.mod h1:4D+MMjwJPaeYLO9JisGNszMAQZWoGhDJNaQ1VXi4fbg=
 github.com/aceobservability/ace-datasource-clickhouse v0.0.0-20260906163719-50ae73a9eb08 h1:KewOO9sOBIgtgjqGgsNFmEO38LQ1oJJ52FYoigeDYVU=
 github.com/aceobservability/ace-datasource-clickhouse v0.0.0-20260906163719-50ae73a9eb08/go.mod h1:IGOryUVPXD/57vxdvqKYZ0ywr2YOy0A3tpe3yBUWAHc=
 github.com/aceobservability/ace-datasource-loki v0.0.0-20260906165404-06f9efcc1ccd h1:REgwrZrcYQg+vgR7w9mMzeezPC0rl9C5D8pfw+4eJdg=
@@ -8,6 +10,8 @@ github.com/aceobservability/ace-datasource-prometheus v0.0.0-20260906152221-4b46
 github.com/aceobservability/ace-datasource-prometheus v0.0.0-20260906152221-4b460476c203/go.mod h1:teR/MAf/a8qKlGdj4yGGh+HMkZsTNtc86pxbqcndJe0=
 github.com/aceobservability/ace-datasource-victoriametrics v0.0.0-20260906162925-9dc8e06dd775 h1:C72kqVe9hVOLi/guMmN2byGlCByT7hr1UVdJ8hU3osA=
 github.com/aceobservability/ace-datasource-victoriametrics v0.0.0-20260906162925-9dc8e06dd775/go.mod h1:BRPtwELSrHZpI16uVaDXSRSsvBTPWFE+MLx1Ipc7uB8=
+github.com/aceobservability/ace-datasource-vmalert v0.0.0-20260906163020-2b639522df8e h1:DWxdGpDKJ6BA8Q9IWMBki8IPghcoeOCuf9lIoQovbzg=
+github.com/aceobservability/ace-datasource-vmalert v0.0.0-20260906163020-2b639522df8e/go.mod h1:yaM2lwGPpKSYCxdCbjYvR/pdyorcngAeDLEqMBZbFzc=
 github.com/aceobservability/ace-llm-anthropic v0.0.0-20260906160347-542e9f4acdea h1:iOv7Vkc5mALGqDIpoW90eeQXF1Uo5YisrBhWpmLtg18=
 github.com/aceobservability/ace-llm-anthropic v0.0.0-20260906160347-542e9f4acdea/go.mod h1:IAe/QvLdRzWfIAmjGyVmv04wnQGa7NYKYxlSdKWCqVQ=
 github.com/aceobservability/ace-llm-copilot v0.0.0-20260906163911-724e3d6190ac h1:uCrZRlGKyS2RdmAvKt1qaTHQIkE8yQoiFGIsafPk10k=

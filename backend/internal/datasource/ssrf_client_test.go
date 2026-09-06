@@ -242,8 +242,8 @@ func constructedDatasourceHTTPClients(t *testing.T) map[string]*http.Client {
 		"victoriatraces":      vtraces.httpClient,
 		"clickhouse":          chClient.HTTPClient(),
 		"elasticsearch":       es.httpClient,
-		"alertmanager":        am.client,
-		"vmalert":             vmalert.client,
+		"alertmanager":        am.HTTPClient(),
+		"vmalert":             vmalert.HTTPClient(),
 	}
 }
 

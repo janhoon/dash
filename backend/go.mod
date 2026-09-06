@@ -3,10 +3,12 @@ module github.com/aceobservability/ace/backend
 go 1.25.13
 
 require (
+	github.com/aceobservability/ace-datasource-alertmanager v0.0.0-20260906163148-8d3946559cb3
 	github.com/aceobservability/ace-datasource-clickhouse v0.0.0-20260906163719-50ae73a9eb08
 	github.com/aceobservability/ace-datasource-loki v0.0.0-20260906165404-06f9efcc1ccd
 	github.com/aceobservability/ace-datasource-prometheus v0.0.0-20260906152221-4b460476c203
 	github.com/aceobservability/ace-datasource-victoriametrics v0.0.0-20260906162925-9dc8e06dd775
+	github.com/aceobservability/ace-datasource-vmalert v0.0.0-20260906163020-2b639522df8e
 	github.com/aceobservability/ace-llm-anthropic v0.0.0-20260906160347-542e9f4acdea
 	github.com/aceobservability/ace-llm-copilot v0.0.0-20260906163911-724e3d6190ac
 	github.com/aceobservability/ace-llm-openai-compat v0.0.0-20260906163134-4077ef660565

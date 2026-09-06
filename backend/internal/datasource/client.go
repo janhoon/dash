@@ -51,13 +51,13 @@ func TestConnection(ctx context.Context, ds models.DataSource) error {
 		if err != nil {
 			return err
 		}
-		return runHTTPConnectionCheck(ctx, ds, client.client, []string{"/health", "/api/v1/alerts", "/"})
+		return runHTTPConnectionCheck(ctx, ds, client.HTTPClient(), []string{"/health", "/api/v1/alerts", "/"})
 	case models.DataSourceAlertManager:
 		client, err := NewAlertManagerClient(ds)
 		if err != nil {
 			return err
 		}
-		return runHTTPConnectionCheck(ctx, ds, client.client, []string{"/api/v2/status", "/api/v2/alerts", "/"})
+		return runHTTPConnectionCheck(ctx, ds, client.HTTPClient(), []string{"/api/v2/status", "/api/v2/alerts", "/"})
 	case models.DataSourcePrometheus:
 		return testRegisteredHTTPConnection(ctx, ds, []string{"/-/healthy", "/api/v1/query?query=1", "/"})
 	case models.DataSourceVictoriaMetrics:
